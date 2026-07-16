@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -35,6 +35,17 @@ export default function ReservationConfirmationPage() {
 
   const [uploading, setUploading] = useState(false);
   const [uploadDone, setUploadDone] = useState(false);
+  const [lastOwnerCbu, setLastOwnerCbu] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLastOwnerCbu(null);
+  }, [id]);
+
+  useEffect(() => {
+    if (reservation?.ownerCbu) {
+      setLastOwnerCbu(reservation.ownerCbu);
+    }
+  }, [reservation?.ownerCbu]);
 
   if (!id) {
     return (
@@ -60,6 +71,7 @@ export default function ReservationConfirmationPage() {
 
   const heading = t('res.confirmation.title');
   const receiptLocked = Boolean(reservation?.hasPaymentReceipt || uploadDone);
+  const ownerCbuLabel = reservation?.ownerCbu ?? lastOwnerCbu ?? '—';
   const carDetailLink = reservation?.links?.car
     ? carDetailTo(idFromUri(reservation.links.car) ?? '', reservation.links.car)
     : null;
@@ -118,7 +130,7 @@ export default function ReservationConfirmationPage() {
                           </div>
                           <div className="col-sm-6">
                             <p className="mb-1 small text-secondary">{t('res.confirmation.ownerCbu')}</p>
-                            <p className="mb-0 fw-medium">{reservation.ownerCbu ?? '—'}</p>
+                            <p className="mb-0 fw-medium">{ownerCbuLabel}</p>
                           </div>
                         </div>
                       </div>

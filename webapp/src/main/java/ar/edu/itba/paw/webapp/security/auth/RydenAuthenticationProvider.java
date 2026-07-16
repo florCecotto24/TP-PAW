@@ -16,11 +16,13 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import ar.edu.itba.paw.exception.RydenException;
+import ar.edu.itba.paw.exception.user.OtpAttemptsExceededException;
 import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.services.user.EmailVerificationService;
 import ar.edu.itba.paw.services.user.PasswordResetService;
 import ar.edu.itba.paw.services.user.UserService;
 import ar.edu.itba.paw.webapp.security.auth.exception.LegacyPasswordMailedException;
+import ar.edu.itba.paw.webapp.security.auth.exception.OtpRateLimitedAuthenticationException;
 import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
 import ar.edu.itba.paw.webapp.security.auth.userdetails.UserRoleAuthorities;
 
@@ -80,11 +82,15 @@ public final class RydenAuthenticationProvider implements AuthenticationProvider
                     userService.findRolesForUser(user.getId())));
         }
 
-        if (passwordResetService.matchesResetCode(email, rawSecret)) {
-            final Set<GrantedAuthority> authorities = new java.util.LinkedHashSet<>(
-                    UserRoleAuthorities.fromUserRoles(userService.findRolesForUser(user.getId())));
-            authorities.add(new SimpleGrantedAuthority(RydenAuthorities.PASSWORD_RESET_OTP));
-            return buildAuthentication(user, rawSecret, authorities);
+        try {
+            if (passwordResetService.matchesResetCode(email, rawSecret)) {
+                final Set<GrantedAuthority> authorities = new java.util.LinkedHashSet<>(
+                        UserRoleAuthorities.fromUserRoles(userService.findRolesForUser(user.getId())));
+                authorities.add(new SimpleGrantedAuthority(RydenAuthorities.PASSWORD_RESET_OTP));
+                return buildAuthentication(user, rawSecret, authorities);
+            }
+        } catch (final OtpAttemptsExceededException ex) {
+            throw new OtpRateLimitedAuthenticationException(ex);
         }
 
         throw new BadCredentialsException("Invalid credentials");
@@ -93,7 +99,9 @@ public final class RydenAuthenticationProvider implements AuthenticationProvider
     private Authentication authenticateWithEmailVerificationOtp(final String email, final String otp) {
         try {
             emailVerificationService.verifyEmailAndConsumeCode(email, otp);
-        } catch (RydenException ex) {
+        } catch (final OtpAttemptsExceededException ex) {
+            throw new OtpRateLimitedAuthenticationException(ex);
+        } catch (final RydenException ex) {
             throw new BadCredentialsException("Invalid credentials");
         }
         final User verified = userService.findByEmailForAuthentication(email)

@@ -16,6 +16,7 @@ import ar.edu.itba.paw.exception.user.VerificationCodeAlreadyActiveException;
 import ar.edu.itba.paw.exception.user.VerificationCodeInvalidException;
 import ar.edu.itba.paw.models.email.user.EmailVerificationCodeEmailPayload;
 import ar.edu.itba.paw.models.domain.user.User;
+import ar.edu.itba.paw.models.util.format.EmailNormalizer;
 import ar.edu.itba.paw.persistence.user.EmailVerificationCodeDao;
 import ar.edu.itba.paw.policy.VerificationCodePolicy;
 
@@ -32,17 +33,20 @@ public class EmailVerificationServiceImpl implements EmailVerificationService {
     private final EmailService emailService;
     private final UserService userService;
     private final VerificationCodePolicy verificationCodePolicy;
+    private final OtpAttemptLimiter otpAttemptLimiter;
 
     @Autowired
     public EmailVerificationServiceImpl(
             final EmailVerificationCodeDao emailVerificationCodeDao,
             final EmailService emailService,
             final UserService userService,
-            final VerificationCodePolicy verificationCodePolicy) {
+            final VerificationCodePolicy verificationCodePolicy,
+            final OtpAttemptLimiter otpAttemptLimiter) {
         this.emailVerificationCodeDao = emailVerificationCodeDao;
         this.emailService = emailService;
         this.userService = userService;
         this.verificationCodePolicy = verificationCodePolicy;
+        this.otpAttemptLimiter = otpAttemptLimiter;
     }
 
     @Override
@@ -128,12 +132,16 @@ public class EmailVerificationServiceImpl implements EmailVerificationService {
     @Override
     @Transactional
     public long verifyEmailAndConsumeCode(final String email, final String code) {
-        final User user = userService.findByEmail(email)
+        final String normalized = EmailNormalizer.normalize(email);
+        otpAttemptLimiter.assertAllowed(normalized);
+        final User user = userService.findByEmail(normalized)
                 .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
         final boolean ok = emailVerificationCodeDao.deleteIfValid(user.getId(), code, Instant.now());
         if (!ok) {
+            otpAttemptLimiter.recordFailure(normalized);
             throw new VerificationCodeInvalidException(MessageKeys.USER_VERIFICATION_CODE_INVALID);
         }
+        otpAttemptLimiter.clear(normalized);
         userService.markEmailVerified(user.getId());
         LOGGER.atInfo().addArgument(user.getId()).log("Email verified for user id={}");
         return user.getId();

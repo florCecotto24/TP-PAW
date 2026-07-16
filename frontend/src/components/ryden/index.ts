@@ -30,6 +30,8 @@ export { default as CarouselHeader } from './carousel/CarouselHeader';
 export type { CarouselHeaderProps } from './carousel/CarouselHeader';
 export { default as CarouselSection } from './carousel/CarouselSection';
 export type { CarouselSectionProps } from './carousel/CarouselSection';
+export { default as CarouselNavPair } from './carousel/CarouselNavPair';
+export type { CarouselNavPairProps } from './carousel/CarouselNavPair';
 
 // Generic UI
 export { default as SortBar } from './ui/SortBar';

@@ -29,9 +29,8 @@ public final class SpaFallbackFilter extends OncePerRequestFilter {
                                     final HttpServletResponse response,
                                     final FilterChain filterChain) throws ServletException, IOException {
         if (isStaticAsset(request)) {
-            // Bypass Jersey: mapped to /api/* only, but static assets must still reach the default
-            // servlet before any API filter runs on overlapping paths (lesson B4).
-            request.getRequestDispatcher(staticAssetPath(request)).forward(request, response);
+            // Pass through so UnconditionalCacheFilter can set Cache-Control on REQUEST.
+            filterChain.doFilter(request, response);
             return;
         }
 
@@ -44,8 +43,19 @@ public final class SpaFallbackFilter extends OncePerRequestFilter {
 
         if (indexExists(request.getServletContext())) {
             // SPA shell must not be cached: it points at content-hashed /public/*.js.
-            // Without this, deep-links keep an old index.html and an immutable stale bundle.
             response.setHeader(HttpHeaders.CACHE_CONTROL, "no-cache");
+            // Security headers for HTML navigations: SpaFallbackFilter runs before Spring Security,
+            // so WebAuthConfig headers never reach the shell / deep-link forwards.
+            response.setHeader("X-Content-Type-Options", "nosniff");
+            response.setHeader("X-Frame-Options", "DENY");
+            response.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+            response.setHeader(
+                    "Content-Security-Policy",
+                    "default-src 'self'; img-src 'self' data: blob:; "
+                            + "media-src 'self' blob:; "
+                            + "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+                            + "font-src 'self' https://fonts.gstatic.com; "
+                            + "object-src 'none'; base-uri 'self'; frame-ancestors 'none'");
             request.getRequestDispatcher(INDEX_HTML).forward(request, response);
             return;
         }

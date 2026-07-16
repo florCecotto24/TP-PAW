@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -110,11 +111,16 @@ public class UserServiceImpl implements UserService {
         }
         assertRegistrationFieldLengths(normalizedEmail, forename, surname);
         assertNewPasswordPair(password, passwordConfirm);
-        final User created = userDao.createUser(
-                normalizedEmail,
-                forename.trim(),
-                surname.trim(),
-                passwordEncoder.encode(password));
+        final User created;
+        try {
+            created = userDao.createUser(
+                    normalizedEmail,
+                    forename.trim(),
+                    surname.trim(),
+                    passwordEncoder.encode(password));
+        } catch (final DataIntegrityViolationException ex) {
+            throw new EmailAlreadyExistsException(MessageKeys.USER_EMAIL_ALREADY_EXISTS);
+        }
         LOGGER.atInfo().addArgument(created.getId()).log("Registered new user id={}");
         return created;
     }
@@ -218,7 +224,7 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public void patchUser(final long userId, final UserPatchCommand patch, final long actingUserId) {
-        assertPatchUserAuthorized(userId, patch, actingUserId);
+        assertCanPatchUser(userId, patch, actingUserId);
         final User user = userDao.getUserById(userId)
                 .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
         if (patch.hasProfileFields()) {
@@ -246,11 +252,7 @@ public class UserServiceImpl implements UserService {
         }
         if (patch.hasAdminFields()) {
             if (patch.getRole() != null) {
-                if ("admin".equalsIgnoreCase(patch.getRole())) {
-                    adminService.promoteUserToAdmin(userId, actingUserId);
-                } else {
-                    adminService.demoteUserFromAdmin(userId, actingUserId);
-                }
+                applyRolePatch(userId, patch.getRole(), actingUserId);
             }
             if (patch.getBlocked() != null) {
                 if (patch.getBlocked()) {
@@ -268,7 +270,9 @@ public class UserServiceImpl implements UserService {
         }
     }
 
-    private void assertPatchUserAuthorized(
+    @Override
+    @Transactional(readOnly = true)
+    public void assertCanPatchUser(
             final long userId,
             final UserPatchCommand patch,
             final long actingUserId) {
@@ -283,6 +287,18 @@ public class UserServiceImpl implements UserService {
         if (patch.hasAdminFields() && !isAdmin) {
             throw new AdminPromoterNotAdminException();
         }
+    }
+
+    private void applyRolePatch(final long userId, final String role, final long actingUserId) {
+        if ("admin".equalsIgnoreCase(role.trim())) {
+            adminService.promoteUserToAdmin(userId, actingUserId);
+            return;
+        }
+        if ("user".equalsIgnoreCase(role.trim())) {
+            adminService.demoteUserFromAdmin(userId, actingUserId);
+            return;
+        }
+        throw new IllegalArgumentException("Invalid role patch value: " + role);
     }
 
     @Override
@@ -702,8 +718,12 @@ public class UserServiceImpl implements UserService {
         }
         // Service decides the role/verification state that distinguishes an admin-created account
         // from self-registration; UserDao#createUser persists what it is told.
-        return userDao.createUser(normalizedEmail, forename, surname, bcryptEncodedHash,
-                UserRole.ADMIN, true, assignedByUserId);
+        try {
+            return userDao.createUser(normalizedEmail, forename, surname, bcryptEncodedHash,
+                    UserRole.ADMIN, true, assignedByUserId);
+        } catch (final DataIntegrityViolationException ex) {
+            throw new EmailAlreadyExistsException(MessageKeys.USER_EMAIL_ALREADY_EXISTS);
+        }
     }
 
     @Override

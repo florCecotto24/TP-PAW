@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import CarouselNavPair from './CarouselNavPair';
 
 export interface CarouselHeaderProps {
   title?: string;
@@ -7,15 +8,16 @@ export interface CarouselHeaderProps {
   showSlideControls?: boolean;
   onPrevPage?: () => void;
   onNextPage?: () => void;
+  /** When true, prev is hidden but its slot stays reserved if next is shown. */
   prevDisabled?: boolean;
+  /** When true, next is hidden but its slot stays reserved if prev is shown. */
   nextDisabled?: boolean;
 }
 
-/** Mirror of {@code ryden:carouselHeader}: title + Bootstrap slide prev/next on {@code id}. */
+/** Title + optional prev/next controls (fixed nav slots). */
 export default function CarouselHeader({
   title,
   subtitle,
-  id: _carouselId = 'cheapestCarsCarousel',
   showSlideControls = true,
   onPrevPage,
   onNextPage,
@@ -25,6 +27,8 @@ export default function CarouselHeader({
   const { t } = useTranslation();
   const resolvedTitle = title ?? t('carousel.defaultTitle');
   const resolvedSubtitle = subtitle ?? t('carousel.defaultSubtitle');
+  const showPrev = showSlideControls && !prevDisabled && Boolean(onPrevPage);
+  const showNext = showSlideControls && !nextDisabled && Boolean(onNextPage);
 
   return (
     <div className="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4 carouselHeader">
@@ -32,28 +36,14 @@ export default function CarouselHeader({
         <h4 className="fw-semibold mb-1">{resolvedTitle}</h4>
         <p className="text-secondary small mb-0">{resolvedSubtitle}</p>
       </div>
-      {showSlideControls ? (
-        <div className="d-flex gap-2 align-items-center">
-          <button
-            className="btn btn-sm btn-outline-secondary"
-            type="button"
-            disabled={prevDisabled}
-            onClick={onPrevPage}
-            aria-label={t('carousel.prevPage')}
-          >
-            <i className="bi bi-chevron-left" aria-hidden="true"></i>
-          </button>
-          <button
-            className="btn btn-sm btn-outline-secondary"
-            type="button"
-            disabled={nextDisabled}
-            onClick={onNextPage}
-            aria-label={t('carousel.nextPage')}
-          >
-            <i className="bi bi-chevron-right" aria-hidden="true"></i>
-          </button>
-        </div>
-      ) : null}
+      <CarouselNavPair
+        showPrev={showPrev}
+        showNext={showNext}
+        onPrev={onPrevPage}
+        onNext={onNextPage}
+        prevLabel={t('carousel.prevPage')}
+        nextLabel={t('carousel.nextPage')}
+      />
     </div>
   );
 }

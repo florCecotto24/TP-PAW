@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -215,7 +216,7 @@ public class ReviewServiceImpl implements ReviewService {
             if (reviewDao.existsReview(reservationId, false)) {
                 throw new RiderReservationException(MessageKeys.REVIEW_ALREADY_SUBMITTED);
             }
-            reviewDao.insertReview(reservationId, false, null, null, null);
+            insertReviewCatchingDuplicate(reservationId, false, null, null, null);
             refreshAggregatesAfterOwnerReview(r);
             return;
         }
@@ -240,7 +241,7 @@ public class ReviewServiceImpl implements ReviewService {
             throw new RiderReservationException(MessageKeys.REVIEW_ALREADY_SUBMITTED);
         }
         final Long imageId = persistOptionalReviewImage(imageName, imageContentType, imageBytes);
-        reviewDao.insertReview(reservationId, false, rating, storedComment, imageId);
+        insertReviewCatchingDuplicate(reservationId, false, rating, storedComment, imageId);
         refreshAggregatesAfterOwnerReview(r);
     }
 
@@ -267,7 +268,7 @@ public class ReviewServiceImpl implements ReviewService {
             if (reviewDao.existsReview(reservationId, true)) {
                 throw new RiderReservationException(MessageKeys.REVIEW_ALREADY_SUBMITTED);
             }
-            reviewDao.insertReview(reservationId, true, null, null, null);
+            insertReviewCatchingDuplicate(reservationId, true, null, null, null);
             refreshAggregatesAfterRiderReview(r);
             return;
         }
@@ -290,8 +291,21 @@ public class ReviewServiceImpl implements ReviewService {
             throw new RiderReservationException(MessageKeys.REVIEW_ALREADY_SUBMITTED);
         }
         final Long imageId = persistOptionalReviewImage(imageName, imageContentType, imageBytes);
-        reviewDao.insertReview(reservationId, true, rating, storedComment, imageId);
+        insertReviewCatchingDuplicate(reservationId, true, rating, storedComment, imageId);
         refreshAggregatesAfterRiderReview(r);
+    }
+
+    private void insertReviewCatchingDuplicate(
+            final long reservationId,
+            final boolean madeByRider,
+            final Integer rating,
+            final String comment,
+            final Long imageId) {
+        try {
+            reviewDao.insertReview(reservationId, madeByRider, rating, comment, imageId);
+        } catch (final DataIntegrityViolationException ex) {
+            throw new RiderReservationException(MessageKeys.REVIEW_ALREADY_SUBMITTED);
+        }
     }
 
     /**

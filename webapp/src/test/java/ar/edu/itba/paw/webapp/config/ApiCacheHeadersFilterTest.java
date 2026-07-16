@@ -65,7 +65,7 @@ class ApiCacheHeadersFilterTest {
     }
 
     @Test
-    void testAuthenticatedJsonGetUsesNoCache() {
+    void testAuthenticatedJsonGetUsesPrivateNoCache() {
         // 1.Arrange
         SecurityContextHolder.getContext().setAuthentication(
                 new TestingAuthenticationToken("user@example.com", "secret", "ROLE_USER"));
@@ -74,7 +74,7 @@ class ApiCacheHeadersFilterTest {
         filter.filter(requestContext, responseContext);
 
         // 3.Assert
-        assertEquals("no-cache", responseContext.getHeaders().getFirst(HttpHeaders.CACHE_CONTROL));
+        assertEquals("private, no-cache", responseContext.getHeaders().getFirst(HttpHeaders.CACHE_CONTROL));
         assertEquals("Accept", responseContext.getHeaders().getFirst(HttpHeaders.VARY));
     }
 

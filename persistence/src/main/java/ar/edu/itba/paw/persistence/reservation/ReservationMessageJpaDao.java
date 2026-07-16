@@ -78,6 +78,7 @@ public class ReservationMessageJpaDao implements ReservationMessageDao {
         final List<Long> ids = pageIds.stream().map(Number::longValue).collect(Collectors.toList());
         final List<ReservationMessage> hydrated = em.createQuery(
                         "FROM ReservationMessage m "
+                                + "JOIN FETCH m.sender "
                                 + "LEFT JOIN FETCH m.attachment "
                                 + "WHERE m.id IN :ids",
                         ReservationMessage.class)
@@ -108,6 +109,7 @@ public class ReservationMessageJpaDao implements ReservationMessageDao {
         final List<Long> ids = pageIds.stream().map(Number::longValue).collect(Collectors.toList());
         final List<ReservationMessage> hydrated = em.createQuery(
                         "FROM ReservationMessage m "
+                                + "JOIN FETCH m.sender "
                                 + "LEFT JOIN FETCH m.attachment "
                                 + "WHERE m.id IN :ids",
                         ReservationMessage.class)
@@ -138,6 +140,7 @@ public class ReservationMessageJpaDao implements ReservationMessageDao {
          */
         final List<ReservationMessage> results = em.createQuery(
                         "FROM ReservationMessage m "
+                                + "JOIN FETCH m.sender "
                                 + "LEFT JOIN FETCH m.attachment "
                                 + "WHERE m.id = :messageId AND m.reservation.id = :reservationId",
                         ReservationMessage.class)

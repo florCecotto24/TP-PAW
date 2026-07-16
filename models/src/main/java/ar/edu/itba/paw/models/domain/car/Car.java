@@ -328,6 +328,10 @@ public class Car {
         return Optional.ofNullable(ratingAvg);
     }
 
+    /**
+     * Returns the live Hibernate-managed collection (not a defensive copy) so association mapping and
+     * dirty tracking keep working. Callers must treat it as read-only.
+     */
     public List<CarPicture> getPictures() {
         return pictures;
     }
@@ -395,7 +399,7 @@ public class Car {
         if (!(o instanceof Car)) {
             return false;
         }
-        return EntityEquality.equalsByLongId(this, this.id, ((Car) o).id);
+        return EntityEquality.equalsByLongId(this, getId(), ((Car) o).getId());
     }
 
     @Override
@@ -407,14 +411,8 @@ public class Car {
     public String toString() {
         return "Car{" +
                 "id=" + id +
-                ", ownerId=" + owner.getId() +
+                ", ownerId=" + (owner != null ? owner.getId() : "null") +
                 ", plate='" + plate + '\'' +
-                ", brand='" + getBrand() + '\'' +
-                ", model='" + getModel() + '\'' +
-                ", type=" + getType() +
-                ", year=" + Objects.toString(year) +
-                ", powertrain=" + powertrain +
-                ", transmission=" + transmission +
                 ", status=" + status +
                 ", createdAt=" + createdAt +
                 ", updatedAt=" + updatedAt +

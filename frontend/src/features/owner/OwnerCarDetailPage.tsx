@@ -7,6 +7,7 @@ import { apiAssetUrl } from '../../api/uri';
 import { useSessionStore } from '../../session/sessionStore';
 import {
   deactivateCar,
+  deleteInsurance,
   fetchCar,
   fetchPictures,
   idFromUri,
@@ -36,7 +37,9 @@ export default function OwnerCarDetailPage() {
   const [busy, setBusy] = useState(false);
   const [showDeactivate, setShowDeactivate] = useState(false);
   const [showPause, setShowPause] = useState(false);
+  const [showRemoveInsurance, setShowRemoveInsurance] = useState(false);
   const [insuranceSuccess, setInsuranceSuccess] = useState(false);
+  const [insuranceRemoved, setInsuranceRemoved] = useState(false);
   const [insuranceViewError, setInsuranceViewError] = useState(false);
   const [insuranceViewBusy, setInsuranceViewBusy] = useState(false);
 
@@ -180,6 +183,7 @@ export default function OwnerCarDetailPage() {
     setBusy(true);
     setError(null);
     setInsuranceSuccess(false);
+    setInsuranceRemoved(false);
     try {
       await uploadInsurance(car, file);
       const refreshed = await fetchCar(id);
@@ -188,6 +192,25 @@ export default function OwnerCarDetailPage() {
     } catch (err) {
       setError(errorMessage(err, 'owner.detail.errors.insuranceFailed'));
       throw err;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onDeleteInsurance() {
+    if (!car || !id) return;
+    setShowRemoveInsurance(false);
+    setBusy(true);
+    setError(null);
+    setInsuranceSuccess(false);
+    setInsuranceRemoved(false);
+    try {
+      await deleteInsurance(car);
+      const refreshed = await fetchCar(id);
+      setCar(refreshed.data);
+      setInsuranceRemoved(true);
+    } catch (err) {
+      setError(errorMessage(err, 'owner.detail.errors.insuranceDeleteFailed'));
     } finally {
       setBusy(false);
     }
@@ -529,16 +552,24 @@ export default function OwnerCarDetailPage() {
                 </div>
                 <p className="small text-secondary mb-2">{t('owner.detail.insurance.hint')}</p>
                 {car.hasInsurance ? (
-                  <p className="small mb-2">
+                  <div className="d-flex flex-wrap gap-2 mb-2">
                     <button
                       type="button"
-                      className="btn btn-link link-primary text-break p-0 align-baseline"
+                      className="btn btn-sm btn-outline-primary"
                       onClick={() => void onViewInsurance()}
                       disabled={insuranceViewBusy || busy}
                     >
                       {t('owner.detail.insurance.viewDocument')}
                     </button>
-                  </p>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline-danger"
+                      onClick={() => setShowRemoveInsurance(true)}
+                      disabled={busy}
+                    >
+                      {t('owner.detail.insurance.removeDocument')}
+                    </button>
+                  </div>
                 ) : null}
                 <label className="form-label small mb-1" htmlFor="detailInsurance">
                   {car.hasInsurance ? t('owner.detail.insurance.replace') : t('owner.detail.insurance.upload')}
@@ -565,6 +596,11 @@ export default function OwnerCarDetailPage() {
                 {insuranceSuccess ? (
                   <div className="alert alert-success mt-2 mb-0 py-2 small" role="alert">
                     {t('owner.detail.insurance.uploadSuccess')}
+                  </div>
+                ) : null}
+                {insuranceRemoved ? (
+                  <div className="alert alert-success mt-2 mb-0 py-2 small" role="alert">
+                    {t('owner.detail.insurance.removeSuccess')}
                   </div>
                 ) : null}
                 {insuranceViewError ? (
@@ -608,6 +644,29 @@ export default function OwnerCarDetailPage() {
           </Button>
           <Button variant="warning" onClick={confirmPause} disabled={busy}>
             {t('owner.detail.pause')}
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      <Modal show={showRemoveInsurance} onHide={() => setShowRemoveInsurance(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title className="fs-5 fw-semibold">
+            {t('owner.detail.insurance.removeDocument')}
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <p className="mb-0 text-secondary">{t('owner.detail.insurance.removeConfirm')}</p>
+        </Modal.Body>
+        <Modal.Footer className="border-0 pt-0">
+          <Button
+            variant="outline-secondary"
+            onClick={() => setShowRemoveInsurance(false)}
+            disabled={busy}
+          >
+            {t('owner.detail.cancel')}
+          </Button>
+          <Button variant="danger" onClick={() => void onDeleteInsurance()} disabled={busy}>
+            {t('owner.detail.insurance.removeDocument')}
           </Button>
         </Modal.Footer>
       </Modal>

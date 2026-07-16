@@ -48,7 +48,7 @@ public class Neighborhood {
         if (!(o instanceof Neighborhood)) {
             return false;
         }
-        return EntityEquality.equalsByLongId(this, this.id, ((Neighborhood) o).id);
+        return EntityEquality.equalsByLongId(this, getId(), ((Neighborhood) o).getId());
     }
 
     @Override

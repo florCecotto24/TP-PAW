@@ -626,9 +626,9 @@ class ReservationJpaDaoTest extends DaoIntegrationTestSupport {
 
     private long insertStoredFile(final String name) {
         jdbcTemplate.update(
-                "INSERT INTO stored_files (uploader_user_id, file_name, content_type, byte_array, created_at) "
-                        + "VALUES (?, ?, ?, ?, ?)",
-                ownerId, name, "application/pdf", new byte[] { 1, 2, 3 }, OffsetDateTime.now(ZoneOffset.UTC));
+                "INSERT INTO stored_files (uploader_user_id, file_name, content_type, byte_array, size_bytes, created_at) "
+                        + "VALUES (?, ?, ?, ?, ?, ?)",
+                ownerId, name, "application/pdf", new byte[] { 1, 2, 3 }, 3L, OffsetDateTime.now(ZoneOffset.UTC));
         return jdbcTemplate.queryForObject(
                 "SELECT id FROM stored_files WHERE file_name = ?", Long.class, name);
     }

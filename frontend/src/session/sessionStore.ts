@@ -3,6 +3,8 @@ import { ApiError, HypermediaClient, type TokenAccessors } from '../api/client';
 import { canonicalApiUserPath } from '../api/uri';
 import { MediaTypes } from '../api/mediaTypes';
 import type { UserDto } from '../api/types';
+import i18n, { isSupported, type Locale } from '../i18n';
+import { queryClient } from '../queryClient';
 
 // =============================================================================
 // Session store (Zustand) — fuente de verdad de auth (LINEAMIENTOS §1.8)
@@ -60,6 +62,21 @@ function readStorage(): PersistedSession | null {
     return raw ? (JSON.parse(raw) as PersistedSession) : null;
   } catch {
     return null;
+  }
+}
+
+/**
+ * Aplica a la SPA la preferencia de idioma del usuario logueado (`latestLocale`, persistida
+ * server-side) para que siga al usuario entre dispositivos. No-op si es null/ausente, no soportada,
+ * o si ya coincide con el idioma actual (evita un changeLanguage redundante).
+ *
+ * Se invoca SOLO en el login explícito (no en la rehidratación de boot): así un refresh de página
+ * no parpadea ni pisa la elección local guardada en localStorage; el server gana al loguear.
+ */
+function hydrateLocaleFromUser(user: UserDto | null): void {
+  const locale = user?.latestLocale;
+  if (locale && isSupported(locale) && i18n.language !== locale) {
+    void i18n.changeLanguage(locale);
   }
 }
 
@@ -146,6 +163,7 @@ export const useSessionStore = create<SessionState>((set, get) => {
         accept: MediaTypes.userPrivate,
       });
       set({ currentUser: res.data, status: 'authenticated' });
+      hydrateLocaleFromUser(res.data);
     } catch (err) {
       get().logout();
       set({ status: 'error', error: err instanceof Error ? err.message : 'login.failed' });
@@ -156,6 +174,7 @@ export const useSessionStore = create<SessionState>((set, get) => {
   logout: () => {
     userFetchSeq++;
     sessionClient.clearConditionalGetCache();
+    queryClient.clear();
     set({
       accessToken: null,
       refreshToken: null,
@@ -206,6 +225,31 @@ const tokenAccessors: TokenAccessors = {
 };
 
 export const sessionClient = new HypermediaClient(tokenAccessors);
+
+/**
+ * Persiste en el server el idioma elegido (atributo `latestLocale`) cuando hay sesión, para que la
+ * preferencia siga al usuario entre dispositivos y `hydrateLocaleFromUser` no la pise con un valor
+ * stale en el próximo login. Best-effort: el idioma ya quedó en localStorage (vía el listener de
+ * i18n), así que un fallo del PATCH NO debe romper el cambio de idioma. No-op si es anónimo.
+ */
+export async function persistLocaleToServer(locale: Locale): Promise<void> {
+  const { currentUserUri, accessToken, refreshToken } = useSessionStore.getState();
+  if (!currentUserUri || (!accessToken && !refreshToken)) {
+    return;
+  }
+  try {
+    const res = await sessionClient.patch<UserDto>(
+      currentUserUri,
+      { latestLocale: locale },
+      { accept: MediaTypes.userPrivate, contentType: MediaTypes.user },
+    );
+    if (res.data && i18n.language === locale) {
+      useSessionStore.setState({ currentUser: res.data });
+    }
+  } catch {
+    /* best-effort: la elección ya está en localStorage; no rompemos la UI. */
+  }
+}
 
 if (typeof window !== 'undefined') {
   queueMicrotask(bootstrapCurrentUserFromSession);

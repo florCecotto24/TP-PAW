@@ -27,8 +27,16 @@ public interface CarBrandService {
     /**
      * Returns the existing brand whose name matches {@code rawName} case-insensitively, or creates a new
      * one with {@code validated = false} if no match exists. Empty/blank input returns {@link Optional#empty()}.
+     * Used by publish flows that intentionally reuse catalog rows.
      */
     Optional<CarBrand> findOrCreateUnvalidated(String rawName);
+
+    /**
+     * Creates a new unvalidated brand. Empty/blank input returns {@link Optional#empty()}.
+     *
+     * @throws ar.edu.itba.paw.exception.car.CarBrandConflictException when a brand with the same name exists
+     */
+    Optional<CarBrand> createUnvalidated(String rawName);
 
     // -----------------------------------------------------------------------------------------------------------
     // Admin-orchestrated operations on brand rows.

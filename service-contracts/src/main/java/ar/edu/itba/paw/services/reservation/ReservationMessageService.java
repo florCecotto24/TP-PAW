@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.services.reservation;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -47,9 +48,20 @@ public interface ReservationMessageService {
     Optional<BinaryContent> findMessageAttachmentContentForParticipant(
             long viewerUserId, long reservationId, long messageId);
 
+    /**
+     * Admin download of a chat attachment without participant scoping (caller enforces admin ACL).
+     */
+    Optional<BinaryContent> findMessageAttachmentContentForAdmin(long reservationId, long messageId);
+
     boolean canParticipantAccessReservationChat(long viewerUserId, long reservationId);
 
     void dispatchChatDigestEmails();
+
+    /**
+     * Atomically marks unseen messages as email-notified. Returns how many rows were updated.
+     * Used by the digest job after grouping by recipient.
+     */
+    int markEmailNotified(Collection<Long> messageIds);
 
     // -----------------------------------------------------------------------------------------------------------
     // Admin-orchestrated read of chat messages.

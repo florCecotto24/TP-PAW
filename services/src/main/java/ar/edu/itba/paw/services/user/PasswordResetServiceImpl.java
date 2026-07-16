@@ -38,6 +38,7 @@ public class PasswordResetServiceImpl implements PasswordResetService {
     private final UserValidationPolicy validationPolicy;
     private final VerificationCodePolicy verificationCodePolicy;
     private final UserService userService;
+    private final OtpAttemptLimiter otpAttemptLimiter;
 
     @Autowired
     public PasswordResetServiceImpl(
@@ -46,13 +47,15 @@ public class PasswordResetServiceImpl implements PasswordResetService {
             final PasswordEncoder passwordEncoder,
             final UserValidationPolicy validationPolicy,
             final VerificationCodePolicy verificationCodePolicy,
-            final UserService userService) {
+            final UserService userService,
+            final OtpAttemptLimiter otpAttemptLimiter) {
         this.passwordResetCodeDao = passwordResetCodeDao;
         this.emailService = emailService;
         this.passwordEncoder = passwordEncoder;
         this.validationPolicy = validationPolicy;
         this.verificationCodePolicy = verificationCodePolicy;
         this.userService = userService;
+        this.otpAttemptLimiter = otpAttemptLimiter;
     }
 
     @Override
@@ -99,11 +102,18 @@ public class PasswordResetServiceImpl implements PasswordResetService {
             return false;
         }
         final String normalized = EmailNormalizer.normalize(email);
+        otpAttemptLimiter.assertAllowed(normalized);
         final Optional<User> userOpt = userService.findByEmail(normalized);
         if (userOpt.isEmpty()) {
             return false;
         }
-        return passwordResetCodeDao.matchesValidCode(userOpt.get().getId(), code, Instant.now());
+        final boolean ok = passwordResetCodeDao.matchesValidCode(userOpt.get().getId(), code, Instant.now());
+        if (ok) {
+            otpAttemptLimiter.clear(normalized);
+        } else {
+            otpAttemptLimiter.recordFailure(normalized);
+        }
+        return ok;
     }
 
     @Override
@@ -114,6 +124,7 @@ public class PasswordResetServiceImpl implements PasswordResetService {
             final String newPassword,
             final String newPasswordConfirm) {
         final String normalized = EmailNormalizer.normalize(email);
+        otpAttemptLimiter.assertAllowed(normalized);
         final User user = userService.findByEmail(normalized)
                 .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
         if (newPassword == null || newPasswordConfirm == null || !newPassword.equals(newPasswordConfirm)) {
@@ -131,8 +142,10 @@ public class PasswordResetServiceImpl implements PasswordResetService {
         }
         final boolean ok = passwordResetCodeDao.deleteIfValid(user.getId(), code, Instant.now());
         if (!ok) {
+            otpAttemptLimiter.recordFailure(normalized);
             throw new PasswordResetCodeInvalidException(MessageKeys.USER_PASSWORD_RESET_CODE_INVALID);
         }
+        otpAttemptLimiter.clear(normalized);
         userService.replacePasswordHash(user.getId(), passwordEncoder.encode(newPassword));
         LOGGER.atInfo().addArgument(user.getId()).log("Password reset completed for user id={}");
     }

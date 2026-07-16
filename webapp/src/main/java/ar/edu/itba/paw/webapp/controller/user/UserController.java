@@ -158,8 +158,8 @@ public class UserController {
 
     /**
      * Admin-only variant of user creation, discriminated from {@link #register} by
-     * {@code Content-Type}: provisions a pre-verified admin account with a temporary
-     * password and emails an invitation (replaces the MVC {@code /admin/users/create}).
+     * {@code Content-Type}: provisions a pre-verified admin account and emails an invitation
+     * plus a password-reset OTP so the invitee sets their own password (never mailed in clear).
      */
     @POST
     @Consumes(VndMediaType.ADMIN_CREATE_USER_V1_JSON)
@@ -172,7 +172,6 @@ public class UserController {
                 form.getEmail(),
                 form.getForename(),
                 form.getSurname(),
-                form.getPassword(),
                 actingAdminId,
                 LocaleContextHolder.getLocale());
 
@@ -223,11 +222,20 @@ public class UserController {
         final User user = userService.getUserById(id)
                 .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
         final RydenUserDetails viewer = currentUserResolver.currentPrincipalOrNull();
+        final UserPatchCommand command = toPatchCommand(patch);
+
+        // Authorize profile/admin fields before any mutation so a password+admin body cannot
+        // commit the password and then 403 on the admin facet.
+        if (command.hasProfileFields() || command.hasAdminFields()) {
+            final long actingUserId = viewer != null
+                    ? viewer.getUserId()
+                    : currentUserResolver.requireUserId();
+            userService.assertCanPatchUser(id, command, actingUserId);
+        }
 
         if (patch.getPassword() != null) {
             applyPasswordPatch(user, patch, viewer);
         }
-        final UserPatchCommand command = toPatchCommand(patch);
         if (command.hasProfileFields() || command.hasAdminFields()) {
             final long actingUserId = viewer != null
                     ? viewer.getUserId()

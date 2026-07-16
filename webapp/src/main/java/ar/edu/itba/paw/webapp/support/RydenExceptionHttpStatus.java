@@ -4,16 +4,21 @@ import javax.ws.rs.core.Response;
 
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.RydenException;
+import ar.edu.itba.paw.exception.car.CarBrandConflictException;
 import ar.edu.itba.paw.exception.car.CarBrandNotFoundException;
+import ar.edu.itba.paw.exception.car.CarModelConflictException;
 import ar.edu.itba.paw.exception.car.CarModelNotFoundException;
 import ar.edu.itba.paw.exception.car.CarNotFoundException;
 import ar.edu.itba.paw.exception.car.CarPublishPrerequisitesMissingException;
+import ar.edu.itba.paw.exception.car.CarStatusTransitionConflictException;
 import ar.edu.itba.paw.exception.car.DuplicatePlateException;
 import ar.edu.itba.paw.exception.reservation.ReservationAccessDeniedException;
 import ar.edu.itba.paw.exception.reservation.ReservationCancelNotAllowedException;
 import ar.edu.itba.paw.exception.reservation.ReservationConflictException;
 import ar.edu.itba.paw.exception.reservation.ReservationMessageException;
+import ar.edu.itba.paw.exception.reservation.RiderReservationException;
 import ar.edu.itba.paw.exception.user.EmailAlreadyExistsException;
+import ar.edu.itba.paw.exception.user.OtpAttemptsExceededException;
 import ar.edu.itba.paw.exception.user.PasswordResetCodeInvalidException;
 import ar.edu.itba.paw.exception.user.UserForbiddenException;
 import ar.edu.itba.paw.exception.user.UserNotFoundException;
@@ -36,6 +41,9 @@ public final class RydenExceptionHttpStatus {
         }
         if (exception instanceof EmailAlreadyExistsException
                 || exception instanceof DuplicatePlateException
+                || exception instanceof CarBrandConflictException
+                || exception instanceof CarModelConflictException
+                || exception instanceof CarStatusTransitionConflictException
                 || exception instanceof ReservationConflictException
                 || exception instanceof ReservationCancelNotAllowedException) {
             return Response.Status.CONFLICT;
@@ -43,6 +51,9 @@ public final class RydenExceptionHttpStatus {
         if (exception instanceof VerificationCodeInvalidException
                 || exception instanceof PasswordResetCodeInvalidException) {
             return Response.Status.UNAUTHORIZED;
+        }
+        if (exception instanceof OtpAttemptsExceededException) {
+            return Response.Status.TOO_MANY_REQUESTS;
         }
         if (exception instanceof ReservationAccessDeniedException
                 || exception instanceof CarPublishPrerequisitesMissingException
@@ -53,6 +64,10 @@ public final class RydenExceptionHttpStatus {
             if (MessageKeys.RESERVATION_CHAT_NOT_PARTICIPANT.equals(messageException.getMessageCode())) {
                 return Response.Status.FORBIDDEN;
             }
+        }
+        if (exception instanceof RiderReservationException riderException
+                && MessageKeys.REVIEW_ALREADY_SUBMITTED.equals(riderException.getMessageCode())) {
+            return Response.Status.CONFLICT;
         }
         return Response.Status.BAD_REQUEST;
     }

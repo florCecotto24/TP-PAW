@@ -59,12 +59,13 @@ class CarPictureJpaDaoTest extends DaoIntegrationTestSupport {
 
         final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         jdbcTemplate.update(
-                "INSERT INTO stored_files (uploader_user_id, file_name, content_type, byte_array, created_at) "
-                        + "VALUES (?, ?, ?, ?, ?)",
+                "INSERT INTO stored_files (uploader_user_id, file_name, content_type, byte_array, size_bytes, created_at) "
+                        + "VALUES (?, ?, ?, ?, ?, ?)",
                 ownerId,
                 "clip.mp4",
                 "video/mp4",
                 new byte[] {4, 5, 6},
+                3L,
                 now);
         storedFileId = jdbcTemplate.queryForObject(
                 "SELECT id FROM stored_files WHERE file_name = ?", Long.class, "clip.mp4");

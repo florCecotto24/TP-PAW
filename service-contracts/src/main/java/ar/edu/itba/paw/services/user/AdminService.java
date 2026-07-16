@@ -21,7 +21,11 @@ public interface AdminService {
 
     void demoteUserFromAdmin(long targetUserId, long assignedByUserId);
 
-    User createAdminUser(String email, String forename, String surname, String temporaryPassword,
+    /**
+     * Provisions a pre-verified admin. A random unusable password hash is stored; the invitee
+     * sets their password via the existing password-reset OTP email (never mailed in clear).
+     */
+    User createAdminUser(String email, String forename, String surname,
                          long assignedByUserId, Locale locale);
 
     void blockUser(long targetUserId, long actingAdminId);

@@ -17,6 +17,9 @@ public final class ValidCarStatusListValidator implements ConstraintValidator<Va
             return true;
         }
         for (final String value : values) {
+            if (value != null && "all".equalsIgnoreCase(value.trim())) {
+                continue;
+            }
             if (!delegate.isValid(value, context)) {
                 return false;
             }

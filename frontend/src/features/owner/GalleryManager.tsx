@@ -1,5 +1,6 @@
 import { useEffect, useState, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Button, Modal } from 'react-bootstrap';
 import { addPicture, deletePicture, fetchPictures } from './api';
 import { apiAssetUrl } from '../../api/uri';
 import { useApiErrorMessage } from './hooks';
@@ -13,6 +14,7 @@ export default function GalleryManager({ car }: { car: CarDto }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [tick, setTick] = useState(0);
+  const [pendingDelete, setPendingDelete] = useState<PictureDto | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -39,11 +41,14 @@ export default function GalleryManager({ car }: { car: CarDto }) {
     }
   }
 
-  async function onDelete(p: PictureDto) {
+  async function confirmDelete() {
+    if (!pendingDelete) return;
+    const target = pendingDelete;
+    setPendingDelete(null);
     setError(null);
     setBusy(true);
     try {
-      await deletePicture(p);
+      await deletePicture(target);
       setTick((n) => n + 1);
     } catch (err) {
       setError(errorMessage(err, 'owner.gallery.errors.deleteFailed'));
@@ -76,7 +81,7 @@ export default function GalleryManager({ car }: { car: CarDto }) {
                   <button
                     type="button"
                     className="btn btn-sm btn-danger position-absolute top-0 end-0 m-1"
-                    onClick={() => onDelete(p)}
+                    onClick={() => setPendingDelete(p)}
                     disabled={busy}
                     aria-label={t('owner.gallery.delete')}
                   >
@@ -99,6 +104,27 @@ export default function GalleryManager({ car }: { car: CarDto }) {
           onChange={onAdd}
         />
       </div>
+
+      <Modal show={pendingDelete != null} onHide={() => setPendingDelete(null)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title className="fs-5 fw-semibold">{t('owner.gallery.delete')}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <p className="mb-0 text-secondary">{t('owner.gallery.deleteConfirm')}</p>
+        </Modal.Body>
+        <Modal.Footer className="border-0 pt-0">
+          <Button
+            variant="outline-secondary"
+            onClick={() => setPendingDelete(null)}
+            disabled={busy}
+          >
+            {t('owner.detail.cancel')}
+          </Button>
+          <Button variant="danger" onClick={() => void confirmDelete()} disabled={busy}>
+            {t('owner.gallery.delete')}
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </article>
   );
 }

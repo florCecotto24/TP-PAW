@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 
 import javax.ws.rs.Consumes;
+import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
@@ -92,6 +93,14 @@ public class CarInsuranceController {
                             .build();
             default -> Response.status(Response.Status.BAD_REQUEST).build();
         };
+    }
+
+    @DELETE
+    @PreAuthorize("@carResourceAccess.isOwnerById(#id, @currentUserResolver.currentPrincipalOrNull())")
+    public Response deleteInsurance(@P("id") @PathParam("id") final long carId) {
+        final Car car = requireCarExists(carId);
+        carService.clearCarInsuranceDocument(car.getOwnerId(), carId);
+        return Response.noContent().build();
     }
 
     private Car requireCarExists(final long carId) {

@@ -6,6 +6,7 @@ import java.util.EnumSet;
 import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -51,16 +52,26 @@ public class FavCarServiceImpl implements FavCarService {
             favCarDao.removeFavorite(carId, userId);
             return false;
         }
-        favCarDao.addFavorite(carId, userId, OffsetDateTime.now());
-        return true;
+        try {
+            favCarDao.addFavorite(carId, userId, OffsetDateTime.now());
+            return true;
+        } catch (final DataIntegrityViolationException ex) {
+            // Concurrent toggle: the other request already inserted the PK.
+            return favCarDao.isFavorited(carId, userId);
+        }
     }
 
     @Override
     @Transactional
     public void addFavorite(final long carId, final long userId) {
         requireFavoriteTarget(carId, userId);
-        if (!favCarDao.isFavorited(carId, userId)) {
+        if (favCarDao.isFavorited(carId, userId)) {
+            return;
+        }
+        try {
             favCarDao.addFavorite(carId, userId, OffsetDateTime.now());
+        } catch (final DataIntegrityViolationException ex) {
+            // Already favorited by a concurrent request — idempotent.
         }
     }
 

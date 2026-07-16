@@ -50,6 +50,9 @@ class ReservationLifecycleSchedulerServiceImplTest {
     @Mock
     private ReservationMailComposer mailComposer;
 
+    @Mock
+    private ReservationLifecycleRowProcessor lifecycleRowProcessor;
+
     @InjectMocks
     private ReservationLifecycleSchedulerServiceImpl schedulerService;
 
@@ -95,7 +98,7 @@ class ReservationLifecycleSchedulerServiceImplTest {
                 .thenReturn(List.of());
         Mockito.when(reviewService.hasRiderReview(RESERVATION_ID)).thenReturn(false);
         Mockito.doThrow(new RiderReservationException("err"))
-                .when(reviewService).submitRiderReviewOfOwner(RIDER_ID, RESERVATION_ID, null, null);
+                .when(lifecycleRowProcessor).autoSkipRiderReview(RIDER_ID, RESERVATION_ID);
 
         Assertions.assertDoesNotThrow(() -> schedulerService.dispatchReviewAutoSkips());
     }

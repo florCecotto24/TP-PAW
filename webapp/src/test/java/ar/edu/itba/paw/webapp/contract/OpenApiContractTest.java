@@ -26,6 +26,8 @@ import ar.edu.itba.paw.webapp.dto.rest.CatalogApprovalDto;
 import ar.edu.itba.paw.webapp.dto.rest.ClientConfigDto;
 import ar.edu.itba.paw.webapp.dto.rest.ErrorDto;
 import ar.edu.itba.paw.webapp.dto.rest.LinksDto;
+import ar.edu.itba.paw.models.util.media.ChatAttachmentKind;
+import ar.edu.itba.paw.webapp.dto.rest.MessageAttachmentDto;
 import ar.edu.itba.paw.webapp.dto.rest.MessageDto;
 import ar.edu.itba.paw.webapp.dto.rest.ReservationDto;
 import ar.edu.itba.paw.webapp.dto.rest.ReservationSummaryDto;
@@ -584,6 +586,12 @@ class OpenApiContractTest {
         dto.setCreatedAt("2026-06-02T15:30:00+00:00");
         dto.setSeen(false);
         dto.setHasAttachment(true);
+        final MessageAttachmentDto attachment = new MessageAttachmentDto();
+        attachment.setFileName("comprobante.pdf");
+        attachment.setContentType("application/pdf");
+        attachment.setSizeBytes(2048L);
+        attachment.setKind(ChatAttachmentKind.PDF);
+        dto.setAttachment(attachment);
         dto.setLinks(LinksDto.ofSelf("/reservations/1/messages/9")
                 .withRelated("reservation", "/reservations/1")
                 .withRelated("sender", "/users/2")

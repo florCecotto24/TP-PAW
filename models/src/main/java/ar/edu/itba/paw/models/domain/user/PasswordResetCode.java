@@ -70,7 +70,7 @@ public class PasswordResetCode {
         if (!(o instanceof PasswordResetCode)) {
             return false;
         }
-        return EntityEquality.equalsByLongId(this, this.id, ((PasswordResetCode) o).id);
+        return EntityEquality.equalsByLongId(this, getId(), ((PasswordResetCode) o).getId());
     }
 
     @Override

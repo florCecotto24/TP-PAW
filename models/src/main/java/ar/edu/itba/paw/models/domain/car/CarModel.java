@@ -146,7 +146,7 @@ public class CarModel {
         if (!(o instanceof CarModel)) {
             return false;
         }
-        return EntityEquality.equalsByLongId(this, this.id, ((CarModel) o).id);
+        return EntityEquality.equalsByLongId(this, getId(), ((CarModel) o).getId());
     }
 
     @Override

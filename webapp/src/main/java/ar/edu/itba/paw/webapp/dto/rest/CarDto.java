@@ -86,11 +86,11 @@ public final class CarDto {
             final UriInfo uriInfo,
             final ConsumerCarCardMarketContext marketContext) {
         final CarDto dto = new CarDto();
-        dto.plate = "";
+        dto.plate = null;
         dto.year = null;
-        dto.powertrain = Car.Powertrain.GASOLINE.name().toLowerCase(Locale.ROOT);
-        dto.transmission = Car.Transmission.MANUAL.name().toLowerCase(Locale.ROOT);
-        dto.type = Car.Type.SEDAN.name().toLowerCase(Locale.ROOT);
+        dto.powertrain = null;
+        dto.transmission = null;
+        dto.type = null;
         dto.status = card.getStatus() == null
                 ? null
                 : card.getStatus().name().toLowerCase(Locale.ROOT);

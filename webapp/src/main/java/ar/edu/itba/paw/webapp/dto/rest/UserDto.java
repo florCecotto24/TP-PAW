@@ -8,7 +8,7 @@ import ar.edu.itba.paw.models.domain.user.User;
 
 /**
  * Public REST representation ({@code application/vnd.paw.user.v1+json}).
- * Fixed schema: never includes email, CBU, phone, role, or blocked.
+ * Fixed schema: never includes email, CBU, phone, role, blocked, or KYC document flags.
  */
 public final class UserDto {
 
@@ -16,10 +16,6 @@ public final class UserDto {
     private String surname;
     private String memberSince;
     private Boolean emailVerified;
-    private boolean licenseValidated;
-    private boolean identityValidated;
-    private boolean licenseUploaded;
-    private boolean identityUploaded;
     private BigDecimal ratingAsRider;
     private BigDecimal ratingAsOwner;
     private LinksDto links;
@@ -37,10 +33,6 @@ public final class UserDto {
         dto.surname = user.getSurname();
         dto.memberSince = user.getMemberSince().map(Object::toString).orElse(null);
         dto.emailVerified = user.getEmailValidated().orElse(Boolean.FALSE);
-        dto.licenseValidated = user.isLicenseValidated();
-        dto.identityValidated = user.isIdentityValidated();
-        dto.licenseUploaded = user.getLicenseFileId().isPresent();
-        dto.identityUploaded = user.getIdentityFileId().isPresent();
         dto.ratingAsOwner = ratingAsOwner;
         dto.ratingAsRider = ratingAsRider;
         dto.links = UserLinks.build(user, uriInfo);
@@ -77,38 +69,6 @@ public final class UserDto {
 
     public void setEmailVerified(final Boolean emailVerified) {
         this.emailVerified = emailVerified;
-    }
-
-    public boolean isLicenseValidated() {
-        return licenseValidated;
-    }
-
-    public void setLicenseValidated(final boolean licenseValidated) {
-        this.licenseValidated = licenseValidated;
-    }
-
-    public boolean isIdentityValidated() {
-        return identityValidated;
-    }
-
-    public void setIdentityValidated(final boolean identityValidated) {
-        this.identityValidated = identityValidated;
-    }
-
-    public boolean isLicenseUploaded() {
-        return licenseUploaded;
-    }
-
-    public void setLicenseUploaded(final boolean licenseUploaded) {
-        this.licenseUploaded = licenseUploaded;
-    }
-
-    public boolean isIdentityUploaded() {
-        return identityUploaded;
-    }
-
-    public void setIdentityUploaded(final boolean identityUploaded) {
-        this.identityUploaded = identityUploaded;
     }
 
     public BigDecimal getRatingAsRider() {

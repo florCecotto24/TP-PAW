@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 import ar.edu.itba.paw.dto.GalleryMediaUpload;
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.car.CarValidationException;
+import ar.edu.itba.paw.models.domain.car.CarPicture;
 import ar.edu.itba.paw.models.domain.file.Image;
 import ar.edu.itba.paw.models.domain.file.StoredFile;
 import ar.edu.itba.paw.models.util.media.CarGalleryMediaContentTypes;
@@ -33,6 +34,31 @@ public class CarGalleryUploadSupport {
     }
 
     @Transactional
+    public CarPicture attachSingleGalleryMedia(
+            final long ownerId,
+            final long carId,
+            final GalleryMediaUpload media,
+            final int displayOrder) {
+        if (media.getData() == null || media.getData().length == 0) {
+            throw new CarValidationException(MessageKeys.CAR_GALLERY_MEDIA_INVALID_TYPE);
+        }
+        if (CarGalleryMediaContentTypes.isImageContentType(media.getContentType())) {
+            final Image image = imageService.createImage(
+                    media.getFilename(), media.getContentType(), media.getData());
+            return carPictureService.createCarPicture(carId, image.getId(), displayOrder);
+        }
+        if (CarGalleryMediaContentTypes.isVideoContentType(media.getContentType(), media.getFilename())) {
+            final StoredFile video = storedFileService.create(
+                    ownerId,
+                    media.getFilename() != null ? media.getFilename() : "video",
+                    media.getContentType() != null ? media.getContentType() : "video/mp4",
+                    media.getData());
+            return carPictureService.createCarPictureFromVideo(carId, video.getId(), displayOrder);
+        }
+        throw new CarValidationException(MessageKeys.CAR_GALLERY_MEDIA_INVALID_TYPE);
+    }
+
+    @Transactional
     public void attachGalleryMedia(
             final long ownerId,
             final long carId,
@@ -46,21 +72,7 @@ public class CarGalleryUploadSupport {
             if (media.getData() == null || media.getData().length == 0) {
                 continue;
             }
-            if (CarGalleryMediaContentTypes.isImageContentType(media.getContentType())) {
-                final Image image = imageService.createImage(
-                        media.getFilename(), media.getContentType(), media.getData());
-                carPictureService.createCarPicture(carId, image.getId(), displayOrder++);
-            } else if (CarGalleryMediaContentTypes.isVideoContentType(
-                    media.getContentType(), media.getFilename())) {
-                final StoredFile video = storedFileService.create(
-                        ownerId,
-                        media.getFilename() != null ? media.getFilename() : "video",
-                        media.getContentType() != null ? media.getContentType() : "video/mp4",
-                        media.getData());
-                carPictureService.createCarPictureFromVideo(carId, video.getId(), displayOrder++);
-            } else {
-                throw new CarValidationException(MessageKeys.CAR_GALLERY_MEDIA_INVALID_TYPE);
-            }
+            attachSingleGalleryMedia(ownerId, carId, media, displayOrder++);
         }
     }
 

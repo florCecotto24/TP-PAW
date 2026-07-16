@@ -37,7 +37,7 @@ export default function AdminCarsPage() {
   );
 
   const listPath = useMemo(() => {
-    return collectionQueryPath('cars', { status: statusFilter || undefined });
+    return collectionQueryPath('cars', { status: statusFilter || 'all' });
   }, [statusFilter]);
 
   const list = usePagedList<CarDto>(listPath, MediaTypes.car, pageIndex + 1, [statusFilter]);

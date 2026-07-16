@@ -261,7 +261,8 @@ export async function updateAvailability(
   body: AvailabilityCreateDto,
 ): Promise<ApiResponse<AvailabilityDto>> {
   const self = availability.links.self;
-  if (self.includes('/range')) {
+  // Bookable segments use collection DELETE with from/until query params (no {availabilityId}).
+  if (self.includes('from=') && self.includes('until=')) {
     await deleteAvailability(availability);
     return createAvailability(car, body);
   }
@@ -321,6 +322,10 @@ export function uploadInsurance(car: CarDto, file: File): Promise<ApiResponse<un
 
 export async function openInsurance(car: CarDto): Promise<boolean> {
   return openAuthenticatedBinary(car.links.insurance);
+}
+
+export function deleteInsurance(car: CarDto): Promise<ApiResponse<unknown>> {
+  return sessionClient.del(car.links.insurance);
 }
 
 // ---- Neighborhoods (catálogo para el select de disponibilidad) ----

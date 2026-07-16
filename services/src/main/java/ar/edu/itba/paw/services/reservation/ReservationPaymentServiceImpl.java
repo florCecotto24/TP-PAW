@@ -23,6 +23,7 @@ import ar.edu.itba.paw.models.domain.file.StoredFile;
 import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.models.dto.file.BinaryContent;
 import ar.edu.itba.paw.models.email.reservation.ReservationMailPayload;
+import ar.edu.itba.paw.models.util.media.BinaryMagicBytes;
 import ar.edu.itba.paw.policy.PaymentReceiptUploadPolicy;
 import ar.edu.itba.paw.util.ReservationMailComposer;
 import ar.edu.itba.paw.util.ReservationServiceSupport;
@@ -173,6 +174,15 @@ public class ReservationPaymentServiceImpl implements ReservationPaymentService 
                 .map(sf -> new BinaryContent(sf.getData(), sf.getContentType(), sf.getFileName()));
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<BinaryContent> findPaymentReceiptContentForAdmin(final long reservationId) {
+        return queryService.getReservationById(reservationId)
+                .flatMap(Reservation::getPaymentReceiptFileId)
+                .flatMap(storedFileService::findById)
+                .map(sf -> new BinaryContent(sf.getData(), sf.getContentType(), sf.getFileName()));
+    }
+
     // ---------------------------------------------------------------------------------------
     // Refund receipt upload and owner auto-unblock
     // ---------------------------------------------------------------------------------------
@@ -240,6 +250,15 @@ public class ReservationPaymentServiceImpl implements ReservationPaymentService 
                 .map(sf -> new BinaryContent(sf.getData(), sf.getContentType(), sf.getFileName()));
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<BinaryContent> findRefundReceiptContentForAdmin(final long reservationId) {
+        return queryService.getReservationById(reservationId)
+                .flatMap(Reservation::getPaymentRefundReceiptFileId)
+                .flatMap(storedFileService::findById)
+                .map(sf -> new BinaryContent(sf.getData(), sf.getContentType(), sf.getFileName()));
+    }
+
     private Optional<Reservation> findReservationForParticipant(final long userId, final long reservationId) {
         final Optional<Reservation> asRider = queryService.getRiderReservationById(userId, reservationId);
         return asRider.isPresent() ? asRider : queryService.getOwnerReservationById(userId, reservationId);
@@ -259,6 +278,9 @@ public class ReservationPaymentServiceImpl implements ReservationPaymentService 
         }
         final int len = data == null ? 0 : data.length;
         if (len == 0) {
+            throw new RiderReservationException(invalidKey);
+        }
+        if (!BinaryMagicBytes.matchesDeclared(contentType, data)) {
             throw new RiderReservationException(invalidKey);
         }
         if (len > paymentReceiptUploadPolicy.getMaxBytes()) {

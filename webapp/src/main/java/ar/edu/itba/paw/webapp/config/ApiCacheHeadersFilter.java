@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.webapp.config;
 
+import java.util.Locale;
 import javax.ws.rs.container.ContainerRequestContext;
 import javax.ws.rs.container.ContainerResponseContext;
 import javax.ws.rs.container.ContainerResponseFilter;
@@ -15,13 +16,14 @@ import org.springframework.security.core.context.SecurityContextHolder;
 /**
  * Default cache policy for vendor-JSON GET responses under the REST API.
  *
- * <p>Anonymous reads use {@code Cache-Control: no-store} so intermediaries do not keep public
+ * Anonymous reads use {@code Cache-Control: no-store} so intermediaries do not keep public
  * representations that may change when the caller later authenticates. Authenticated reads use
- * {@code no-cache} (revalidate on each use). {@code Vary: Accept} is always set for negotiated
- * JSON because the same URI can yield summary vs full representations.</p>
+ * {@code private, no-cache} (browser may store; shared caches must not; revalidate on each use).
+ * {@code Vary: Accept} is always set for negotiated JSON because the same URI can yield summary
+ * vs full representations.
  *
- * <p>Skips responses that already carry {@code Cache-Control} or {@code ETag} — notably binary
- * media served via {@link ar.edu.itba.paw.webapp.support.CacheableBinaryResponses} (A4).</p>
+ * Skips responses that already carry {@code Cache-Control} or {@code ETag} — notably binary
+ * media served via {@link ar.edu.itba.paw.webapp.support.CacheableBinaryResponses}.
  */
 @Provider
 public final class ApiCacheHeadersFilter implements ContainerResponseFilter {
@@ -42,7 +44,7 @@ public final class ApiCacheHeadersFilter implements ContainerResponseFilter {
         }
         appendVaryAccept(responseContext);
         responseContext.getHeaders().putSingle(
-                HttpHeaders.CACHE_CONTROL, isAuthenticated() ? "no-cache" : "no-store");
+                HttpHeaders.CACHE_CONTROL, isAuthenticated() ? "private, no-cache" : "no-store");
     }
 
     private static boolean isJsonFamily(final MediaType mediaType) {
@@ -67,7 +69,7 @@ public final class ApiCacheHeadersFilter implements ContainerResponseFilter {
             return;
         }
         final String existingValue = existing.toString();
-        if (existingValue.toLowerCase().contains("accept")) {
+        if (existingValue.toLowerCase(Locale.ROOT).contains("accept")) {
             return;
         }
         responseContext.getHeaders().putSingle(HttpHeaders.VARY, existingValue + ", Accept");

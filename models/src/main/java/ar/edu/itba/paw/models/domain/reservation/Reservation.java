@@ -47,14 +47,19 @@ public class Reservation {
         CANCELLED_BY_RIDER,
         CANCELLED_BY_OWNER,
         CANCELLED_DUE_TO_MISSING_PAYMENT_PROOF,
-        FINISHED
+        FINISHED;
+
+        /** Canonical lowercase token persisted in {@code reservations.status} and used in status filters. */
+        public String dbValue() {
+            return name().toLowerCase(Locale.ROOT);
+        }
     }
 
     @Converter
     public static class StatusConverter implements AttributeConverter<Status, String> {
         @Override
         public String convertToDatabaseColumn(final Status attribute) {
-            return attribute == null ? null : attribute.name().toLowerCase(Locale.ROOT);
+            return attribute == null ? null : attribute.dbValue();
         }
         @Override
         public Status convertToEntityAttribute(final String dbData) {
@@ -145,6 +150,9 @@ public class Reservation {
     @Column(name = "pending_refund_email_sent", nullable = false)
     private boolean pendingRefundEmailSent;
 
+    @Column(name = "pickup_reminder_email_sent", nullable = false)
+    private boolean pickupReminderEmailSent;
+
     /* package */ Reservation() {
         // For Hibernate
     }
@@ -171,6 +179,7 @@ public class Reservation {
         this.riderReviewInviteEmailSent = b.riderReviewInviteEmailSent;
         this.pendingPaymentProofEmailSent = b.pendingPaymentProofEmailSent;
         this.pendingRefundEmailSent = b.pendingRefundEmailSent;
+        this.pickupReminderEmailSent = b.pickupReminderEmailSent;
     }
 
     public static Builder builder() {
@@ -199,6 +208,7 @@ public class Reservation {
         private boolean riderReviewInviteEmailSent;
         private boolean pendingPaymentProofEmailSent;
         private boolean pendingRefundEmailSent;
+        private boolean pickupReminderEmailSent;
 
         public Builder id(final long id) {
             this.id = id;
@@ -303,6 +313,11 @@ public class Reservation {
 
         public Builder pendingRefundEmailSent(final boolean pendingRefundEmailSent) {
             this.pendingRefundEmailSent = pendingRefundEmailSent;
+            return this;
+        }
+
+        public Builder pickupReminderEmailSent(final boolean pickupReminderEmailSent) {
+            this.pickupReminderEmailSent = pickupReminderEmailSent;
             return this;
         }
 
@@ -486,6 +501,10 @@ public class Reservation {
         this.pendingRefundEmailSent = pendingRefundEmailSent;
     }
 
+    public void setPickupReminderEmailSent(final boolean pickupReminderEmailSent) {
+        this.pickupReminderEmailSent = pickupReminderEmailSent;
+    }
+
     public boolean isReturnReminderEmailSent() {
         return returnReminderEmailSent;
     }
@@ -506,11 +525,15 @@ public class Reservation {
         return pendingRefundEmailSent;
     }
 
+    public boolean isPickupReminderEmailSent() {
+        return pickupReminderEmailSent;
+    }
+
     @Override
     public String toString() {
         return "Reservation{" +
                 "id=" + id +
-                ", riderId=" + rider.getId() +
+                ", riderId=" + (rider != null ? rider.getId() : "null") +
                 ", carId=" + (car != null ? car.getId() : "null") +
                 ", startDate=" + startDate +
                 ", endDate=" + endDate +
@@ -531,7 +554,7 @@ public class Reservation {
         if (!(o instanceof Reservation)) {
             return false;
         }
-        return EntityEquality.equalsByLongId(this, this.id, ((Reservation) o).id);
+        return EntityEquality.equalsByLongId(this, getId(), ((Reservation) o).getId());
     }
 
     @Override

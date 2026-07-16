@@ -4,7 +4,8 @@ import java.util.Locale;
 import java.util.Objects;
 
 /**
- * Invitation to a newly created administrator account with a one-time temporary password.
+ * Invitation to a newly created administrator account. The invitee sets their password via the
+ * separate password-reset OTP email — this payload never carries a plaintext password.
  * Use {@link #builder()} to construct instances.
  */
 public final class AdminInvitationEmailPayload {
@@ -12,13 +13,11 @@ public final class AdminInvitationEmailPayload {
     private final Locale messageLocale;
     private final String recipientEmail;
     private final String recipientFullName;
-    private final String plainPassword;
 
     private AdminInvitationEmailPayload(final Builder builder) {
         this.messageLocale = Objects.requireNonNull(builder.messageLocale, "messageLocale");
         this.recipientEmail = Objects.requireNonNull(builder.recipientEmail, "recipientEmail");
         this.recipientFullName = Objects.requireNonNull(builder.recipientFullName, "recipientFullName");
-        this.plainPassword = Objects.requireNonNull(builder.plainPassword, "plainPassword");
     }
 
     public static Builder builder() {
@@ -37,15 +36,10 @@ public final class AdminInvitationEmailPayload {
         return recipientFullName;
     }
 
-    public String getPlainPassword() {
-        return plainPassword;
-    }
-
     public static final class Builder {
         private Locale messageLocale;
         private String recipientEmail;
         private String recipientFullName;
-        private String plainPassword;
 
         private Builder() {
         }
@@ -62,11 +56,6 @@ public final class AdminInvitationEmailPayload {
 
         public Builder recipientFullName(final String value) {
             this.recipientFullName = value;
-            return this;
-        }
-
-        public Builder plainPassword(final String value) {
-            this.plainPassword = value;
             return this;
         }
 

@@ -34,9 +34,7 @@ class ModelsToStringTest {
         // Act
         final String result = car.toString();
         // Assert
-        final String expected = "Car{id=1, ownerId=2, plate='AA123BB', brand='null', model='null', type=null, "
-                + "year=2020, "
-                + "powertrain=HYBRID, transmission=AUTOMATIC, status=ACTIVE, "
+        final String expected = "Car{id=1, ownerId=2, plate='AA123BB', status=ACTIVE, "
                 + "createdAt=2026-04-05T10:00Z, updatedAt=2026-04-05T11:00Z, ratingAvg=null}";
         Assertions.assertEquals(expected, result);
     }
@@ -118,13 +116,13 @@ class ModelsToStringTest {
     }
 
     @Test
-    void testImageToStringIncludesAllFieldsIncludingData() {
+    void testImageToStringIncludesDataLengthNotBytes() {
         // Arrange
         final Image image = Image.identified(1L, "cover.jpg", "image/jpeg", new byte[] {1, 2, -1});
         // Act
         final String result = image.toString();
         // Assert
-        final String expected = "Image{id=1, name='cover.jpg', contentType='image/jpeg', data=[1, 2, -1]}";
+        final String expected = "Image{id=1, name='cover.jpg', contentType='image/jpeg', dataLength=3}";
         Assertions.assertEquals(expected, result);
     }
 }

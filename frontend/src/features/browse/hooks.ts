@@ -246,9 +246,10 @@ async function loadFavoritedCarIds(favoritesLink: string): Promise<Set<string>> 
 /** IDs de autos favoritos del usuario logueado (para grids de browse). */
 export function useFavoritedCarIds() {
   const favoritesLink = useSessionStore((s) => s.currentUser?.links?.favorites);
+  const userSelf = useSessionStore((s) => s.currentUser?.links?.self);
   return useQuery({
-    queryKey: ['browse', 'favorites', 'ids'],
-    enabled: !!favoritesLink,
+    queryKey: ['browse', 'favorites', 'ids', userSelf],
+    enabled: !!favoritesLink && !!userSelf,
     queryFn: async () => {
       try {
         return await loadFavoritedCarIds(favoritesLink as string);
@@ -271,9 +272,10 @@ export function useFavoritedCarIds() {
  */
 export function useIsFavorite(carSelf: string | undefined) {
   const favoritesLink = useSessionStore((s) => s.currentUser?.links?.favorites);
+  const userSelf = useSessionStore((s) => s.currentUser?.links?.self);
   return useQuery({
-    queryKey: ['browse', 'favorites', carSelf],
-    enabled: !!carSelf && !!favoritesLink,
+    queryKey: ['browse', 'favorites', userSelf, carSelf],
+    enabled: !!carSelf && !!favoritesLink && !!userSelf,
     queryFn: async () => {
       const carId = lastPathSegment(carSelf as string);
       if (!carId) return false;
@@ -325,6 +327,7 @@ export function useToggleFavorite() {
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['browse', 'favorites'] });
+      void qc.invalidateQueries({ queryKey: ['profile', 'favorites'] });
     },
   });
 }

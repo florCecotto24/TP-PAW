@@ -53,6 +53,9 @@ public class AdminServiceImplTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
+    @Mock
+    private PasswordResetService passwordResetService;
+
     private AdminServiceImpl adminService;
 
     @BeforeEach
@@ -66,7 +69,8 @@ public class AdminServiceImplTest {
                 reservationWorkflowService,
                 reservationMessageService,
                 emailService,
-                passwordEncoder);
+                passwordEncoder,
+                passwordResetService);
     }
 
     @Test
@@ -82,7 +86,7 @@ public class AdminServiceImplTest {
                 .emailValidated(true)
                 .build();
         Mockito.when(userService.findRolesForUser(10L)).thenReturn(List.of(UserRole.ADMIN));
-        Mockito.when(passwordEncoder.encode("TempPass1!")).thenReturn("HASH");
+        Mockito.when(passwordEncoder.encode(Mockito.anyString())).thenReturn("HASH");
         Mockito.when(userService.createAdminUserWithEncodedPassword(
                         Mockito.eq("newadmin@test.com"),
                         Mockito.eq("New"),
@@ -93,7 +97,7 @@ public class AdminServiceImplTest {
 
         // 2. Act
         final User result = adminService.createAdminUser(
-                "newadmin@test.com", "New", "Admin", "TempPass1!", 10L, Locale.ENGLISH);
+                "newadmin@test.com", "New", "Admin", 10L, Locale.ENGLISH);
 
         // 3. Assert: returns the user produced by the service and does not throw
         Assertions.assertNotNull(result);
@@ -105,7 +109,7 @@ public class AdminServiceImplTest {
     public void testCreateAdminUserPropagatesValidationException() {
         // 1. Arrange
         Mockito.when(userService.findRolesForUser(10L)).thenReturn(List.of(UserRole.ADMIN));
-        Mockito.when(passwordEncoder.encode("TempPass1!")).thenReturn("HASH");
+        Mockito.when(passwordEncoder.encode(Mockito.anyString())).thenReturn("HASH");
         Mockito.when(userService.createAdminUserWithEncodedPassword(
                         Mockito.eq("x@test.com"),
                         Mockito.eq("X"),
@@ -117,7 +121,7 @@ public class AdminServiceImplTest {
         // 2. Act and 3. Assert
         Assertions.assertThrows(AdminPromoterNotAdminException.class,
                 () -> adminService.createAdminUser(
-                        "x@test.com", "X", "Y", "TempPass1!", 10L, Locale.ENGLISH));
+                        "x@test.com", "X", "Y", 10L, Locale.ENGLISH));
     }
 
     @Test

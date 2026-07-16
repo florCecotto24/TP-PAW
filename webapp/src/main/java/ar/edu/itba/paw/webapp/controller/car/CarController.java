@@ -63,7 +63,6 @@ import ar.edu.itba.paw.webapp.dto.rest.CarSummaryDto;
 import ar.edu.itba.paw.webapp.dto.rest.LinksDto;
 import ar.edu.itba.paw.webapp.form.car.CarCreateForm;
 import ar.edu.itba.paw.webapp.form.car.CarPatchForm;
-import ar.edu.itba.paw.webapp.form.car.CarReplaceForm;
 import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
 import ar.edu.itba.paw.webapp.support.BinaryPayloadSupport;
 import ar.edu.itba.paw.webapp.support.CarCreateRequestSupport;
@@ -165,47 +164,93 @@ public class CarController {
             @QueryParam("status") @ValidCarStatusList final List<String> status,
             @QueryParam("sort") final String sort) {
         final PaginationParams paging = paginationSupport.forBrowseCars(page, pageSizeParam);
+
+        if (ownerId == null && isStatusAll(status)) {
+            return listAdminCatalog(paging);
+        }
+
+        if (ownerId != null) {
+            return listOwnerCars(paging, ownerId, query, category, transmission, powertrain,
+                    priceMin, priceMax, rating, status, sort);
+        }
+
+        return listPublicBrowse(paging, query, category, transmission, powertrain, priceMin,
+                priceMax, priceMarket, rating, neighborhoodId, from, until, flexible, flexMonth,
+                flexDays, status, sort);
+    }
+
+    /** Admin moderation catalog ({@code status=all}, no {@code ownerId}): whole fleet, full-car DTOs. */
+    private Response listAdminCatalog(final PaginationParams paging) {
+        carResourceAccess.requireAdmin();
+        final Page<Car> adminPage = adminService.listCars(paging.getZeroBasedPage(), paging.getPageSize());
+        return pagedCarsFromEntities(adminPage, paging);
+    }
+
+    /** Owner-scoped listing: self/admin may filter by status; anyone else sees active-only. */
+    private Response listOwnerCars(
+            final PaginationParams paging,
+            final long ownerId,
+            final String query,
+            final List<String> category,
+            final List<String> transmission,
+            final List<String> powertrain,
+            final BigDecimal priceMin,
+            final BigDecimal priceMax,
+            final List<String> rating,
+            final List<String> status,
+            final String sort) {
         final RydenUserDetails viewer = currentUserResolver.currentPrincipalOrNull();
+        final boolean selfOrAdmin = viewer != null
+                && (viewer.getUserId() == ownerId || carResourceAccess.isAdmin());
+        if (status != null && !status.isEmpty() && !selfOrAdmin) {
+            throw new javax.ws.rs.ForbiddenException();
+        }
         final List<Car.Type> categories = toCarTypes(category);
         final List<Car.Transmission> transmissions = toTransmissions(transmission);
         final List<Car.Powertrain> powertrains = toPowertrains(powertrain);
         final List<String> ratingBands = rating == null ? List.of() : rating;
+        final List<Car.Status> statuses =
+                carService.resolveOwnerListingStatuses(toCarStatuses(status), selfOrAdmin);
+        final String internalSort = RestCarSortMapper.toInternalSort(sort);
+        final var criteria = carService.buildOwnerCarSearchCriteria(
+                ownerId,
+                categories.isEmpty() ? null : categories,
+                transmissions.isEmpty() ? null : transmissions,
+                powertrains.isEmpty() ? null : powertrains,
+                priceMin,
+                priceMax,
+                statuses,
+                ratingBands.isEmpty() ? null : ratingBands,
+                query,
+                paging.getZeroBasedPage(),
+                paging.getPageSize(),
+                internalSort);
+        final Page<CarCard> ownerPage = carService.getOwnerCarCards(criteria);
+        // Public profile / counterparty grids use ownerId without self-or-admin access and
+        // should show competitive-price badges like browse/favorites. Owner "Mis autos"
+        // (self) and admin fleet views keep plain summaries without market enrichment.
+        return pagedCarSummariesFromCards(ownerPage, paging, !selfOrAdmin);
+    }
 
-        if (ownerId == null && carRepresentationSupport.acceptsFullCar(httpHeaders)) {
-            carResourceAccess.requireAdmin();
-            final Page<Car> adminPage = adminService.listCars(paging.getZeroBasedPage(), paging.getPageSize());
-            return pagedCarsFromEntities(adminPage, paging);
-        }
-
-        if (ownerId != null) {
-            final boolean selfOrAdmin = viewer != null
-                    && (viewer.getUserId() == ownerId || carResourceAccess.isAdmin());
-            if (status != null && !status.isEmpty() && !selfOrAdmin) {
-                throw new javax.ws.rs.ForbiddenException();
-            }
-            final List<Car.Status> statuses =
-                    carService.resolveOwnerListingStatuses(toCarStatuses(status), selfOrAdmin);
-            final String internalSort = RestCarSortMapper.toInternalSort(sort);
-            final var criteria = carService.buildOwnerCarSearchCriteria(
-                    ownerId,
-                    categories.isEmpty() ? null : categories,
-                    transmissions.isEmpty() ? null : transmissions,
-                    powertrains.isEmpty() ? null : powertrains,
-                    priceMin,
-                    priceMax,
-                    statuses,
-                    ratingBands.isEmpty() ? null : ratingBands,
-                    query,
-                    paging.getZeroBasedPage(),
-                    paging.getPageSize(),
-                    internalSort);
-            final Page<CarCard> ownerPage = carService.getOwnerCarCards(criteria);
-            // Public profile / counterparty grids use ownerId without self-or-admin access and
-            // should show competitive-price badges like browse/favorites. Owner "Mis autos"
-            // (self) and admin fleet views keep plain summaries without market enrichment.
-            return pagedCarSummariesFromCards(ownerPage, paging, !selfOrAdmin);
-        }
-
+    /** Public browse (active-only): shortcut queries for the home carousels, else full search. */
+    private Response listPublicBrowse(
+            final PaginationParams paging,
+            final String query,
+            final List<String> category,
+            final List<String> transmission,
+            final List<String> powertrain,
+            final BigDecimal priceMin,
+            final BigDecimal priceMax,
+            final String priceMarket,
+            final List<String> rating,
+            final Long neighborhoodId,
+            final String from,
+            final String until,
+            final boolean flexible,
+            final String flexMonth,
+            final Integer flexDays,
+            final List<String> status,
+            final String sort) {
         final PriceMarketPosition priceMarketPosition = parsePriceMarketPosition(priceMarket);
 
         if (RestCarSortMapper.isBrowseShortcut(sort) && isPublicBrowseShortcut(query, category, transmission,
@@ -217,6 +262,10 @@ public class CarController {
             return pagedCarSummariesFromCards(shortcutPage, paging, true);
         }
 
+        final List<Car.Type> categories = toCarTypes(category);
+        final List<Car.Transmission> transmissions = toTransmissions(transmission);
+        final List<Car.Powertrain> powertrains = toPowertrains(powertrain);
+        final List<String> ratingBands = rating == null ? List.of() : rating;
         final CarSearchRequest searchRequest = CarSearchRequest.builder()
                 .query(query)
                 .categories(categories.isEmpty() ? null : categories)
@@ -363,24 +412,6 @@ public class CarController {
                 .build();
     }
 
-    @PUT
-    @Path("/{id}")
-    @Consumes(VndMediaType.CAR_V1_JSON)
-    @Produces(VndMediaType.CAR_V1_JSON)
-    @PreAuthorize("@carResourceAccess.isOwnerById(#id, @currentUserResolver.currentPrincipalOrNull())")
-    public Response replaceCar(@P("id") @PathParam("id") final long id, @Valid final CarReplaceForm form) {
-        final Car car = carService.getCarById(id)
-                .orElseThrow(() -> new CarNotFoundException(id));
-        carService.updateDescription(car.getOwnerId(), id, form.getDescription());
-        carService.updateMinimumRentalDays(id, form.getMinimumRentalDays());
-        final Car updated = carService.getCarById(id)
-                .orElseThrow(() -> new CarNotFoundException(id));
-        // Owner/admin edit path: the caller is authorized on the car, so the plate is visible to them.
-        return Response.ok(CarDto.from(updated, uriInfo, true)).build();
-    }
-
-    // Not a @PreAuthorize candidate: "status" transitions apply owner- or admin-only rules
-    // depending on the *target* status; authorization is enforced in CarService#applyStatusTransition.
     @PATCH
     @Path("/{id}")
     @Consumes(VndMediaType.CAR_V1_JSON)
@@ -390,19 +421,20 @@ public class CarController {
                 .orElseThrow(() -> new CarNotFoundException(id));
         final RydenUserDetails viewer = currentUserResolver.currentPrincipalOrNull();
 
+        // Authorize description/min-days before status so a mixed body cannot partially commit.
+        if (patch.getDescription() != null || patch.getMinimumRentalDays() != null) {
+            carResourceAccess.requireOwnerOrAdmin(car, viewer);
+        }
         if (patch.getStatus() != null) {
             final Car.Status target = CarRestEnums.parseStatus(patch.getStatus());
             carService.applyStatusTransition(
                     car.getId(), target, viewer.getUserId(), LocaleContextHolder.getLocale());
         }
-        if (patch.getDescription() != null || patch.getMinimumRentalDays() != null) {
-            carResourceAccess.requireOwnerOrAdmin(car, viewer);
-            if (patch.getDescription() != null) {
-                carService.updateDescription(car.getOwnerId(), id, patch.getDescription());
-            }
-            if (patch.getMinimumRentalDays() != null) {
-                carService.updateMinimumRentalDays(id, patch.getMinimumRentalDays());
-            }
+        if (patch.getDescription() != null) {
+            carService.updateDescription(car.getOwnerId(), id, patch.getDescription());
+        }
+        if (patch.getMinimumRentalDays() != null) {
+            carService.updateMinimumRentalDays(id, patch.getMinimumRentalDays());
         }
 
         final Car updated = carService.getCarById(id)
@@ -526,7 +558,16 @@ public class CarController {
     }
 
     private static List<Car.Status> toCarStatuses(final List<String> raw) {
+        if (raw == null || raw.isEmpty() || isStatusAll(raw)) {
+            return List.of();
+        }
         return toDistinctCarEnums(raw, CarRestEnums::parseStatus);
+    }
+
+    private static boolean isStatusAll(final List<String> status) {
+        return status != null
+                && status.size() == 1
+                && "all".equalsIgnoreCase(status.get(0));
     }
 
     private static <E> List<E> toDistinctCarEnums(final List<String> raw, final Function<String, E> parser) {

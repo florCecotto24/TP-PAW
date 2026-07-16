@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import ar.edu.itba.paw.exception.car.CarModelConflictException;
 import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.models.domain.car.CarModel;
 import ar.edu.itba.paw.persistence.car.CarModelDao;
@@ -65,6 +66,23 @@ public class CarModelServiceImpl implements CarModelService {
         // Creating a brand-new car_models row requires the body type; without it the model is unresolvable.
         if (type == null) {
             return Optional.empty();
+        }
+        return Optional.of(carModelDao.create(brandId, normalized, false, type));
+    }
+
+    @Override
+    @Transactional
+    public Optional<CarModel> createUnvalidated(final long brandId, final String rawName, final Car.Type type) {
+        if (rawName == null) {
+            return Optional.empty();
+        }
+        final String normalized = rawName.trim();
+        if (normalized.isEmpty() || type == null) {
+            return Optional.empty();
+        }
+        final Optional<CarModel> existing = carModelDao.findByBrandIdAndNameIgnoreCase(brandId, normalized);
+        if (existing.isPresent()) {
+            throw new CarModelConflictException(existing.get().getId());
         }
         return Optional.of(carModelDao.create(brandId, normalized, false, type));
     }

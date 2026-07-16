@@ -117,17 +117,16 @@ public class UserAccountEmailServiceImpl implements UserAccountEmailService {
     @Async("mailTaskExecutor")
     public void sendAdminInvitation(final AdminInvitationEmailPayload payload) {
         final String to = payload.getRecipientEmail();
-        final String plainPassword = payload.getPlainPassword();
-        if (to == null || to.isBlank() || plainPassword == null || plainPassword.isBlank()) {
-            LOGGER.atError().log("sendAdminInvitation: missing to or password");
+        if (to == null || to.isBlank()) {
+            LOGGER.atError().log("sendAdminInvitation: missing recipient");
             return;
         }
         final Locale mailLocale = payload.getMessageLocale();
         final Context ctx = new Context(mailLocale);
         mailDispatch.setHtmlLangFromLocale(ctx, mailLocale);
         ctx.setVariable("recipientFullName", payload.getRecipientFullName());
-        ctx.setVariable("plainPassword", plainPassword);
         ctx.setVariable("loginUrl", mailPublicUrls.absolutePath("/login"));
+        ctx.setVariable("forgotPasswordUrl", mailPublicUrls.absolutePath("/forgot-password"));
         try {
             mailDispatch.runMail(() -> {
                 final String htmlContent = htmlTemplateEngine.process(ADMIN_INVITATION_TEMPLATE, ctx);

@@ -203,6 +203,7 @@ public class ReservationJpaDao implements ReservationDao {
                 .riderReviewInviteEmailSent(false)
                 .pendingPaymentProofEmailSent(false)
                 .pendingRefundEmailSent(false)
+                .pickupReminderEmailSent(false)
                 .build();
         em.persist(reservation);
         return reservation;
@@ -337,7 +338,8 @@ public class ReservationJpaDao implements ReservationDao {
                                 + "JOIN FETCH c.owner owner "
                                 + "LEFT JOIN FETCH c.carModel cm "
                                 + "LEFT JOIN FETCH cm.brand "
-                                + "WHERE r.status = :status AND r.startDate >= :from AND r.startDate < :to",
+                                + "WHERE r.status = :status AND r.startDate >= :from AND r.startDate < :to "
+                                + "AND r.pickupReminderEmailSent = FALSE",
                         Reservation.class)
                 .setParameter("status", Reservation.Status.ACCEPTED)
                 .setParameter("from", from)
@@ -403,7 +405,7 @@ public class ReservationJpaDao implements ReservationDao {
     @Override
     @Transactional
     public int updateReservationStatus(final long reservationId, final String status) {
-        final Reservation r = em.find(Reservation.class, reservationId);
+        final Reservation r = em.find(Reservation.class, reservationId, LockModeType.PESSIMISTIC_WRITE);
         if (r == null) {
             return 0;
         }
@@ -473,7 +475,7 @@ public class ReservationJpaDao implements ReservationDao {
             idSql.append("AND LOWER(r.status) = :statusFilter ");
             listParams.put("statusFilter", statusFilter);
         }
-        idSql.append("ORDER BY r.created_at DESC LIMIT :limit OFFSET :offset");
+        idSql.append("ORDER BY r.created_at DESC, r.id DESC LIMIT :limit OFFSET :offset");
         final List<ReservationCard> content = loadReservationCardsByIdNativeQuery(idSql.toString(), listParams);
         return new Page<>(content, page, pageSize, total != null ? total.longValue() : 0L);
     }
@@ -595,13 +597,26 @@ public class ReservationJpaDao implements ReservationDao {
     @Override
     @Transactional
     public int markCarReturned(final long reservationId, final long ownerUserId) {
-        final Reservation r = em.find(Reservation.class, reservationId);
+        final Reservation r = em.find(Reservation.class, reservationId, LockModeType.PESSIMISTIC_WRITE);
         if (r == null || r.getCar().getOwner().getId() != ownerUserId) {
             return 0;
         }
+        if (r.isCarReturned()) {
+            return 1;
+        }
+        final Reservation.Status status = r.getStatus();
+        if (status != Reservation.Status.ACCEPTED
+                && status != Reservation.Status.STARTED
+                && status != Reservation.Status.FINISHED) {
+            return 0;
+        }
+        final OffsetDateTime now = OffsetDateTime.now();
+        if (!now.isAfter(r.getEndDate())) {
+            return 0;
+        }
         r.setCarReturned(true);
-        r.setCarReturnedAt(OffsetDateTime.now());
-        r.setUpdatedAt(OffsetDateTime.now());
+        r.setCarReturnedAt(now);
+        r.setUpdatedAt(now);
         return 1;
     }
 
@@ -705,6 +720,18 @@ public class ReservationJpaDao implements ReservationDao {
             return 0;
         }
         r.setReturnReminderEmailSent(true);
+        r.setUpdatedAt(OffsetDateTime.now());
+        return 1;
+    }
+
+    @Override
+    @Transactional
+    public int claimPickupReminderEmailSent(final long reservationId) {
+        final Reservation r = em.find(Reservation.class, reservationId, LockModeType.PESSIMISTIC_WRITE);
+        if (r == null || r.isPickupReminderEmailSent()) {
+            return 0;
+        }
+        r.setPickupReminderEmailSent(true);
         r.setUpdatedAt(OffsetDateTime.now());
         return 1;
     }
@@ -816,7 +843,7 @@ public class ReservationJpaDao implements ReservationDao {
                     return applyConfirmedAdminPauseCancellation(
                             r, paymentRefundRequired, refundProofDeadlineAtOrNull);
                 }
-                r.setStatus(Reservation.Status.CANCELLED_DUE_TO_MISSING_PAYMENT_PROOF);
+                r.setStatus(Reservation.Status.CANCELLED_BY_OWNER);
                 r.setPaymentRefundRequired(false);
                 r.setRefundProofDeadlineAt(null);
                 r.setPaymentRefundReceiptFile(null);
@@ -853,7 +880,7 @@ public class ReservationJpaDao implements ReservationDao {
     @Override
     @Transactional
     public int attachRefundReceipt(final long reservationId, final long ownerUserId, final long storedFileId) {
-        final Reservation r = em.find(Reservation.class, reservationId);
+        final Reservation r = em.find(Reservation.class, reservationId, LockModeType.PESSIMISTIC_WRITE);
         if (r == null
                 || r.getCar().getOwner().getId() != ownerUserId
                 || !r.isPaymentRefundRequired()
@@ -1010,7 +1037,7 @@ public class ReservationJpaDao implements ReservationDao {
     @Override
     public Page<ReservationCard> findAllReservationCards(final int page, final int pageSize) {
         final Number total = (Number) em.createQuery("SELECT COUNT(r) FROM Reservation r").getSingleResult();
-        final String idSql = "SELECT r.id FROM reservations r ORDER BY r.created_at DESC LIMIT :limit OFFSET :offset";
+        final String idSql = "SELECT r.id FROM reservations r ORDER BY r.created_at DESC, r.id DESC LIMIT :limit OFFSET :offset";
         final Map<String, Object> params = new LinkedHashMap<>();
         params.put("limit", pageSize);
         params.put("offset", page * pageSize);
@@ -1087,11 +1114,11 @@ public class ReservationJpaDao implements ReservationDao {
     private static String buildReservationOrderBy(final String sortBy, final String sortDirection) {
         final String dir = "asc".equalsIgnoreCase(sortDirection) ? "ASC" : "DESC";
         if ("price".equals(sortBy)) {
-            return "r.total_price " + dir + ", r.created_at DESC";
+            return "r.total_price " + dir + ", r.id DESC";
         } else if ("rating".equals(sortBy)) {
-            return "c.rating_avg " + dir + " NULLS LAST, r.created_at DESC";
+            return "c.rating_avg " + dir + " NULLS LAST, r.id DESC";
         } else {
-            return "r.created_at " + dir;
+            return "r.created_at " + dir + ", r.id DESC";
         }
     }
 

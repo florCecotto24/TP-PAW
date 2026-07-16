@@ -89,10 +89,9 @@ export interface CreateAdminUserPayload {
   forename: string;
   surname: string;
   email: string;
-  password: string;
 }
 
-/** POST /users con Content-Type admincreateuser: crea un admin pre-verificado con contraseña temporal. */
+/** POST /users con Content-Type admincreateuser: crea un admin pre-verificado; set-password vía OTP. */
 export async function createAdminUser(
   payload: CreateAdminUserPayload,
 ): Promise<ApiResponse<UserDto>> {

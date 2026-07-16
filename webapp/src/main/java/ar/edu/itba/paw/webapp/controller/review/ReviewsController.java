@@ -2,6 +2,7 @@ package ar.edu.itba.paw.webapp.controller.review;
 
 import java.io.IOException;
 
+import javax.ws.rs.BadRequestException;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
@@ -87,17 +88,19 @@ public final class ReviewsController {
     }
 
     /**
-     * Creates a review for a finished reservation. Same collection URI as {@link #listReviews};
-     * {@code reservationId} is required (query) so the resource identity stays unique.
+     * Creates a review for a finished reservation. The reservation is identified by URN in the
+     * multipart body ({@code reservationUri}), not by query string.
      */
     @POST
     @Consumes(MediaType.MULTIPART_FORM_DATA)
     @Produces(VndMediaType.REVIEW_V1_JSON)
     public Response submitReview(
-            @QueryParam("reservationId") final Long reservationId,
+            @FormDataParam("reservationUri") final String reservationUri,
             @FormDataParam("rating") final Integer rating,
             @FormDataParam("comment") final String comment,
             @FormDataParam("image") final FormDataBodyPart imagePart) throws IOException {
+        final long reservationId = RestUriUtils.parseReservationId(reservationUri)
+                .orElseThrow(() -> new BadRequestException("reservationUri required"));
         final ReviewSubmitQueryForm query = ReviewSubmitQueryForm.of(reservationId);
         formValidationSupport.validate(query);
         final var form = reviewSubmitSupport.buildValidatedSubmitForm(rating, comment, imagePart);

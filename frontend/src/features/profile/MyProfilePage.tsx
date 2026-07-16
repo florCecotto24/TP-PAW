@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Form } from 'react-bootstrap';
+import { Button, Form, Modal } from 'react-bootstrap';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Avatar, BreadcrumbTrail, LoadingBlock, FieldView, ReceiptUploadPicker } from '../../components/ryden';
 import { profilePictureAssetUrl } from '../../api/uri';
@@ -164,7 +164,7 @@ function ProfilePictureCard({ user, onChanged }: { user: UserDto; onChanged: () 
             alt={`${user.forename} ${user.surname}`}
             forename={user.forename}
             surname={user.surname}
-            className="profile-card__avatar"
+            className="profile-card__avatar-placeholder"
             imgClassName="profile-card__avatar-img"
             placeholderClassName="profile-card__avatar-placeholder"
             colored
@@ -476,6 +476,7 @@ function DocumentRow({
   const uploaded = type === 'license' ? user.licenseUploaded : user.identityUploaded;
   const [viewError, setViewError] = useState(false);
   const [banner, setBanner] = useState<'uploaded' | 'removed' | null>(null);
+  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
 
   const upload = useMutation({
     mutationFn: (file: File) => uploadDocument(user, type, file),
@@ -509,12 +510,13 @@ function DocumentRow({
   };
 
   const onConfirmUpload = async (file: File) => {
-    try {
-      await upload.mutateAsync(file);
-    } catch (err) {
-      throw err;
-    }
+    await upload.mutateAsync(file);
   };
+
+  function confirmRemoveDocument() {
+    setShowRemoveConfirm(false);
+    remove.mutate();
+  }
 
   return (
     <div className="mb-3">
@@ -557,7 +559,7 @@ function DocumentRow({
             variant="outline-danger"
             size="sm"
             className="d-block mb-3"
-            onClick={() => remove.mutate()}
+            onClick={() => setShowRemoveConfirm(true)}
             disabled={remove.isPending}
           >
             {t('profile.docs.remove')}
@@ -600,6 +602,31 @@ function DocumentRow({
           {t('profile.common.error')}
         </div>
       )}
+
+      <Modal show={showRemoveConfirm} onHide={() => setShowRemoveConfirm(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title className="fs-5 fw-semibold">{t('profile.docs.remove')}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <p className="mb-0 text-secondary">{t('profile.docs.removeConfirm', { label })}</p>
+        </Modal.Body>
+        <Modal.Footer className="border-0 pt-0">
+          <Button
+            variant="outline-secondary"
+            onClick={() => setShowRemoveConfirm(false)}
+            disabled={remove.isPending}
+          >
+            {t('profile.common.cancel')}
+          </Button>
+          <Button
+            variant="danger"
+            onClick={confirmRemoveDocument}
+            disabled={remove.isPending}
+          >
+            {t('profile.docs.remove')}
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </div>
   );
 }

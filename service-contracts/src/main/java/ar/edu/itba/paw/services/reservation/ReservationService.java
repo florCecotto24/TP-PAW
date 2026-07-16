@@ -181,6 +181,9 @@ public interface ReservationService {
     /** {@link BinaryContent} variant of {@link #findPaymentReceiptForParticipant} for download endpoints (issue #16). */
     Optional<BinaryContent> findPaymentReceiptContentForParticipant(long userId, long reservationId);
 
+    /** Admin download of the payment receipt without participant scoping. */
+    Optional<BinaryContent> findPaymentReceiptContentForAdmin(long reservationId);
+
     /** Owner uploads refund transfer proof for a cancelled confirmed reservation that requires refund documentation. */
     void attachRefundReceiptByOwner(long ownerUserId, long reservationId, String originalFilename, String contentType, byte[] data);
 
@@ -189,6 +192,9 @@ public interface ReservationService {
 
     /** {@link BinaryContent} variant of {@link #findRefundReceiptForParticipant} for download endpoints (issue #16). */
     Optional<BinaryContent> findRefundReceiptContentForParticipant(long userId, long reservationId);
+
+    /** Admin download of the refund receipt without participant scoping. */
+    Optional<BinaryContent> findRefundReceiptContentForAdmin(long reservationId);
 
     /** Minimum hours between "now" and the pickup ({@code app.reservation.pickup-lead-hours}). */
     int getConfiguredPickupLeadHours();
@@ -453,6 +459,9 @@ public interface ReservationService {
 
     /** Sets {@code return_reminder_email_sent} idempotently. Returns rows updated (0 or 1). */
     int claimReturnReminderEmailSent(long reservationId);
+
+    /** Sets {@code pickup_reminder_email_sent} idempotently. Returns rows updated (0 or 1). */
+    int claimPickupReminderEmailSent(long reservationId);
 
     /** Sets {@code return_checkout_email_sent} idempotently. Returns rows updated (0 or 1). */
     int claimReturnCheckoutEmailSent(long reservationId);

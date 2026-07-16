@@ -2,6 +2,7 @@ package ar.edu.itba.paw.webapp.controller.reservation;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Optional;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
@@ -18,18 +19,16 @@ import org.springframework.security.access.method.P;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Component;
 
-import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.models.dto.file.BinaryContent;
 import ar.edu.itba.paw.services.reservation.ReservationService;
 import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
 import ar.edu.itba.paw.webapp.support.BinaryPayloadSupport;
+import ar.edu.itba.paw.webapp.support.CacheableBinaryResponses;
 import ar.edu.itba.paw.webapp.support.CurrentUserResolver;
+import ar.edu.itba.paw.webapp.support.ReservationResourceAccess;
 
 /**
  * Owner refund proof ({@code /reservations/{id}/refund-receipt}).
- *
- * The participant/owner gates are declarative ({@code @PreAuthorize}, backed by the
- * {@code reservationResourceAccess} bean referenced by name), so it isn't injected as a field.
  */
 @Path("/reservations/{id}/refund-receipt")
 @Component
@@ -38,6 +37,7 @@ public class ReservationRefundReceiptController {
     private final ReservationService reservationService;
     private final CurrentUserResolver currentUserResolver;
     private final BinaryPayloadSupport binaryPayloadSupport;
+    private final ReservationResourceAccess reservationResourceAccess;
 
     @Context
     private HttpHeaders httpHeaders;
@@ -46,19 +46,27 @@ public class ReservationRefundReceiptController {
     public ReservationRefundReceiptController(
             final ReservationService reservationService,
             final CurrentUserResolver currentUserResolver,
-            final BinaryPayloadSupport binaryPayloadSupport) {
+            final BinaryPayloadSupport binaryPayloadSupport,
+            final ReservationResourceAccess reservationResourceAccess) {
         this.reservationService = reservationService;
         this.currentUserResolver = currentUserResolver;
         this.binaryPayloadSupport = binaryPayloadSupport;
+        this.reservationResourceAccess = reservationResourceAccess;
     }
 
     @GET
     @PreAuthorize(
             "@reservationResourceAccess.canViewReservation(#id, @currentUserResolver.currentPrincipalOrNull())")
     public Response download(@P("id") @PathParam("id") final long reservationId) {
-        final RydenUserDetails viewer = currentUserResolver.requirePrincipal();
-        return reservationService.findRefundReceiptContentForParticipant(viewer.getUserId(), reservationId)
-                .map(this::binaryResponse)
+        final Optional<BinaryContent> content;
+        if (reservationResourceAccess.isAdmin()) {
+            content = reservationService.findRefundReceiptContentForAdmin(reservationId);
+        } else {
+            final RydenUserDetails viewer = currentUserResolver.requirePrincipal();
+            content = reservationService.findRefundReceiptContentForParticipant(
+                    viewer.getUserId(), reservationId);
+        }
+        return content.map(this::binaryResponse)
                 .orElseGet(() -> Response.status(Response.Status.NOT_FOUND).build());
     }
 
@@ -78,8 +86,6 @@ public class ReservationRefundReceiptController {
     }
 
     private Response binaryResponse(final BinaryContent content) {
-        return Response.ok(content.getBytes())
-                .type(content.getContentType())
-                .build();
+        return CacheableBinaryResponses.sensitive(content, content.getFileName());
     }
 }

@@ -73,12 +73,16 @@ info:
 servers:
   - url: /webapp/api
     description: >
-      API bajo el context path del WAR en Tomcat local (webapp.war).
+      API bajo el context path local (Jetty / `webapp.war` → `/webapp`).
       La SPA vive en /webapp/; los recursos REST en /webapp/api/.
+  - url: /paw-2026a-08/api
+    description: >
+      API en Pampero (`http://pawserver.it.itba.edu.ar/paw-2026a-08/api`).
+      Empaquetar la SPA con `npm run build:pampero` (Vite base `/paw-2026a-08/`).
   - url: /api
     description: >
-      API en Jetty dev (`mvn jetty:run`, context path `/`) o despliegue sin context path.
-      Ajustar el prefijo al probar según `server.servlet.context-path`.
+      API sin context path (contenedor montado en `/`).
+      Ajustar el prefijo al probar según el entorno.
 
 tags:
   - name: index
@@ -202,9 +206,9 @@ paths:
           dispara un OTP por email. Reenviar OTP: POST /users/{id}/credentials.
           Verificar: Basic auth email:otp (ver securitySchemes.basicAuth).
         - `application/vnd.paw.admincreateuser.v1+json` (solo admin, Bearer): crea
-          una cuenta ya pre-verificada con `role=admin` y una contraseña temporal;
-          dispara un email de invitación con esa contraseña (reemplaza
-          `/admin/users/create` del MVC viejo).
+          una cuenta ya pre-verificada con `role=admin`; dispara un email de
+          invitación y un OTP de set-password (mismo flujo que forgot-password).
+          La contraseña nunca viaja en claro por mail.
       requestBody:
         required: true
         content:
@@ -789,36 +793,18 @@ paths:
         "304":
           $ref: "#/components/responses/NotModified"
         "404": { $ref: "#/components/responses/NotFound" }
-    put:
-      tags: [cars]
-      summary: Reemplazar atributos del auto (owner)
-      requestBody:
-        required: true
-        content:
-          application/vnd.paw.car.v1+json:
-            schema: { $ref: "#/components/schemas/CarDto" }
-      responses:
-        "200":
-          description: Auto reemplazado.
-          content:
-            application/vnd.paw.car.v1+json:
-              schema: { $ref: "#/components/schemas/CarDto" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
     patch:
       tags: [cars]
-      summary: Transiciones de estado del auto (pausar/despausar/admin-pausar/desactivar)
+      summary: Transiciones de estado y campos editables del auto
       description: >
-        Absorbe TODAS las "acciones" del MVC sobre el auto:
-        - Owner pausa/despausa → { "status": "paused" | "active" } (toggle viejo).
-        - Owner desactiva → { "status": "deactivated" } (irreversible). [También
-          podría ser DELETE como soft-delete; ver decisión D5.]
-        - Admin pausa/despausa → { "status": "admin_paused" | "active" } (solo
-          admin; reemplaza /admin/cars/{id}/pause y /resume). Dispara
-          cancelación en cascada de reservas y email al owner.
-        - Editar precio/min rental days / descripción → atributos sueltos.
-        El resource valida transición permitida (405/403/400 según el caso) y
-        que el llamante tenga permiso (owner vs admin).
+        Absorbe las "acciones" del MVC sobre el auto vía atributos del body:
+        - Owner pausa/despausa → { "status": "paused" | "active" }.
+        - Admin pausa/despausa → { "status": "admin_paused" | "active" }
+          (cancela reservas en cascada y notifica al owner).
+        - Soft-delete / desactivación → solo `DELETE /cars/{id}` (PATCH
+          `status: deactivated` responde 409).
+        - Descripción / minimumRentalDays cuando vienen en el body.
+        El resource valida transición permitida y permisos (owner vs admin).
       requestBody:
         required: true
         content:
@@ -834,7 +820,9 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "409":
-          description: Transición no permitida desde el estado actual.
+          description: >
+            Transición no permitida desde el estado actual, o intento de
+            desactivar vía PATCH (usar DELETE).
     delete:
       tags: [cars]
       summary: Desactivar (soft-delete) el auto (owner) — ver decisión D5
@@ -927,6 +915,28 @@ paths:
               schema: { $ref: "#/components/schemas/AvailabilityDto" }
         "400": { $ref: "#/components/responses/ValidationError" }
         "403": { $ref: "#/components/responses/Forbidden" }
+    delete:
+      tags: [cars]
+      summary: Retirar disponibilidad por rango de fechas (owner)
+      description: >
+        DELETE sobre la colección `/cars/{id}/availabilities` con query params
+        `from` y `until` (wall-local `YYYY-MM-DD`). Inserta filas WITHDRAWN
+        cubriendo el rango. Falla con 409 si hay reservas activas solapadas.
+      parameters:
+        - name: from
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: until
+          in: query
+          required: true
+          schema: { type: string, format: date }
+      responses:
+        "204": { description: Rango retirado. }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: Hay reservas activas que se solapan.
 
   /cars/{id}/availabilities/{availabilityId}:
     parameters:
@@ -1112,6 +1122,13 @@ paths:
         "204": { description: Subido. }
         "400": { $ref: "#/components/responses/ValidationError" }
         "403": { $ref: "#/components/responses/Forbidden" }
+    delete:
+      tags: [cars, files]
+      summary: Quitar el seguro (owner)
+      responses:
+        "204": { description: Quitado. }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /image/{id}:
     parameters:
@@ -1474,6 +1491,11 @@ paths:
           content:
             application/vnd.paw.brand.v1+json:
               schema: { $ref: "#/components/schemas/BrandDto" }
+        "409":
+          description: Ya existe una marca con ese nombre.
+          content:
+            application/vnd.paw.error.v1+json:
+              schema: { $ref: "#/components/schemas/ErrorDto" }
 
   /brands/{id}:
     parameters:
@@ -1551,6 +1573,11 @@ paths:
           content:
             application/vnd.paw.model.v1+json:
               schema: { $ref: "#/components/schemas/ModelDto" }
+        "409":
+          description: Ya existe un modelo con ese nombre para la marca.
+          content:
+            application/vnd.paw.error.v1+json:
+              schema: { $ref: "#/components/schemas/ErrorDto" }
 
   /brands/{id}/models/{modelId}:
     parameters:
@@ -2012,14 +2039,13 @@ components:
     AdminCreateUserDto:
       type: object
       description: >
-        Body de POST /users con Content-Type admincreateuser: sin passwordConfirm
-        (la escribe el admin una sola vez como contraseña temporal a rotar).
-      required: [email, forename, surname, password]
+        Body de POST /users con Content-Type admincreateuser. Sin password: el
+        servidor emite un OTP de set-password (mismo flujo que forgot-password).
+      required: [email, forename, surname]
       properties:
         email: { type: string, format: email }
         forename: { type: string }
         surname: { type: string }
-        password: { type: string, format: password, writeOnly: true, description: Contraseña temporal; se envía por email al nuevo admin. }
 
     UserPatchDto:
       type: object
@@ -2305,6 +2331,19 @@ components:
         startDate: { type: string, format: date-time, description: Solo PENDING impaga (rider). }
         endDate: { type: string, format: date-time }
 
+    MessageAttachmentDto:
+      type: object
+      description: Metadatos del adjunto (sin bytes); null si el mensaje no tiene archivo.
+      required: [fileName, contentType, sizeBytes, kind]
+      properties:
+        fileName: { type: string }
+        contentType: { type: string, description: MIME type almacenado (p.ej. application/pdf). }
+        sizeBytes: { type: integer, format: int64, minimum: 0 }
+        kind:
+          type: string
+          enum: [IMAGE, PDF, DOCUMENT, VIDEO, GENERIC]
+          description: Categoría de UI para icono/etiqueta.
+
     MessageDto:
       type: object
       properties:
@@ -2312,6 +2351,10 @@ components:
         createdAt: { type: string, format: date-time }
         seen: { type: boolean }
         hasAttachment: { type: boolean }
+        attachment:
+          allOf:
+            - $ref: "#/components/schemas/MessageAttachmentDto"
+          nullable: true
         links:
           allOf:
             - $ref: "#/components/schemas/Links"

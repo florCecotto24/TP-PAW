@@ -168,6 +168,9 @@ public interface ReservationDao {
     /** Sets {@code return_reminder_email_sent} if still false; returns rows updated (0 or 1). */
     int claimReturnReminderEmailSent(long reservationId);
 
+    /** Sets {@code pickup_reminder_email_sent} if still false; returns rows updated (0 or 1). */
+    int claimPickupReminderEmailSent(long reservationId);
+
     /** Sets {@code return_checkout_email_sent} if still false; returns rows updated (0 or 1). */
     int claimReturnCheckoutEmailSent(long reservationId);
 

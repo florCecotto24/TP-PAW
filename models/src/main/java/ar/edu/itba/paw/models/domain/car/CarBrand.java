@@ -100,7 +100,7 @@ public class CarBrand {
         if (!(o instanceof CarBrand)) {
             return false;
         }
-        return EntityEquality.equalsByLongId(this, this.id, ((CarBrand) o).id);
+        return EntityEquality.equalsByLongId(this, getId(), ((CarBrand) o).getId());
     }
 
     @Override

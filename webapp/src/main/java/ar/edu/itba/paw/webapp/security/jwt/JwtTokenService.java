@@ -4,8 +4,11 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import javax.crypto.SecretKey;
 import javax.servlet.http.HttpServletRequest;
@@ -19,12 +22,14 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
 
 import ar.edu.itba.paw.webapp.config.properties.AppSecurityJwtProperties;
+import ar.edu.itba.paw.webapp.security.auth.RydenAuthorities;
 import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.MalformedJwtException;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.UnsupportedJwtException;
 import io.jsonwebtoken.security.Keys;
 import io.jsonwebtoken.security.SignatureException;
@@ -36,9 +41,9 @@ public final class JwtTokenService implements TokenService {
 
     private static final String CLAIM_TOKEN_TYPE = "tokenType";
     private static final String CLAIM_USER_ID = "userId";
-    private static final String CLAIM_FORENAME = "forename";
-    private static final String CLAIM_SURNAME = "surname";
-    private static final String CLAIM_ROLE_ASSIGNED_BY = "roleAssignedBy";
+
+    /** Password-reset OTP grant: short access window; never renewed via refresh. */
+    private static final int PWD_RESET_ACCESS_MAX_MINUTES = 5;
 
     static final String ACCESS_TOKEN_HEADER = "X-Access-Token";
     static final String REFRESH_TOKEN_HEADER = "X-Refresh-Token";
@@ -56,8 +61,19 @@ public final class JwtTokenService implements TokenService {
     public void attachTokenHeaders(final HttpServletResponse response,
                                    final RydenUserDetails principal,
                                    final HttpServletRequest request) {
-        response.setHeader(ACCESS_TOKEN_HEADER, generateToken(principal, JwtTokenType.ACCESS));
-        response.setHeader(REFRESH_TOKEN_HEADER, generateToken(principal, JwtTokenType.REFRESH));
+        final boolean passwordResetGrant = hasPasswordResetOtp(principal);
+        final int accessMinutes = passwordResetGrant
+                ? Math.min(properties.accessTokenMinutes(), PWD_RESET_ACCESS_MAX_MINUTES)
+                : properties.accessTokenMinutes();
+        response.setHeader(ACCESS_TOKEN_HEADER,
+                generateToken(principal, JwtTokenType.ACCESS, accessMinutes, principal.getAuthorities()));
+        // Refresh must not carry ROLE_PASSWORD_RESET_OTP — otherwise rotation renews the grant for days.
+        final Collection<? extends GrantedAuthority> refreshAuthorities = passwordResetGrant
+                ? stripPasswordResetOtp(principal.getAuthorities())
+                : principal.getAuthorities();
+        response.setHeader(REFRESH_TOKEN_HEADER,
+                generateToken(principal, JwtTokenType.REFRESH, properties.refreshTokenDays() * 24 * 60,
+                        refreshAuthorities));
         final String userUri = buildUserUri(request, principal.getUserId());
         response.addHeader("Link", String.format("<%s>; rel=\"%s\"", userUri, AUTHENTICATED_USER_REL));
     }
@@ -79,15 +95,19 @@ public final class JwtTokenService implements TokenService {
             LOGGER.atDebug().setCause(ex).log("Invalid JWT signature");
         } catch (MalformedJwtException | UnsupportedJwtException | IllegalArgumentException ex) {
             LOGGER.atDebug().setCause(ex).log("Invalid JWT token");
+        } catch (JwtException ex) {
+            // e.g. WeakKeyException when a stored token's alg (HS512) does not fit the HMAC key size
+            LOGGER.atDebug().setCause(ex).log("Rejected JWT token");
         }
         return null;
     }
 
-    private String generateToken(final RydenUserDetails principal, final JwtTokenType type) {
+    private String generateToken(final RydenUserDetails principal,
+                                 final JwtTokenType type,
+                                 final int lifetimeMinutes,
+                                 final Collection<? extends GrantedAuthority> authorities) {
         final Instant now = Instant.now();
-        final Instant expiry = type.isRefresh()
-                ? now.plusSeconds((long) properties.refreshTokenDays() * 24 * 60 * 60)
-                : now.plusSeconds((long) properties.accessTokenMinutes() * 60);
+        final Instant expiry = now.plusSeconds((long) lifetimeMinutes * 60L);
 
         return Jwts.builder()
                 .issuer(properties.issuer())
@@ -96,26 +116,42 @@ public final class JwtTokenService implements TokenService {
                 .expiration(Date.from(expiry))
                 .claim(CLAIM_TOKEN_TYPE, type.getClaimValue())
                 .claim(CLAIM_USER_ID, principal.getUserId())
-                .claim(CLAIM_FORENAME, principal.getForename())
-                .claim(CLAIM_SURNAME, principal.getSurname())
-                .claim(CLAIM_ROLE_ASSIGNED_BY, principal.getRoleAssignedBy().orElse(null))
-                .claim("authorities", JwtAuthorityCodec.encode(principal))
-                .signWith(signingKey)
+                .claim("authorities", encodeAuthorities(authorities))
+                // SHA-256-derived key is 256 bits → HS256 (HS512 would throw WeakKeyException).
+                .signWith(signingKey, Jwts.SIG.HS256)
                 .compact();
     }
 
     private RydenUserDetails toPrincipal(final Claims claims) {
-        final Long roleAssignedBy = claims.get(CLAIM_ROLE_ASSIGNED_BY, Long.class);
         final Collection<? extends GrantedAuthority> authorities =
                 JwtAuthorityCodec.decode(claims.getSubject(), claims.get("authorities", String.class));
+        // Display names and roleAssignedBy stay out of the JWT (PII / stale metadata); load via API.
         return new RydenUserDetails(
                 claims.get(CLAIM_USER_ID, Long.class),
                 claims.getSubject(),
-                claims.get(CLAIM_FORENAME, String.class),
-                claims.get(CLAIM_SURNAME, String.class),
+                null,
+                null,
                 null,
                 authorities,
-                roleAssignedBy);
+                null);
+    }
+
+    private static boolean hasPasswordResetOtp(final RydenUserDetails principal) {
+        return principal.getAuthorities().stream()
+                .anyMatch(a -> RydenAuthorities.PASSWORD_RESET_OTP.equals(a.getAuthority()));
+    }
+
+    private static List<GrantedAuthority> stripPasswordResetOtp(
+            final Collection<? extends GrantedAuthority> authorities) {
+        return authorities.stream()
+                .filter(a -> !RydenAuthorities.PASSWORD_RESET_OTP.equals(a.getAuthority()))
+                .collect(Collectors.toCollection(ArrayList::new));
+    }
+
+    private static String encodeAuthorities(final Collection<? extends GrantedAuthority> authorities) {
+        return authorities.stream()
+                .map(GrantedAuthority::getAuthority)
+                .collect(Collectors.joining(","));
     }
 
     private static String buildUserUri(final HttpServletRequest request, final long userId) {
@@ -129,19 +165,14 @@ public final class JwtTokenService implements TokenService {
         if (!request.getContextPath().endsWith("/")) {
             uri.append('/');
         }
-        uri.append("users/").append(userId);
+        uri.append("api/users/").append(userId);
         return uri.toString();
     }
 
     private static SecretKey resolveSigningKey(final String configuredSecret, final Environment environment) {
         if (configuredSecret != null && !configuredSecret.isBlank()) {
-            // Derive a fixed 256-bit key via SHA-256 so any configured secret length is accepted
-            // (raw bytes would make hmacShaKeyFor reject secrets shorter than 32 bytes).
             return Keys.hmacShaKeyFor(sha256(configuredSecret));
         }
-        // Blank secret: a random key is ephemeral (no operator controls it, tokens die on restart).
-        // Tolerable ONLY under local/test; in a deployed profile we FAIL FAST instead of silently
-        // booting on a throwaway signing key that invalidates every JWT on each redeploy.
         if (environment != null && environment.acceptsProfiles(Profiles.of("local", "test"))) {
             LOGGER.atWarn().log("app.security.jwt.secret is blank — using a random key (tokens reset on restart)");
             return Jwts.SIG.HS256.key().build();

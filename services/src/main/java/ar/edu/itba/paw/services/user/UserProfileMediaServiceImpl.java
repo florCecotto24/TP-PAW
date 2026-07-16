@@ -16,6 +16,7 @@ import ar.edu.itba.paw.models.domain.file.StoredFile;
 import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.models.domain.user.UserDocumentType;
 import ar.edu.itba.paw.models.dto.file.BinaryContent;
+import ar.edu.itba.paw.models.util.media.BinaryMagicBytes;
 import ar.edu.itba.paw.policy.ProfileDocumentUploadPolicy;
 
 import ar.edu.itba.paw.services.file.ImageService;
@@ -100,6 +101,9 @@ public class UserProfileMediaServiceImpl implements UserProfileMediaService {
         }
         final int length = data == null ? 0 : data.length;
         if (length <= 0) {
+            throw new InvalidProfileDocumentException(MessageKeys.USER_PROFILE_DOCUMENT_INVALID);
+        }
+        if (!BinaryMagicBytes.matchesDeclared(contentType, data)) {
             throw new InvalidProfileDocumentException(MessageKeys.USER_PROFILE_DOCUMENT_INVALID);
         }
         if (length > profileDocumentUploadPolicy.getMaxBytes()) {

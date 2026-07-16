@@ -34,9 +34,6 @@ public final class CreateAdminUserForm {
             groups = ValidationGroups.OnCreateAdminUser.class)
     private String email = "";
 
-    @NotBlank(message = "{validation.registration.password.required}", groups = ValidationGroups.OnCreateAdminUser.class)
-    private String password = "";
-
     public String getForename() {
         return forename;
     }
@@ -59,13 +56,5 @@ public final class CreateAdminUserForm {
 
     public void setEmail(final String email) {
         this.email = email != null ? email.trim() : "";
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(final String password) {
-        this.password = password != null ? password : "";
     }
 }

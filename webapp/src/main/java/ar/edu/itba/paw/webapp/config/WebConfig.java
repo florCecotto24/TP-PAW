@@ -38,10 +38,13 @@ import ar.edu.itba.paw.policy.ReservationMessageValidationPolicy;
 import ar.edu.itba.paw.policy.ReviewValidationPolicy;
 import ar.edu.itba.paw.policy.UserValidationPolicy;
 import ar.edu.itba.paw.policy.VerificationCodePolicy;
+import ar.edu.itba.paw.services.user.UserService;
 import ar.edu.itba.paw.webapp.config.properties.AppMoneyProperties;
 import ar.edu.itba.paw.webapp.config.properties.AppReservationChatProperties;
 import ar.edu.itba.paw.webapp.config.properties.AppSecurityJwtProperties;
 import ar.edu.itba.paw.webapp.config.properties.AppValidationProperties;
+import ar.edu.itba.paw.webapp.filter.RydenLocaleFilter;
+import ar.edu.itba.paw.webapp.i18n.RydenLocaleResolver;
 
 /**
  * Root Spring configuration for the SPA + REST stack: JPA, validation, async mail, security, and services.
@@ -88,6 +91,16 @@ public class WebConfig {
         bundle.setDefaultEncoding(StandardCharsets.UTF_8.name());
         bundle.setFallbackToSystemLocale(false);
         return bundle;
+    }
+
+    @Bean
+    public RydenLocaleResolver rydenLocaleResolver(final UserService userService) {
+        return new RydenLocaleResolver(userService);
+    }
+
+    @Bean
+    public RydenLocaleFilter rydenLocaleFilter(final RydenLocaleResolver rydenLocaleResolver) {
+        return new RydenLocaleFilter(rydenLocaleResolver);
     }
 
     @Bean

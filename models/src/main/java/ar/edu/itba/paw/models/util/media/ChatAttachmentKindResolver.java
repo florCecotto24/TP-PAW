@@ -1,5 +1,7 @@
 package ar.edu.itba.paw.models.util.media;
 
+import java.util.Locale;
+
 import ar.edu.itba.paw.models.util.media.ChatAttachmentKind;
 
 /** Maps stored file metadata to a chat UI display category. */
@@ -10,7 +12,7 @@ public final class ChatAttachmentKindResolver {
 
     public static ChatAttachmentKind resolve(final String contentType, final String fileName) {
         if (contentType != null && !contentType.isBlank()) {
-            final String t = contentType.trim().toLowerCase();
+            final String t = contentType.trim().toLowerCase(Locale.ROOT);
             if (t.startsWith("image/")) {
                 return ChatAttachmentKind.IMAGE;
             }
@@ -26,7 +28,7 @@ public final class ChatAttachmentKindResolver {
             }
         }
         if (fileName != null && !fileName.isBlank()) {
-            final String lower = fileName.trim().toLowerCase();
+            final String lower = fileName.trim().toLowerCase(Locale.ROOT);
             if (lower.endsWith(".pdf")) {
                 return ChatAttachmentKind.PDF;
             }

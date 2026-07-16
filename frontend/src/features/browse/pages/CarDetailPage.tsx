@@ -1,10 +1,11 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   BreadcrumbTrail,
   CarDetailGalleryGrid,
   CarDetailGalleryModal,
+  CarouselNavPair,
   DetailListingMeta,
   LoadingBlock,
   ReviewCard,
@@ -194,6 +195,15 @@ export default function CarDetailPage() {
     reviewsView: reviewsToggleView,
     ...(reviewsIsListView ? { reviewPage: 0 } : {}),
   });
+  const reviewSlides = useMemo(() => chunk(reviewItems, 2), [reviewItems]);
+  const [reviewSlide, setReviewSlide] = useState(0);
+  useEffect(() => {
+    setReviewSlide(0);
+  }, [resolvedId, reviewsIsListView, reviewItems.length]);
+  const reviewSlideSafe =
+    reviewSlides.length === 0 ? 0 : Math.min(reviewSlide, reviewSlides.length - 1);
+  const canPrevReviewSlide = reviewSlideSafe > 0;
+  const canNextReviewSlide = reviewSlideSafe < reviewSlides.length - 1;
 
   return (
     <main className="car-detail-page container pb-4">
@@ -308,27 +318,19 @@ export default function CarDetailPage() {
             <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
               <h2 className="h5 fw-bold mb-0">{t('carDetail.reviews.title')}</h2>
               <div className="d-flex align-items-center gap-2">
-                {!reviewsIsListView && reviewItems.length > 0 ? (
-                  <>
-                    <button
-                      className="btn btn-sm btn-outline-secondary"
-                      type="button"
-                      data-bs-target={`#${REVIEWS_CAROUSEL_ID}`}
-                      data-bs-slide="prev"
-                      aria-label={t('carDetail.reviews.carousel.prev')}
-                    >
-                      <i className="bi bi-chevron-left" aria-hidden="true"></i>
-                    </button>
-                    <button
-                      className="btn btn-sm btn-outline-secondary"
-                      type="button"
-                      data-bs-target={`#${REVIEWS_CAROUSEL_ID}`}
-                      data-bs-slide="next"
-                      aria-label={t('carDetail.reviews.carousel.next')}
-                    >
-                      <i className="bi bi-chevron-right" aria-hidden="true"></i>
-                    </button>
-                  </>
+                {!reviewsIsListView && reviewSlides.length > 1 ? (
+                  <div className="carouselHeader">
+                    <CarouselNavPair
+                      showPrev={canPrevReviewSlide}
+                      showNext={canNextReviewSlide}
+                      onPrev={() => setReviewSlide((s) => Math.max(0, s - 1))}
+                      onNext={() =>
+                        setReviewSlide((s) => Math.min(reviewSlides.length - 1, s + 1))
+                      }
+                      prevLabel={t('carDetail.reviews.carousel.prev')}
+                      nextLabel={t('carDetail.reviews.carousel.next')}
+                    />
+                  </div>
                 ) : null}
                 {reviewsHasMoreThanOnePage && reviewsToggleHref ? (
                   <Link className="btn btn-sm btn-link text-decoration-none" to={reviewsToggleHref}>
@@ -397,10 +399,11 @@ export default function CarDetailPage() {
             {!reviewsIsListView && reviewItems.length > 0 ? (
               <div id={REVIEWS_CAROUSEL_ID} className="carousel slide ryden-review-carousel" data-bs-ride="false">
                 <div className="carousel-inner">
-                  {chunk(reviewItems, 2).map((slideReviews, slideIndex) => (
+                  {reviewSlides.map((slideReviews, slideIndex) => (
                     <div
                       key={slideIndex}
-                      className={`carousel-item${slideIndex === 0 ? ' active' : ''}`}
+                      className={`carousel-item${slideIndex === reviewSlideSafe ? ' active' : ''}`}
+                      aria-hidden={slideIndex !== reviewSlideSafe}
                     >
                       <div className="row row-cols-1 row-cols-md-2 g-3 pb-2 align-items-stretch">
                         {slideReviews.map((review) => (

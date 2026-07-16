@@ -64,10 +64,8 @@ export async function deleteProfilePicture(user: UserDto): Promise<void> {
 /** Path de un documento (license/identity) — para subir, borrar y descargar. */
 export function documentPath(user: UserDto, type: DocumentType): string {
   const self = user.links?.self;
-  const base = user.links?.documents ?? (self ? subResource(self, 'documents') : '');
-  if (!base) throw new Error('profile.documents.missingLink');
-  const normalized = base.endsWith('/') ? base.slice(0, -1) : base;
-  return `${normalized}/${type}`;
+  if (!self) throw new Error('profile.documents.missingLink');
+  return `${subResource(self, 'documents')}/${type}`;
 }
 
 /** PUT /users/{id}/documents/{type} (raw octet-stream body). */

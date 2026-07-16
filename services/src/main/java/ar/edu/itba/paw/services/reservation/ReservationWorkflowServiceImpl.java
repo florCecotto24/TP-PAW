@@ -28,6 +28,7 @@ import ar.edu.itba.paw.exception.user.CBUNotFoundException;
 import ar.edu.itba.paw.exception.user.UserNotFoundException;
 import ar.edu.itba.paw.models.domain.car.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.car.Car;
+import ar.edu.itba.paw.models.util.time.WallDateTimeParsing;
 import ar.edu.itba.paw.models.domain.reservation.Reservation;
 import ar.edu.itba.paw.models.domain.reservation.ReservationParticipantRole;
 import ar.edu.itba.paw.models.domain.user.User;
@@ -265,14 +266,7 @@ public class ReservationWorkflowServiceImpl implements ReservationWorkflowServic
     private void cancelReservationForAdminCarPause(final Reservation r, final OffsetDateTime nowUtc) {
         final long reservationId = r.getId();
         switch (r.getStatus()) {
-            case PENDING -> {
-                if (r.getPaymentReceiptFileId().isPresent()) {
-                    cancelConfirmedForAdminPause(reservationId, r, nowUtc);
-                } else {
-                    cancelReservation(reservationId);
-                }
-            }
-            case ACCEPTED, STARTED -> cancelConfirmedForAdminPause(reservationId, r, nowUtc);
+            case PENDING, ACCEPTED, STARTED -> cancelConfirmedForAdminPause(reservationId, r, nowUtc);
             default -> {
                 // no-op
             }
@@ -415,8 +409,16 @@ public class ReservationWorkflowServiceImpl implements ReservationWorkflowServic
         if (Boolean.TRUE.equals(carReturned)) {
             markCarReturnedByOwner(viewerUserId, reservationId);
         }
-        if (fromDateTimeWall != null) {
-            editPendingReservationByRider(viewerUserId, reservationId, fromDateTimeWall, untilDateTimeWall);
+        if (fromDateTimeWall != null || untilDateTimeWall != null) {
+            final Reservation existing = reservationService.getReservationById(reservationId)
+                    .orElseThrow(ReservationAccessDeniedException::denied);
+            final String from = fromDateTimeWall != null
+                    ? fromDateTimeWall
+                    : WallDateTimeParsing.formatUtcAsClientWallDateTimeInput(existing.getStartDate());
+            final String until = untilDateTimeWall != null
+                    ? untilDateTimeWall
+                    : WallDateTimeParsing.formatUtcAsClientWallDateTimeInput(existing.getEndDate());
+            editPendingReservationByRider(viewerUserId, reservationId, from, until);
         }
         return reservationService.getReservationById(reservationId)
                 .orElseThrow(ReservationAccessDeniedException::denied);

@@ -41,7 +41,7 @@ export default function CarDetailGalleryModal({
             />
           </div>
           <div className="modal-body p-0">
-            <div id={carouselId} className="carousel slide carousel-fade" data-bs-ride="false">
+            <div id={carouselId} className="carousel slide carousel-fade" data-bs-ride="false" data-bs-wrap="false">
               <div className="carousel-inner">
                 {mediaItems.map((item, index) => (
                   <div key={index} className={`carousel-item${index === 0 ? ' active' : ''}`}>
@@ -95,7 +95,7 @@ export default function CarDetailGalleryModal({
                   </div>
                 ))}
               </div>
-              {mediaItems.length > 0 ? (
+              {mediaItems.length > 1 ? (
                 <>
                   <button
                     className="carousel-control-prev"

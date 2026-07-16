@@ -14,6 +14,7 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -62,6 +63,7 @@ public class ReservationMessageServiceImpl implements ReservationMessageService 
     private final ReservationMessageValidationPolicy messageValidationPolicy;
     private final ReservationChatPolicy chatPolicy;
     private final ChatAttachmentUploadPolicy chatAttachmentUploadPolicy;
+    private final ReservationLifecycleRowProcessor lifecycleRowProcessor;
 
     @Autowired
     public ReservationMessageServiceImpl(
@@ -74,7 +76,8 @@ public class ReservationMessageServiceImpl implements ReservationMessageService 
             final StoredFileService storedFileService,
             final ReservationMessageValidationPolicy messageValidationPolicy,
             final ReservationChatPolicy chatPolicy,
-            final ChatAttachmentUploadPolicy chatAttachmentUploadPolicy) {
+            final ChatAttachmentUploadPolicy chatAttachmentUploadPolicy,
+            @Lazy final ReservationLifecycleRowProcessor lifecycleRowProcessor) {
         this.reservationMessageDao = reservationMessageDao;
         this.reservationService = reservationService;
         this.userService = userService;
@@ -85,6 +88,7 @@ public class ReservationMessageServiceImpl implements ReservationMessageService 
         this.messageValidationPolicy = messageValidationPolicy;
         this.chatPolicy = chatPolicy;
         this.chatAttachmentUploadPolicy = chatAttachmentUploadPolicy;
+        this.lifecycleRowProcessor = lifecycleRowProcessor;
     }
 
     @Override
@@ -251,8 +255,11 @@ public class ReservationMessageServiceImpl implements ReservationMessageService 
         return reservationMessageDao.findByIdAndReservationId(messageId, reservationId);
     }
 
+    /**
+     * Deliberately NOT {@code @Transactional}: each recipient claim commits in {@code REQUIRES_NEW}
+     * before mail is queued, so a failed send cannot roll back the claim (or leave TX rollback-only).
+     */
     @Override
-    @Transactional
     public void dispatchChatDigestEmails() {
         final List<ReservationMessage> pending = reservationMessageDao.findPendingEmailNotification();
         if (pending.isEmpty()) {
@@ -274,6 +281,12 @@ public class ReservationMessageServiceImpl implements ReservationMessageService 
         for (final Map.Entry<Long, List<ReservationMessage>> entry : byRecipient.entrySet()) {
             dispatchDigestForRecipient(entry.getKey(), entry.getValue(), carCache);
         }
+    }
+
+    @Override
+    @Transactional
+    public int markEmailNotified(final java.util.Collection<Long> messageIds) {
+        return reservationMessageDao.markEmailNotified(messageIds);
     }
 
     @Override
@@ -303,6 +316,16 @@ public class ReservationMessageServiceImpl implements ReservationMessageService 
                 .map(sf -> new BinaryContent(sf.getData(), sf.getContentType(), sf.getFileName()));
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<BinaryContent> findMessageAttachmentContentForAdmin(
+            final long reservationId, final long messageId) {
+        return findMessageForAdmin(reservationId, messageId)
+                .map(ReservationMessage::getAttachment)
+                .filter(attachment -> attachment != null)
+                .map(sf -> new BinaryContent(sf.getData(), sf.getContentType(), sf.getFileName()));
+    }
+
     private void dispatchDigestForRecipient(
             final long recipientId,
             final List<ReservationMessage> messages,
@@ -316,7 +339,7 @@ public class ReservationMessageServiceImpl implements ReservationMessageService 
             }
             final List<Long> messageIds =
                     unseenMessages.stream().map(ReservationMessage::getId).collect(Collectors.toList());
-            if (reservationMessageDao.markEmailNotified(messageIds) == 0) {
+            if (!lifecycleRowProcessor.markChatDigestNotified(messageIds)) {
                 return;
             }
             final Optional<User> recipientOpt = userService.getUserById(recipientId);
@@ -432,15 +455,15 @@ public class ReservationMessageServiceImpl implements ReservationMessageService 
     }
 
     private ReservationMessageDto toDto(final ReservationMessage message) {
-        final long senderUserId = message.getSenderUserId();
-        final User sender = userService
-                .getUserById(senderUserId)
-                .orElseThrow(() -> new ReservationMessageException(MessageKeys.RESERVATION_CHAT_NOT_PARTICIPANT));
+        final User sender = message.getSender();
+        if (sender == null) {
+            throw new ReservationMessageException(MessageKeys.RESERVATION_CHAT_NOT_PARTICIPANT);
+        }
         final ReservationMessageAttachmentDto attachmentDto = toAttachmentDto(message);
         return new ReservationMessageDto(
                 message.getId(),
                 message.getReservationId(),
-                senderUserId,
+                sender.getId(),
                 formatDisplayName(sender),
                 message.getBody(),
                 message.getCreatedAt(),
@@ -461,7 +484,7 @@ public class ReservationMessageServiceImpl implements ReservationMessageService 
                 attachment.getId(),
                 attachment.getFileName(),
                 attachment.getContentType(),
-                attachment.getData().length,
+                attachment.getSizeBytes(),
                 ChatAttachmentKindResolver.resolve(attachment.getContentType(), attachment.getFileName()),
                 url);
     }

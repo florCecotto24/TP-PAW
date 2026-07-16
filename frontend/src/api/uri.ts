@@ -80,7 +80,7 @@ export function joinBaseAndPath(base: string, path: string): string {
 /**
  * Resuelve una URN de la API (relativa o absoluta) a URL usable en fetch / `<img src>`.
  * Jersey suele emitir links absolutos; hay que usarlos tal cual (no volver a prefijar el context path).
- * Si el link absoluto omite el context path del WAR (`/webapp`), se corrige cuando el origen coincide.
+ * Si el link absoluto omite el context path del WAR (`/webapp` o `/paw-2026a-08`), se corrige cuando el origen coincide.
  */
 export function resolveApiUrl(uri: string): string {
   if (!uri) {

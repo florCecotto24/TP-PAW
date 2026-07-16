@@ -239,14 +239,14 @@ export interface ReviewInput {
   image?: File | null;
 }
 
-/** POST review (multipart) a la colección canónica `/reviews?reservationId=…`. */
+/** POST review (multipart) a `/reviews` con URN de reserva en el body. */
 export async function postReview(
   reviewsUri: string,
+  reservationUri: string,
   input: ReviewInput,
 ): Promise<ApiResponse<ReviewDto>> {
-  // encodeMultipart: mismo fix que publishCar — FormData nativo a veces llega
-  // a Jersey sin boundary → 400 "Missing start boundary".
   const parts: MultipartPart[] = [
+    { name: 'reservationUri', value: reservationUri },
     { name: 'rating', value: String(input.rating) },
     { name: 'comment', value: input.comment ?? '' },
   ];
@@ -259,7 +259,9 @@ export async function postReview(
     });
   }
   const { body, contentType } = await encodeMultipart(parts);
-  return sessionClient.post<ReviewDto>(reviewsUri, body, {
+  // POST to the reviews collection (strip filter query from the list link).
+  const collectionPath = reviewsUri.split('?')[0];
+  return sessionClient.post<ReviewDto>(collectionPath, body, {
     accept: MediaTypes.review,
     contentType,
   });

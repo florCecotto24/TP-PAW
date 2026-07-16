@@ -25,6 +25,7 @@ import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.admin.AdminPromoterNotAdminException;
 import ar.edu.itba.paw.exception.car.CarNotAdminPausedException;
 import ar.edu.itba.paw.exception.car.CarNotFoundException;
+import ar.edu.itba.paw.exception.car.CarStatusTransitionConflictException;
 import ar.edu.itba.paw.exception.car.CarValidationException;
 import ar.edu.itba.paw.exception.car.DuplicatePlateException;
 import ar.edu.itba.paw.models.domain.car.AvailabilityPeriod;
@@ -40,6 +41,7 @@ import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.email.listing.CarPausedMissingCbuOwnerEmailPayload;
 import ar.edu.itba.paw.models.security.UserRole;
 import ar.edu.itba.paw.models.util.rules.CbuRules;
+import ar.edu.itba.paw.models.util.media.BinaryMagicBytes;
 import ar.edu.itba.paw.models.util.media.CarGalleryMediaContentTypes;
 import ar.edu.itba.paw.models.util.search.CarSearchCriteria;
 import ar.edu.itba.paw.models.util.search.CarSearchRequest;
@@ -265,24 +267,20 @@ public class CarServiceImpl implements CarService {
                     adminService.adminResumeCar(carId, actingUserId);
                 } else {
                     if (car.getStatus() != Car.Status.PAUSED) {
-                        throw new CarValidationException(MessageKeys.CAR_INVALID_STATUS_TRANSITION);
+                        throw new CarStatusTransitionConflictException(carId);
                     }
                     toggleCarStatus(actingUserId, carId);
                 }
             }
             case PAUSED -> {
                 if (car.getStatus() != Car.Status.ACTIVE) {
-                    throw new CarValidationException(MessageKeys.CAR_INVALID_STATUS_TRANSITION);
+                    throw new CarStatusTransitionConflictException(carId);
                 }
                 toggleCarStatus(actingUserId, carId);
             }
             case ADMIN_PAUSED -> adminService.adminPauseCar(carId, actingUserId, locale);
-            case DEACTIVATED -> {
-                if (!deactivateCar(actingUserId, carId)) {
-                    throw new CarNotFoundException(carId);
-                }
-            }
-            default -> throw new CarValidationException(MessageKeys.CAR_INVALID_STATUS_TRANSITION);
+            case DEACTIVATED -> throw new CarStatusTransitionConflictException(carId);
+            default -> throw new CarStatusTransitionConflictException(carId);
         }
     }
 
@@ -548,11 +546,15 @@ public class CarServiceImpl implements CarService {
         if (data == null || data.length == 0) {
             throw new CarValidationException(MessageKeys.CAR_INSURANCE_INVALID);
         }
+        if (!StoredFile.isAllowedPaymentReceiptContentType(contentType)
+                || !BinaryMagicBytes.matchesDeclared(contentType, data)) {
+            throw new CarValidationException(MessageKeys.CAR_INSURANCE_INVALID);
+        }
         final Car car = carOpt.get();
         final StoredFile stored = storedFileService.create(
                 ownerId,
                 originalFilename != null ? originalFilename : "insurance",
-                contentType != null ? contentType : "application/octet-stream",
+                contentType,
                 data);
         carDao.updateInsuranceDocument(carId, stored.getId());
         if (car.getStatus() == Car.Status.LACK_DOC) {

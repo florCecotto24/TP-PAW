@@ -185,7 +185,6 @@ public class CarAvailabilityController {
     }
 
     @DELETE
-    @Path("/range")
     @PreAuthorize("@carResourceAccess.isOwnerById(#id, @currentUserResolver.currentPrincipalOrNull())")
     public Response deleteAvailabilityRange(
             @P("id") @PathParam("id") final long carId,

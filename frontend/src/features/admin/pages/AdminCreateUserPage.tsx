@@ -5,12 +5,10 @@ import { Alert, Button, Form } from 'react-bootstrap';
 import { ApiError } from '../../../api/client';
 import { paths } from '../../../routes/paths';
 import BreadcrumbTrail from '../../../components/ryden/layout/BreadcrumbTrail';
-import { PasswordField } from '../../../components/ryden';
 import { createAdminUser } from '../api';
 import { useAdminErrorMessage } from '../useAdminErrorMessage';
 
-// Réplica de admin/createAdminUser.jsp: alta de un admin pre-verificado con
-// contraseña temporal (POST /users, Content-Type admincreateuser).
+/** Alta de un admin pre-verificado; el invitee define la contraseña con el OTP de reset. */
 export default function AdminCreateUserPage() {
   const { t } = useTranslation();
   const errorMessage = useAdminErrorMessage();
@@ -18,7 +16,6 @@ export default function AdminCreateUserPage() {
   const [forename, setForename] = useState('');
   const [surname, setSurname] = useState('');
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -31,12 +28,11 @@ export default function AdminCreateUserPage() {
     setFieldErrors({});
     setSubmitting(true);
     try {
-      const res = await createAdminUser({ forename, surname, email, password });
+      const res = await createAdminUser({ forename, surname, email });
       setSuccess(t('admin.createAdmin.success', { email: res.data?.email ?? email }));
       setForename('');
       setSurname('');
       setEmail('');
-      setPassword('');
     } catch (err) {
       if (err instanceof ApiError && err.body?.errors?.length) {
         const byField: Record<string, string> = {};
@@ -105,7 +101,7 @@ export default function AdminCreateUserPage() {
                 <div className="text-danger small d-block mt-1">{fieldErrors.surname}</div>
               ) : null}
             </Form.Group>
-            <Form.Group className="mb-3" controlId="email">
+            <Form.Group className="mb-4" controlId="email">
               <Form.Label className="fw-semibold">{t('admin.createAdmin.email')}</Form.Label>
               <Form.Control
                 type="email"
@@ -118,20 +114,6 @@ export default function AdminCreateUserPage() {
               />
               {fieldErrors.email ? (
                 <div className="text-danger small d-block mt-1">{fieldErrors.email}</div>
-              ) : null}
-            </Form.Group>
-            <Form.Group className="mb-4" controlId="password">
-              <Form.Label className="fw-semibold">{t('admin.createAdmin.password')}</Form.Label>
-              <PasswordField
-                id="password"
-                value={password}
-                onChange={setPassword}
-                autoComplete="new-password"
-                isInvalid={!!fieldErrors.password}
-                required
-              />
-              {fieldErrors.password ? (
-                <div className="text-danger small d-block mt-1">{fieldErrors.password}</div>
               ) : null}
             </Form.Group>
             <div className="d-flex gap-2">

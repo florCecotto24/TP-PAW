@@ -354,7 +354,6 @@ public class ReservationServiceImpl implements ReservationService {
     // ---------------------------------------------------------------------------------------
 
     @Override
-    @Transactional
     public void cancelExpiredPendingPaymentReservations() {
         paymentService.cancelExpiredPendingPaymentReservations();
     }
@@ -387,6 +386,12 @@ public class ReservationServiceImpl implements ReservationService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public Optional<BinaryContent> findPaymentReceiptContentForAdmin(final long reservationId) {
+        return paymentService.findPaymentReceiptContentForAdmin(reservationId);
+    }
+
+    @Override
     @Transactional
     public void attachRefundReceiptByOwner(
             final long ownerUserId, final long reservationId,
@@ -408,19 +413,22 @@ public class ReservationServiceImpl implements ReservationService {
     }
 
     @Override
-    @Transactional
+    @Transactional(readOnly = true)
+    public Optional<BinaryContent> findRefundReceiptContentForAdmin(final long reservationId) {
+        return paymentService.findRefundReceiptContentForAdmin(reservationId);
+    }
+
+    @Override
     public void dispatchDuePaymentProofReminderEmails() {
         paymentService.dispatchDuePaymentProofReminderEmails();
     }
 
     @Override
-    @Transactional
     public void dispatchDueRefundProofReminderEmails() {
         paymentService.dispatchDueRefundProofReminderEmails();
     }
 
     @Override
-    @Transactional
     public void sweepRefundOverdueAndBlockOwners() {
         paymentService.sweepRefundOverdueAndBlockOwners();
     }
@@ -448,7 +456,6 @@ public class ReservationServiceImpl implements ReservationService {
     }
 
     @Override
-    @Transactional
     public void dispatchReviewAutoSkips() {
         schedulerService.dispatchReviewAutoSkips();
     }
@@ -638,6 +645,12 @@ public class ReservationServiceImpl implements ReservationService {
     @Transactional
     public int claimReturnReminderEmailSent(final long reservationId) {
         return reservationDao.claimReturnReminderEmailSent(reservationId);
+    }
+
+    @Override
+    @Transactional
+    public int claimPickupReminderEmailSent(final long reservationId) {
+        return reservationDao.claimPickupReminderEmailSent(reservationId);
     }
 
     @Override

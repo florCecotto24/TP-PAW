@@ -5,7 +5,6 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.time.ZoneOffset;
-import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -18,7 +17,6 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import ar.edu.itba.paw.exception.reservation.RiderReservationException;
 import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.models.domain.reservation.Reservation;
 import ar.edu.itba.paw.models.domain.user.User;
@@ -47,6 +45,7 @@ public class ReservationLifecycleSchedulerServiceImpl implements ReservationLife
     private final ReservationPricingService pricingService;
     private final ReviewService reviewService;
     private final ReservationMailComposer mailComposer;
+    private final ReservationLifecycleRowProcessor lifecycleRowProcessor;
 
     @Autowired
     public ReservationLifecycleSchedulerServiceImpl(
@@ -54,20 +53,25 @@ public class ReservationLifecycleSchedulerServiceImpl implements ReservationLife
             final ReservationTimingPolicy reservationTimingPolicy,
             final ReservationPricingService pricingService,
             @Lazy final ReviewService reviewService,
-            final ReservationMailComposer mailComposer) {
+            final ReservationMailComposer mailComposer,
+            final ReservationLifecycleRowProcessor lifecycleRowProcessor) {
         this.reservationService = reservationService;
         this.reservationTimingPolicy = reservationTimingPolicy;
         this.pricingService = pricingService;
         this.reviewService = reviewService;
         this.mailComposer = mailComposer;
+        this.lifecycleRowProcessor = lifecycleRowProcessor;
     }
 
     // ---------------------------------------------------------------------------------------
     // Return reminder + checkout + review invite emails
     // ---------------------------------------------------------------------------------------
 
+    /**
+     * Deliberately NOT {@code @Transactional}: each claim commits in {@code REQUIRES_NEW} before
+     * {@code @Async} mail is queued, so a rolled-back batch cannot leave emails for unclaimed rows.
+     */
     @Override
-    @Transactional
     public void dispatchReturnReminderEmails() {
         final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         final int hours = reservationTimingPolicy.getReturnReminderHoursBeforeCheckout();
@@ -82,7 +86,7 @@ public class ReservationLifecycleSchedulerServiceImpl implements ReservationLife
                         .log("Skipping return reminder: missing data (reservation id={})");
                 continue;
             }
-            if (reservationService.claimReturnReminderEmailSent(reservation.getId()) == 0) {
+            if (!lifecycleRowProcessor.claimReturnReminder(reservation.getId())) {
                 continue;
             }
             try {
@@ -97,7 +101,6 @@ public class ReservationLifecycleSchedulerServiceImpl implements ReservationLife
     }
 
     @Override
-    @Transactional
     public void dispatchReturnCheckoutEmails() {
         final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         final List<Reservation> candidates = reservationService.findReservationsForReturnCheckoutEmail(now);
@@ -110,7 +113,7 @@ public class ReservationLifecycleSchedulerServiceImpl implements ReservationLife
                         .log("Skipping return checkout mail: missing data (reservation id={})");
                 continue;
             }
-            if (reservationService.claimReturnCheckoutEmailSent(reservation.getId()) == 0) {
+            if (!lifecycleRowProcessor.claimReturnCheckout(reservation.getId())) {
                 continue;
             }
             try {
@@ -125,7 +128,6 @@ public class ReservationLifecycleSchedulerServiceImpl implements ReservationLife
     }
 
     @Override
-    @Transactional
     public void dispatchRiderReviewInviteEmails() {
         final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         final List<Reservation> candidates = reservationService.findReservationsForRiderReviewInviteEmail(now);
@@ -138,7 +140,7 @@ public class ReservationLifecycleSchedulerServiceImpl implements ReservationLife
                         .log("Skipping rider review invite: missing data (reservation id={})");
                 continue;
             }
-            if (reservationService.claimRiderReviewInviteEmailSent(reservation.getId()) == 0) {
+            if (!lifecycleRowProcessor.claimRiderReviewInvite(reservation.getId())) {
                 continue;
             }
             try {
@@ -153,7 +155,6 @@ public class ReservationLifecycleSchedulerServiceImpl implements ReservationLife
     }
 
     @Override
-    @Transactional
     public void dispatchReviewAutoSkips() {
         final int days = reservationTimingPolicy.getReviewAutoSkipDays();
         if (days < 1) {
@@ -175,9 +176,9 @@ public class ReservationLifecycleSchedulerServiceImpl implements ReservationLife
                 continue;
             }
             try {
-                reviewService.submitRiderReviewOfOwner(r.getRiderId(), r.getId(), null, null);
+                lifecycleRowProcessor.autoSkipRiderReview(r.getRiderId(), r.getId());
                 rDone++;
-            } catch (final RiderReservationException e) {
+            } catch (final RuntimeException e) {
                 LOGGER.atWarn().setCause(e).addArgument(r.getId())
                         .log("Auto-skip rider review failed (reservation id={})");
             }
@@ -202,9 +203,9 @@ public class ReservationLifecycleSchedulerServiceImpl implements ReservationLife
                 continue;
             }
             try {
-                reviewService.submitOwnerReviewOfRider(ownerId, r.getId(), null, null);
+                lifecycleRowProcessor.autoSkipOwnerReview(ownerId, r.getId());
                 oDone++;
-            } catch (final RiderReservationException e) {
+            } catch (final RuntimeException e) {
                 LOGGER.atWarn().setCause(e).addArgument(r.getId())
                         .log("Auto-skip owner review failed (reservation id={})");
             }
@@ -213,7 +214,6 @@ public class ReservationLifecycleSchedulerServiceImpl implements ReservationLife
     }
 
     @Override
-    @Transactional
     public void transitionAcceptedReservationsToStarted() {
         final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         final List<Long> candidateIds = reservationService.findAcceptedReservationIdsWithStartOnOrBefore(now);
@@ -221,7 +221,12 @@ public class ReservationLifecycleSchedulerServiceImpl implements ReservationLife
                 .log("Reservation start transition run: {} accepted reservation(s) at or past pickup time");
         int started = 0;
         for (final Long reservationId : candidateIds) {
-            started += reservationService.transitionAcceptedToStartedIfDue(reservationId, now);
+            try {
+                started += lifecycleRowProcessor.transitionAcceptedToStartedIfDue(reservationId, now);
+            } catch (final RuntimeException e) {
+                LOGGER.atWarn().setCause(e).addArgument(reservationId)
+                        .log("Accepted→started transition failed (reservation id={})");
+            }
         }
         LOGGER.atInfo().addArgument(started).log("Reservation start transition run: marked {} reservation(s) as started");
     }
@@ -239,14 +244,16 @@ public class ReservationLifecycleSchedulerServiceImpl implements ReservationLife
     /** Keeps a single {@code cancelled} counter for owner dashboards while persisting granular statuses. */
     private static Map<String, Long> mergeCancelledBuckets(final Map<String, Long> raw) {
         final Map<String, Long> out = new LinkedHashMap<>(raw);
-        long merged = out.getOrDefault("cancelled", 0L);
-        merged += out.getOrDefault("cancelled_by_rider", 0L);
-        merged += out.getOrDefault("cancelled_by_owner", 0L);
-        merged += out.getOrDefault("cancelled_due_to_missing_payment_proof", 0L);
-        out.remove("cancelled_by_rider");
-        out.remove("cancelled_by_owner");
-        out.remove("cancelled_due_to_missing_payment_proof");
-        out.put("cancelled", merged);
+        final String cancelled = Reservation.Status.CANCELLED.dbValue();
+        long merged = out.getOrDefault(cancelled, 0L);
+        for (final Reservation.Status granular : List.of(
+                Reservation.Status.CANCELLED_BY_RIDER,
+                Reservation.Status.CANCELLED_BY_OWNER,
+                Reservation.Status.CANCELLED_DUE_TO_MISSING_PAYMENT_PROOF)) {
+            merged += out.getOrDefault(granular.dbValue(), 0L);
+            out.remove(granular.dbValue());
+        }
+        out.put(cancelled, merged);
         return out;
     }
 
@@ -254,14 +261,19 @@ public class ReservationLifecycleSchedulerServiceImpl implements ReservationLife
     @Transactional(readOnly = true)
     public BigDecimal getCarTotalEarnings(final long ownerId, final long carId) {
         return reservationService.sumCarRevenueByStatuses(
-                ownerId, carId, Arrays.asList("accepted", "started", "finished"));
+                ownerId, carId, List.of(
+                        Reservation.Status.ACCEPTED.dbValue(),
+                        Reservation.Status.STARTED.dbValue(),
+                        Reservation.Status.FINISHED.dbValue()));
     }
 
     @Override
     @Transactional(readOnly = true)
     public BigDecimal getCarPendingEarnings(final long ownerId, final long carId) {
         return reservationService.sumCarRevenueByStatuses(
-                ownerId, carId, Arrays.asList("accepted", "started"));
+                ownerId, carId, List.of(
+                        Reservation.Status.ACCEPTED.dbValue(),
+                        Reservation.Status.STARTED.dbValue()));
     }
 
     @Override

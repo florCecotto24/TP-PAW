@@ -305,7 +305,7 @@ public class CarAvailability {
         if (!(o instanceof CarAvailability)) {
             return false;
         }
-        return EntityEquality.equalsByLongId(this, this.id, ((CarAvailability) o).id);
+        return EntityEquality.equalsByLongId(this, getId(), ((CarAvailability) o).getId());
     }
 
     @Override

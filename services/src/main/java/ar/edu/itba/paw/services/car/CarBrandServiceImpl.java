@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import ar.edu.itba.paw.exception.car.CarBrandConflictException;
 import ar.edu.itba.paw.models.domain.car.CarBrand;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.persistence.car.CarBrandDao;
@@ -59,6 +60,23 @@ public class CarBrandServiceImpl implements CarBrandService {
         final Optional<CarBrand> existing = carBrandDao.findByNameIgnoreCase(normalized);
         if (existing.isPresent()) {
             return existing;
+        }
+        return Optional.of(carBrandDao.create(normalized, false));
+    }
+
+    @Override
+    @Transactional
+    public Optional<CarBrand> createUnvalidated(final String rawName) {
+        if (rawName == null) {
+            return Optional.empty();
+        }
+        final String normalized = rawName.trim();
+        if (normalized.isEmpty()) {
+            return Optional.empty();
+        }
+        final Optional<CarBrand> existing = carBrandDao.findByNameIgnoreCase(normalized);
+        if (existing.isPresent()) {
+            throw new CarBrandConflictException(existing.get().getId());
         }
         return Optional.of(carBrandDao.create(normalized, false));
     }

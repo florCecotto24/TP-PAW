@@ -37,6 +37,11 @@ public interface ReservationPaymentService {
     Optional<BinaryContent> findPaymentReceiptContentForParticipant(long userId, long reservationId);
 
     /**
+     * Admin download of the payment receipt linked to the reservation, without participant scoping.
+     */
+    Optional<BinaryContent> findPaymentReceiptContentForAdmin(long reservationId);
+
+    /**
      * Owner uploads refund transfer proof for a cancelled confirmed reservation that requires
      * refund documentation.
      */
@@ -50,6 +55,11 @@ public interface ReservationPaymentService {
      * {@link BinaryContent} value object so download endpoints don't leak the JPA entity.
      */
     Optional<BinaryContent> findRefundReceiptContentForParticipant(long userId, long reservationId);
+
+    /**
+     * Admin download of the refund receipt linked to the reservation, without participant scoping.
+     */
+    Optional<BinaryContent> findRefundReceiptContentForAdmin(long reservationId);
 
     /**
      * Batch job: cancels pending reservations whose payment-proof deadline passed without a

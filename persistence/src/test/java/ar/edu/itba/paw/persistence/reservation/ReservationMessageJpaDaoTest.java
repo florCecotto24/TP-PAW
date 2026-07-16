@@ -126,12 +126,13 @@ class ReservationMessageJpaDaoTest extends DaoIntegrationTestSupport {
         // 1. Arrange — seed a stored file directly; the DAO call we test is the one in Act.
         final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         jdbcTemplate.update(
-                "INSERT INTO stored_files (uploader_user_id, file_name, content_type, byte_array, created_at) "
-                        + "VALUES (?, ?, ?, ?, ?)",
+                "INSERT INTO stored_files (uploader_user_id, file_name, content_type, byte_array, size_bytes, created_at) "
+                        + "VALUES (?, ?, ?, ?, ?, ?)",
                 riderId,
                 "photo.png",
                 "image/png",
                 new byte[] {1, 2, 3},
+                3L,
                 now);
         final long fileId =
                 jdbcTemplate.queryForObject("SELECT id FROM stored_files WHERE file_name = ?", Long.class, "photo.png");

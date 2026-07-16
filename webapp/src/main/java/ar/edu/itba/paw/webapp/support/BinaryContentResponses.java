@@ -20,7 +20,8 @@ public final class BinaryContentResponses {
         final Response.ResponseBuilder builder = Response.ok(content.getBytes())
                 .header("Content-Disposition", "inline; filename=\"" + safeName + "\"");
         if (contentType != null && !contentType.isBlank()) {
-            builder.type(contentType);
+            final int semi = contentType.indexOf(';');
+            builder.type(semi < 0 ? contentType.trim() : contentType.substring(0, semi).trim());
         } else {
             builder.type(MediaType.APPLICATION_OCTET_STREAM);
         }

@@ -19,6 +19,7 @@ public final class MessageDto {
     private String createdAt;
     private boolean seen;
     private boolean hasAttachment;
+    private MessageAttachmentDto attachment;
     private LinksDto links;
 
     public MessageDto() {
@@ -32,6 +33,7 @@ public final class MessageDto {
                 : ISO_OFFSET.format(message.getCreatedAt());
         dto.seen = message.isSeen();
         dto.hasAttachment = message.getAttachmentFileId() != null;
+        dto.attachment = MessageAttachmentDto.fromStoredFile(message.getAttachment());
         final long reservationId = message.getReservationId();
         final long messageId = message.getId();
         dto.links = LinksDto.ofSelf(RestUriUtils.reservationMessageUri(uriInfo, reservationId, messageId).toString())
@@ -51,6 +53,7 @@ public final class MessageDto {
         out.createdAt = dto.getCreatedAt() == null ? null : ISO_OFFSET.format(dto.getCreatedAt());
         out.seen = dto.isSeen();
         out.hasAttachment = dto.getAttachment() != null;
+        out.attachment = MessageAttachmentDto.fromInternal(dto.getAttachment());
         out.links = LinksDto.ofSelf(
                         RestUriUtils.reservationMessageUri(uriInfo, dto.getReservationId(), dto.getId()).toString())
                 .withRelated("reservation",
@@ -95,6 +98,14 @@ public final class MessageDto {
 
     public void setHasAttachment(final boolean hasAttachment) {
         this.hasAttachment = hasAttachment;
+    }
+
+    public MessageAttachmentDto getAttachment() {
+        return attachment;
+    }
+
+    public void setAttachment(final MessageAttachmentDto attachment) {
+        this.attachment = attachment;
     }
 
     public LinksDto getLinks() {

@@ -53,8 +53,8 @@ export default function HomeCarouselBlock({
           subtitle={subtitle}
           emptyMessage={emptyMessage ?? t('carousel.noVehicles')}
           pageIndex={pageIndex}
-          onPrevPage={hasPrevPage ? () => onPageChange(pageIndex - 1) : undefined}
-          onNextPage={hasNextPage ? () => onPageChange(pageIndex + 1) : undefined}
+          onPrevPage={() => onPageChange(pageIndex - 1)}
+          onNextPage={() => onPageChange(pageIndex + 1)}
           prevPageDisabled={!hasPrevPage}
           nextPageDisabled={!hasNextPage}
           renderItem={(car: CarSummaryDto): ReactNode => <BrowseCarCard car={car} />}

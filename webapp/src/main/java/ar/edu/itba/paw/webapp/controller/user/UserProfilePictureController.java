@@ -15,7 +15,6 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Request;
 import javax.ws.rs.core.Response;
 
-import org.glassfish.jersey.media.multipart.FormDataParam;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.method.P;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -36,6 +35,7 @@ import ar.edu.itba.paw.webapp.support.FormValidationSupport;
  *
  * Mutations are gated declaratively ({@code @PreAuthorize}, backed by the
  * {@code userResourceAccess}/{@code currentUserResolver} beans referenced by name); GET is public.
+ * PUT accepts a raw {@code image/*} body (see {@code openapi.yaml}), not multipart.
  */
 @Path("/users/{id}/profile-picture")
 @Component
@@ -48,6 +48,9 @@ public class UserProfilePictureController {
 
     @Context
     private Request request;
+
+    @Context
+    private HttpHeaders httpHeaders;
 
     @Autowired
     public UserProfilePictureController(
@@ -75,21 +78,18 @@ public class UserProfilePictureController {
     }
 
     @PUT
-    @Consumes({MediaType.WILDCARD, "image/*", MediaType.MULTIPART_FORM_DATA})
+    @Consumes({"image/*", MediaType.APPLICATION_OCTET_STREAM, MediaType.WILDCARD})
     @PreAuthorize("@userResourceAccess.isSelf(#id, @currentUserResolver.currentPrincipalOrNull())")
     public Response uploadProfilePicture(
             @P("id") @PathParam("id") final long id,
-            @Context final HttpHeaders headers,
-            final InputStream body,
-            @FormDataParam("file") final InputStream multipartBody,
-            @FormDataParam("file") final org.glassfish.jersey.media.multipart.FormDataContentDisposition fileMeta)
-            throws IOException {
+            final InputStream body) throws IOException {
         userService.getUserById(id)
                 .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
 
-        final InputStream source = multipartBody != null ? multipartBody : body;
-        final byte[] bytes = binaryPayloadSupport.readValidatedBody(source);
-        final String contentType = resolveContentType(headers, fileMeta);
+        final byte[] bytes = binaryPayloadSupport.readValidatedBody(body);
+        final String contentType = httpHeaders.getMediaType() != null
+                ? httpHeaders.getMediaType().toString()
+                : MediaType.APPLICATION_OCTET_STREAM;
         final ProfilePictureRestForm form = ProfilePictureRestForm.of(bytes, contentType);
         formValidationSupport.validate(form);
 
@@ -104,12 +104,5 @@ public class UserProfilePictureController {
                 .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
         userService.clearProfilePicture(id);
         return Response.noContent().build();
-    }
-
-    private static String resolveContentType(
-            final HttpHeaders headers,
-            final org.glassfish.jersey.media.multipart.FormDataContentDisposition fileMeta) {
-        final MediaType type = headers.getMediaType();
-        return type != null ? type.toString() : MediaType.APPLICATION_OCTET_STREAM;
     }
 }

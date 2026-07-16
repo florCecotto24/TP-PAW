@@ -22,6 +22,7 @@ import javax.persistence.Table;
 
 import ar.edu.itba.paw.models.domain.file.Image;
 import ar.edu.itba.paw.models.domain.file.StoredFile;
+import ar.edu.itba.paw.models.domain.internal.EntityEquality;
 import ar.edu.itba.paw.models.security.UserRole;
 
 /**
@@ -472,10 +473,6 @@ public class User {
         this.identityValidated = identityValidated;
     }
 
-    /**
-     * Entity identity based on persisted {@code id}. Two instances with {@code id == 0} are not considered equal
-     * unless they are the same object reference.
-     */
     @Override
     public boolean equals(final Object o) {
         if (this == o) {
@@ -485,18 +482,12 @@ public class User {
             return false;
         }
         final User other = (User) o;
-        if (id == 0L || other.id == 0L) {
-            return false;
-        }
-        return id == other.id;
+        return EntityEquality.equalsByLongId(this, getId(), other.getId());
     }
 
     @Override
     public int hashCode() {
-        if (id == 0L) {
-            return System.identityHashCode(this);
-        }
-        return Long.hashCode(id);
+        return EntityEquality.hashByLongId(this, id);
     }
 
     @Override

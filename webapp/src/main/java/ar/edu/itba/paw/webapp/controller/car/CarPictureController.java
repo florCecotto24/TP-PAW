@@ -149,13 +149,11 @@ public class CarPictureController {
                 ? filePart.getMediaType().toString()
                 : MediaType.APPLICATION_OCTET_STREAM;
         final int order = carGalleryUploadSupport.nextDisplayOrder(carId);
-        carGalleryUploadSupport.attachGalleryMedia(
+        final CarPicture created = carGalleryUploadSupport.attachSingleGalleryMedia(
                 car.getOwnerId(),
                 carId,
-                List.of(new GalleryMediaUpload(filename, contentType, bytes)),
+                new GalleryMediaUpload(filename, contentType, bytes),
                 order);
-        final List<CarPicture> pictures = carPictureService.getCarPicturesByCarId(carId);
-        final CarPicture created = pictures.get(pictures.size() - 1);
         final URI location = uriInfo.getBaseUriBuilder()
                 .path("cars").path(String.valueOf(carId))
                 .path("pictures").path(String.valueOf(created.getId()))

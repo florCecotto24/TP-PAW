@@ -70,7 +70,7 @@ public class EmailVerificationCode {
         if (!(o instanceof EmailVerificationCode)) {
             return false;
         }
-        return EntityEquality.equalsByLongId(this, this.id, ((EmailVerificationCode) o).id);
+        return EntityEquality.equalsByLongId(this, getId(), ((EmailVerificationCode) o).getId());
     }
 
     @Override

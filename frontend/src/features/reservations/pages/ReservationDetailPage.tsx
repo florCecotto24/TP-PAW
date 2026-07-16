@@ -187,8 +187,8 @@ export default function ReservationDetailPage() {
 
   const onSaveDates = () => {
     if (!reservation || !editStart || !editEnd) return;
-    const startIso = new Date(`${editStart}T00:00:00`).toISOString();
-    const endIso = new Date(`${editEnd}T00:00:00`).toISOString();
+    const startIso = `${editStart}T00:00:00`;
+    const endIso = `${editEnd}T00:00:00`;
     void runAction(async () => {
       await patchReservation(reservation.links.self, { startDate: startIso, endDate: endIso });
       setEditDatesOpen(false);
@@ -210,13 +210,13 @@ export default function ReservationDetailPage() {
   };
 
   const onSubmitReview = () => {
-    if (!reviewsUri) return;
+    if (!reviewsUri || !reservation?.links?.self) return;
     if (reviewComment.length > reviewCommentMaxLength) {
       setActionError(t('res.review.commentTooLong', { max: reviewCommentMaxLength }));
       return;
     }
     void runAction(async () => {
-      await postReview(reviewsUri, {
+      await postReview(reviewsUri, reservation.links.self, {
         rating: reviewRating,
         comment: reviewComment,
         image: reviewImage,

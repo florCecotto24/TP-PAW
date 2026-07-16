@@ -51,8 +51,8 @@ public interface ReservationWorkflowService {
 
     /**
      * Cancels every blocking reservation on {@code carId} when an admin pauses the listing.
-     * Unpaid pending rows become {@code cancelled_due_to_missing_payment_proof}; confirmed rows
-     * ({@code accepted}/{@code started}) become {@code cancelled_by_owner} with refund metadata when paid.
+     * Pending unpaid and confirmed rows become {@code cancelled_by_owner}; refund metadata applies
+     * when a payment receipt was already uploaded.
      */
     void cancelBlockingReservationsForAdminCarPause(long carId);
 

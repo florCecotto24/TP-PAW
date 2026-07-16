@@ -28,9 +28,17 @@ public interface CarModelService {
     /**
      * Returns the existing model with {@code name} (case-insensitive) for the brand, or creates a new one
      * with {@code validated = false} and the given body {@code type} if no match exists. Empty/blank name
-     * returns {@link Optional#empty()}.
+     * returns {@link Optional#empty()}. Used by publish flows that intentionally reuse catalog rows.
      */
     Optional<CarModel> findOrCreateUnvalidated(long brandId, String rawName, Car.Type type);
+
+    /**
+     * Creates a new unvalidated model for the brand. Empty/blank name or null {@code type} returns
+     * {@link Optional#empty()}.
+     *
+     * @throws ar.edu.itba.paw.exception.car.CarModelConflictException when a model with the same name exists
+     */
+    Optional<CarModel> createUnvalidated(long brandId, String rawName, Car.Type type);
 
     // -----------------------------------------------------------------------------------------------------------
     // Admin-orchestrated operations on model rows.

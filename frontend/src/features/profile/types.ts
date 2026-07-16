@@ -33,8 +33,9 @@ export interface UserDto {
   memberSince?: string;
   latestLocale?: string | null;
   emailVerified: boolean;
-  licenseValidated: boolean;
-  identityValidated: boolean;
+  /** Present only on {@code user.private.v1}. */
+  licenseValidated?: boolean;
+  identityValidated?: boolean;
   licenseUploaded?: boolean;
   identityUploaded?: boolean;
   blocked?: boolean;

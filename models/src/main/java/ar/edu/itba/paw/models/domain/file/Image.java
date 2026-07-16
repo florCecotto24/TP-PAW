@@ -1,7 +1,5 @@
 package ar.edu.itba.paw.models.domain.file;
 
-import java.util.Arrays;
-
 import javax.persistence.Basic;
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -93,6 +91,10 @@ public class Image {
         return id;
     }
 
+    /**
+     * Returns the backing image buffer directly (not a defensive copy): blobs are large and this
+     * value flows straight into download responses. Callers must treat the array as read-only.
+     */
     public byte[] getData() {
         return data;
     }
@@ -105,7 +107,7 @@ public class Image {
         if (!(o instanceof Image)) {
             return false;
         }
-        return EntityEquality.equalsByLongId(this, this.id, ((Image) o).id);
+        return EntityEquality.equalsByLongId(this, getId(), ((Image) o).getId());
     }
 
     @Override
@@ -115,11 +117,12 @@ public class Image {
 
     @Override
     public String toString() {
+        final int dataLength = data == null ? 0 : data.length;
         return "Image{" +
                 "id=" + id +
                 ", name='" + name + '\'' +
                 ", contentType='" + contentType + '\'' +
-                ", data=" + Arrays.toString(data) +
+                ", dataLength=" + dataLength +
                 '}';
     }
 }

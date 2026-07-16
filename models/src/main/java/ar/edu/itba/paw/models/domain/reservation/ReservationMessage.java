@@ -134,7 +134,7 @@ public class ReservationMessage {
         if (!(o instanceof ReservationMessage)) {
             return false;
         }
-        return EntityEquality.equalsByLongId(this, this.id, ((ReservationMessage) o).id);
+        return EntityEquality.equalsByLongId(this, getId(), ((ReservationMessage) o).getId());
     }
 
     @Override

@@ -78,6 +78,9 @@ public class BrandController {
         this.paginationSupport = paginationSupport;
     }
 
+    // Not a @PreAuthorize candidate: a single method-level precondition cannot express that two-way routing, so the
+    // admin gate stays imperative when {@code validated=false}. Approve/reject remain declarative
+    // ({@code @PreAuthorize} on PATCH/DELETE below).
     @GET
     @Produces(VndMediaType.BRAND_V1_JSON)
     public Response listBrands(
@@ -110,8 +113,8 @@ public class BrandController {
     @Produces(VndMediaType.BRAND_V1_JSON)
     public Response createBrand(@Valid final BrandCreateForm form) {
         currentUserResolver.requireUserId();
-        final CarBrand brand = carBrandService.findOrCreateUnvalidated(form.getName())
-                .orElseThrow(IllegalStateException::new);
+        final CarBrand brand = carBrandService.createUnvalidated(form.getName())
+                .orElseThrow(() -> new IllegalStateException("Brand name required"));
 
         final URI location = uriInfo.getBaseUriBuilder()
                 .path("brands")
@@ -155,6 +158,9 @@ public class BrandController {
         return Response.noContent().build();
     }
 
+    // Same query-param ACL split as {@link #listBrands}: validated models are public; asking for
+    // the unvalidated set ({@code validated=false}) is admin-only and cannot be expressed as a
+    // fixed @PreAuthorize on the path alone.
     @GET
     @Path("/{id}/models")
     @Produces(VndMediaType.MODEL_V1_JSON)
@@ -194,13 +200,18 @@ public class BrandController {
                 .orElseThrow(() -> new CarBrandNotFoundException(id));
 
         final Car.Type type = CarRestEnums.parseType(form.getType());
-        final CarModel model = carModelService.findOrCreateUnvalidated(id, form.getName(), type)
-                .orElseThrow(IllegalStateException::new);
+        final CarModel model = carModelService.createUnvalidated(id, form.getName(), type)
+                .orElseThrow(() -> new IllegalStateException("Model name and type required"));
 
         final URI location = RestUriUtils.modelUri(uriInfo, id, model.getId());
         return Response.created(location).entity(ModelDto.from(model, uriInfo)).build();
     }
 
+    /**
+     * Admin gate used only when a collection query opts into pending/unvalidated rows
+     * ({@code validated=false}). Prefer {@code @PreAuthorize("@userResourceAccess.isAdmin()")}
+     * when the whole operation is admin-only (see {@link #approveBrand}, {@link #rejectBrand}).
+     */
     private void requireAdmin() {
         if (!AuthenticationAuthorities.hasAdminRole(SecurityContextHolder.getContext().getAuthentication())) {
             throw new AccessDeniedException("Admin role required.");

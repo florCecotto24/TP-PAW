@@ -74,7 +74,11 @@ function ChatMessageBubble({
     >
       <div className={bubbleClass}>
         {attachmentUri ? (
-          <ChatAttachmentPreview attachmentUri={attachmentUri} onVisualKind={setVisualOnly} />
+          <ChatAttachmentPreview
+            attachmentUri={attachmentUri}
+            attachmentMeta={msg.attachment ?? undefined}
+            onVisualKind={setVisualOnly}
+          />
         ) : null}
         {bodyText ? (
           attachmentUri ? (

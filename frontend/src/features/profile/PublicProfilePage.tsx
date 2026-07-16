@@ -110,21 +110,6 @@ export default function PublicProfilePage() {
               </div>
             </section>
 
-            {/* Documents card */}
-            <section className="counterparty-section-card counterparty-reviews-card card border-0 shadow-sm rounded-4 mt-4">
-              <div className="card-body p-4">
-                <h2 className="h5 fw-semibold mb-3">{t('profile.public.documents')}</h2>
-                <ul className="list-unstyled mb-0">
-                  <DocStatus
-                    validated={user.licenseValidated}
-                    label={t('profile.docs.license')}
-                    className="mb-2"
-                  />
-                  <DocStatus validated={user.identityValidated} label={t('profile.docs.identity')} />
-                </ul>
-              </div>
-            </section>
-
             {/* Active cars */}
             <UserCars user={user} />
 
@@ -137,31 +122,6 @@ export default function PublicProfilePage() {
           </div>
         </div>
       </div>
-  );
-}
-
-function DocStatus({
-  validated,
-  label,
-  className,
-}: {
-  validated: boolean;
-  label: string;
-  className?: string;
-}) {
-  const { t } = useTranslation();
-  return (
-    <li className={className}>
-      {validated ? (
-        <i className="bi bi-check-circle-fill text-success" aria-hidden="true"></i>
-      ) : (
-        <i className="bi bi-x-circle-fill text-danger" aria-hidden="true"></i>
-      )}
-      <span className="visually-hidden">
-        {t(validated ? 'profile.docs.statusValidated' : 'profile.docs.statusNotValidated')}
-      </span>
-      <span className="fw-semibold ms-1">{label}</span>
-    </li>
   );
 }
 

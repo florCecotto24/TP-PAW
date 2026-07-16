@@ -5,6 +5,7 @@ import java.util.stream.Collectors;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.GenericEntity;
@@ -19,7 +20,7 @@ import ar.edu.itba.paw.services.location.LocationService;
 import ar.edu.itba.paw.webapp.api.common.VndMediaType;
 import ar.edu.itba.paw.webapp.dto.rest.NeighborhoodDto;
 
-/** Location catalog ({@code GET /neighborhoods}). */
+/** Location catalog ({@code GET /neighborhoods}, {@code GET /neighborhoods/{id}}). */
 @Path("/neighborhoods")
 @Component
 public final class NeighborhoodController {
@@ -46,6 +47,15 @@ public final class NeighborhoodController {
         return Response.ok(new GenericEntity<List<NeighborhoodDto>>(dtos) {})
                 .header("X-Total-Count", dtos.size())
                 .build();
+    }
+
+    @GET
+    @Path("/{id}")
+    @Produces(VndMediaType.NEIGHBORHOOD_V1_JSON)
+    public Response getNeighborhood(@PathParam("id") final long id) {
+        final Neighborhood neighborhood = locationService.findNeighborhoodById(id)
+                .orElseThrow(() -> new javax.ws.rs.NotFoundException());
+        return Response.ok(toDto(neighborhood)).build();
     }
 
     private NeighborhoodDto toDto(final Neighborhood neighborhood) {

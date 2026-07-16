@@ -81,6 +81,50 @@ export function isAllowedChatFile(file: File): boolean {
 
 export type ChatFileValidationError = 'invalidType' | 'tooLarge';
 
+export type ChatAttachmentKind = 'IMAGE' | 'PDF' | 'DOCUMENT' | 'VIDEO' | 'GENERIC';
+
+export interface ChatAttachmentMeta {
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+  kind: ChatAttachmentKind;
+}
+
+export function chatAttachmentTypeLabel(
+  kind: ChatAttachmentKind | undefined,
+  contentType: string | undefined,
+  t: (key: string) => string,
+): string {
+  switch (kind) {
+    case 'PDF':
+      return t('res.chat.attachmentKind.pdf');
+    case 'IMAGE':
+      return t('res.chat.attachmentKind.image');
+    case 'DOCUMENT':
+      return t('res.chat.attachmentKind.document');
+    case 'VIDEO':
+      return t('res.chat.attachmentKind.video');
+    case 'GENERIC':
+      return t('res.chat.attachmentKind.generic');
+    default:
+      break;
+  }
+  const mime = (contentType ?? '').toLowerCase();
+  if (mime === 'application/pdf' || mime.includes('pdf')) return t('res.chat.attachmentKind.pdf');
+  if (mime.startsWith('image/')) return t('res.chat.attachmentKind.image');
+  if (mime.startsWith('video/')) return t('res.chat.attachmentKind.video');
+  return t('res.chat.attachmentKind.generic');
+}
+
+export function chatAttachmentMetaLine(
+  meta: ChatAttachmentMeta,
+  t: (key: string) => string,
+): string {
+  const typeLabel = chatAttachmentTypeLabel(meta.kind, meta.contentType, t);
+  const sizeLabel = formatFileSize(meta.sizeBytes);
+  return sizeLabel ? `${typeLabel} · ${sizeLabel}` : typeLabel;
+}
+
 export function validateChatFile(
   file: File | null | undefined,
   maxAttachmentMb?: number,

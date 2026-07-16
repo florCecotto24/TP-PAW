@@ -2,7 +2,7 @@ import CarCard, { type CarCardProps } from './CarCard';
 import type { To } from 'react-router-dom';
 import type { AppLinkTarget } from '../../../routes/navigationState';
 
-/** Datos mínimos de tarjeta de consumidor (equiv. {@code VehicleCardView} del JSP). */
+/** Datos mínimos de tarjeta de consumidor para grids de browse. */
 export interface ConsumerCarCardData {
   carId: number;
   model: string;

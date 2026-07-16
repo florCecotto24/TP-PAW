@@ -2,12 +2,18 @@ package ar.edu.itba.paw.models.domain.internal;
 
 /**
  * Helpers that consolidate the JPA-friendly {@code equals}/{@code hashCode} contract used by the
- * domain entities. Two entities of the same logical class are equal iff both have a non-zero
- * (i.e. persisted) primary key and that key matches; transient instances (id=0) are only equal to
- * themselves so that a {@code Set<Entity>} populated before a flush still keeps each new row
- * separate. {@code hashCode} is stable across the unmanaged → managed transition: it returns the
- * identity hash for transient rows so the bucket location does not change once the database
- * generates an id.
+ * domain entities.
+ *
+ * Equality: two entities of the same logical class are equal iff both have a non-zero
+ * (persisted) primary key and that key matches. Transient instances ({@code id == 0}) are only
+ * equal to themselves ({@code ==}); callers must compare ids via getters so Hibernate proxies
+ * initialize correctly.
+ *
+ * Hash code: stable for the lifetime of an instance across the unmanaged → managed transition.
+ * It is based on the entity class (proxy subclasses unwrap to the mapped type), not on the id,
+ * so assigning a generated PK does not move the object to another {@link java.util.HashSet} bucket.
+ * Equal persisted entities of the same type therefore share the same hash regardless of instance
+ * identity.
  */
 public final class EntityEquality {
 
@@ -15,9 +21,8 @@ public final class EntityEquality {
     }
 
     /**
-     * Equality predicate for entities keyed by a {@code long} primary key. The caller passes the
-     * already-narrowed peer (via {@code instanceof}) so this method does not need to know about
-     * Hibernate proxies; the cast is the caller's responsibility.
+     * Equality predicate for entities keyed by a {@code long} primary key. The caller passes ids
+     * obtained via getters (not field access) so Hibernate proxies are initialized.
      */
     public static boolean equalsByLongId(final Object self, final long selfId, final long otherId) {
         if (selfId == 0L || otherId == 0L) {
@@ -27,12 +32,11 @@ public final class EntityEquality {
     }
 
     /**
-     * Identity-stable hash for a {@code long}-keyed entity. Returns the JVM identity hash code while
-     * the row is transient (id=0) so the entity does not change its bucket once the persist call
-     * generates the database id.
+     * Class-stable hash for a {@code long}-keyed entity. Ignores {@code id} so the hash does not
+     * change when a transient row receives a generated primary key.
      */
     public static int hashByLongId(final Object self, final long id) {
-        return id == 0L ? System.identityHashCode(self) : Long.hashCode(id);
+        return entityClass(self).hashCode();
     }
 
     /**
@@ -48,10 +52,27 @@ public final class EntityEquality {
     }
 
     /**
-     * Identity-stable hash for entities keyed by an embedded composite id. Mirrors
-     * {@link #hashByLongId(Object, long)} for the {@code @EmbeddedId} case.
+     * Class-stable hash for entities keyed by an embedded composite id. Mirrors
+     * {@link #hashByLongId(Object, long)}.
      */
     public static int hashByEmbeddedId(final Object self, final Object id) {
-        return id == null ? System.identityHashCode(self) : id.hashCode();
+        return entityClass(self).hashCode();
+    }
+
+    private static Class<?> entityClass(final Object self) {
+        Class<?> type = self.getClass();
+        // Hibernate / ByteBuddy / Javassist proxies subclass the mapped entity.
+        while (type.getSuperclass() != null && type.getSuperclass() != Object.class) {
+            final String name = type.getName();
+            if (name.contains("HibernateProxy")
+                    || name.contains("ByteBuddy")
+                    || name.contains("javassist")
+                    || name.contains("EnhancerBy")) {
+                type = type.getSuperclass();
+            } else {
+                break;
+            }
+        }
+        return type;
     }
 }

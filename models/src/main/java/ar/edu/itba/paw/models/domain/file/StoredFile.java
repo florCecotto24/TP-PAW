@@ -47,6 +47,10 @@ public class StoredFile {
     @Column(name = "byte_array", nullable = false)
     private byte[] data;
 
+    /** Byte length of {@link #data}; kept denormalized so list/poll paths need not load the blob. */
+    @Column(name = "size_bytes", nullable = false)
+    private long sizeBytes;
+
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
 
@@ -66,6 +70,7 @@ public class StoredFile {
         this.fileName = fileName;
         this.contentType = contentType;
         this.data = data;
+        this.sizeBytes = data == null ? 0L : data.length;
         this.createdAt = createdAt;
     }
 
@@ -110,8 +115,16 @@ public class StoredFile {
         return contentType;
     }
 
+    /**
+     * Returns the backing blob buffer directly (not a defensive copy): file payloads are large and
+     * this value flows straight into download responses. Callers must treat the array as read-only.
+     */
     public byte[] getData() {
         return data;
+    }
+
+    public long getSizeBytes() {
+        return sizeBytes;
     }
 
     public OffsetDateTime getCreatedAt() {
@@ -122,9 +135,10 @@ public class StoredFile {
         if (contentType == null) {
             return false;
         }
-        final String t = contentType.trim().toLowerCase();
-        return t.startsWith("image/")
-                || "application/pdf".equals(t);
+        final String t = contentType.trim().toLowerCase(java.util.Locale.ROOT);
+        final int semi = t.indexOf(';');
+        final String bare = semi < 0 ? t : t.substring(0, semi).trim();
+        return Image.isImageContentType(bare) || "application/pdf".equals(bare);
     }
 
     @Override
@@ -135,7 +149,7 @@ public class StoredFile {
         if (!(o instanceof StoredFile)) {
             return false;
         }
-        return EntityEquality.equalsByLongId(this, this.id, ((StoredFile) o).id);
+        return EntityEquality.equalsByLongId(this, getId(), ((StoredFile) o).getId());
     }
 
     @Override

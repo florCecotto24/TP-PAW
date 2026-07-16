@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Navbar, Nav, Container, NavDropdown } from 'react-bootstrap';
 import i18n, { SUPPORTED_LOCALES, type Locale } from '../i18n';
-import { useSessionStore } from '../session/sessionStore';
+import { persistLocaleToServer, useSessionStore } from '../session/sessionStore';
 import { paths } from '../routes/paths';
 import {
   isMyCarsNavActive,
@@ -37,7 +37,11 @@ export default function NavBar() {
   }
 
   function setLanguage(next: Locale) {
-    if (next !== lang) void i18n.changeLanguage(next);
+    if (next === lang) {
+      return;
+    }
+    void i18n.changeLanguage(next);
+    void persistLocaleToServer(next);
   }
 
   const avatarUrl = resolveProfilePictureAssetUrl(currentUser?.links, currentUserUri);
@@ -129,7 +133,6 @@ export default function NavBar() {
                         className="navbar-user-menu-toggle w-100 h-100"
                         imgClassName="navbar-user-menu-toggle__img w-100 h-100"
                         placeholderClassName="d-flex align-items-center justify-content-center w-100 h-100"
-                        iconFallback
                       />
                     </span>
                   }

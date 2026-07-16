@@ -2,6 +2,7 @@ package ar.edu.itba.paw.scheduling;
 
 import ar.edu.itba.paw.services.email.EmailService;
 import ar.edu.itba.paw.services.reservation.ReservationAvailabilityService;
+import ar.edu.itba.paw.services.reservation.ReservationLifecycleRowProcessor;
 import ar.edu.itba.paw.services.reservation.ReservationService;
 import ar.edu.itba.paw.services.user.UserService;
 import ar.edu.itba.paw.util.CarAvailabilityAddressFormatter;
@@ -27,6 +28,7 @@ import ar.edu.itba.paw.models.domain.user.User;
 /**
  * Daily job: emails riders a reminder the day before pickup for reservations starting tomorrow (wall zone window
  * mapped to UTC for the query). Cron and zone: {@code app.scheduler.reservation-reminder.*}.
+ * Each row is claimed ({@code pickup_reminder_email_sent}) before {@code @Async} mail is queued.
  */
 @Component
 public final class ReservationReminderScheduler {
@@ -35,6 +37,7 @@ public final class ReservationReminderScheduler {
 
     private final ReservationService reservationService;
     private final ReservationAvailabilityService reservationAvailabilityService;
+    private final ReservationLifecycleRowProcessor lifecycleRowProcessor;
     private final CarAvailabilityAddressFormatter carAvailabilityAddressFormatter;
     private final UserService userService;
     private final EmailService emailService;
@@ -44,12 +47,14 @@ public final class ReservationReminderScheduler {
     public ReservationReminderScheduler(
             final ReservationService reservationService,
             final ReservationAvailabilityService reservationAvailabilityService,
+            final ReservationLifecycleRowProcessor lifecycleRowProcessor,
             final CarAvailabilityAddressFormatter carAvailabilityAddressFormatter,
             final UserService userService,
             final EmailService emailService,
             final MoneyFormat moneyFormat) {
         this.reservationService = reservationService;
         this.reservationAvailabilityService = reservationAvailabilityService;
+        this.lifecycleRowProcessor = lifecycleRowProcessor;
         this.carAvailabilityAddressFormatter = carAvailabilityAddressFormatter;
         this.userService = userService;
         this.emailService = emailService;
@@ -71,6 +76,7 @@ public final class ReservationReminderScheduler {
         final var reservations = reservationService.findReminderReservations(from, to);
         LOGGER.atInfo().addArgument(reservations.size()).log("Found {} reservations to send reminders for");
 
+        int queued = 0;
         for (final Reservation reservation : reservations) {
             try {
                 // Rider, car and owner come pre-fetched from findReminderReservations (JOIN FETCH
@@ -81,6 +87,9 @@ public final class ReservationReminderScheduler {
                 if (rider == null || car == null || car.getOwner() == null) {
                     LOGGER.atWarn().addArgument(reservation.getId())
                             .log("Skipping reservation reminder email: rider/car/owner missing for reservationId={}");
+                    continue;
+                }
+                if (!lifecycleRowProcessor.claimPickupReminder(reservation.getId())) {
                     continue;
                 }
 
@@ -115,9 +124,11 @@ public final class ReservationReminderScheduler {
                 LOGGER.atInfo().addArgument(rider.getEmail()).addArgument(reservation.getId())
                         .log("Queueing reservation reminder email to {} for reservation id={}");
                 emailService.sendReservationReminderEmail(payload);
+                queued++;
             } catch (final RuntimeException e) {
                 LOGGER.atError().setCause(e).addArgument(reservation.getId()).log("Could not send reservation reminder email for reservation id={}");
             }
         }
+        LOGGER.atInfo().addArgument(queued).log("Reservation reminder job: queued {} email(s)");
     }
 }

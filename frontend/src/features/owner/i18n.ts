@@ -161,6 +161,9 @@ export const ownerI18n = {
           upload: 'Subir seguro',
           replace: 'Reemplazar seguro',
           viewDocument: 'Ver documento',
+          removeDocument: 'Eliminar seguro',
+          removeConfirm: '¿Eliminar el documento de seguro? El auto pasará a "Falta documentación".',
+          removeSuccess: 'Documento de seguro eliminado.',
           uploadSuccess: 'Documento de seguro subido correctamente.',
           viewError: 'No se pudo abrir el documento.',
           chooseFile: 'Elegir archivo…',
@@ -190,6 +193,7 @@ export const ownerI18n = {
           statusFailed: 'No se pudo cambiar el estado.',
           deactivateFailed: 'No se pudo desactivar el auto.',
           insuranceFailed: 'No se pudo subir el seguro.',
+          insuranceDeleteFailed: 'No se pudo eliminar el seguro.',
         },
       },
       availability: {
@@ -238,6 +242,7 @@ export const ownerI18n = {
         empty: 'Sin fotos todavía.',
         add: 'Agregar fotos / videos',
         delete: 'Quitar',
+        deleteConfirm: '¿Eliminar este archivo de la galería?',
         errors: {
           uploadFailed: 'No se pudo subir el archivo.',
           deleteFailed: 'No se pudo quitar el archivo.',
@@ -426,6 +431,9 @@ export const ownerI18n = {
           upload: 'Upload insurance',
           replace: 'Replace insurance',
           viewDocument: 'View document',
+          removeDocument: 'Delete insurance',
+          removeConfirm: 'Delete the insurance document? The car will move to "Missing documents".',
+          removeSuccess: 'Insurance document deleted.',
           uploadSuccess: 'Insurance document uploaded successfully.',
           viewError: 'The document could not be opened.',
           chooseFile: 'Choose file…',
@@ -455,6 +463,7 @@ export const ownerI18n = {
           statusFailed: 'Could not change the status.',
           deactivateFailed: 'Could not deactivate the car.',
           insuranceFailed: 'Could not upload the insurance.',
+          insuranceDeleteFailed: 'Could not delete the insurance.',
         },
       },
       availability: {
@@ -503,6 +512,7 @@ export const ownerI18n = {
         empty: 'No pictures yet.',
         add: 'Add pictures / videos',
         delete: 'Remove',
+        deleteConfirm: 'Delete this file from the gallery?',
         errors: {
           uploadFailed: 'Could not upload the file.',
           deleteFailed: 'Could not remove the file.',

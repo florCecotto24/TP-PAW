@@ -58,9 +58,14 @@ mvn compile -pl webapp -am
 mvn jetty:run -pl webapp
 ```
 
-Alternatively, deploy the **`webapp`** WAR (`webapp/target/webapp.war`) to **Tomcat** on Pampero. The Vite `base` is set in `frontend/vite.config.ts` (`/webapp/`, matching the WAR name).
+Alternatively, deploy the **`webapp`** WAR (`webapp/target/webapp.war`) to **Tomcat** on Pampero. Public URL: `http://pawserver.it.itba.edu.ar/paw-2026a-08/`. Build the SPA with Pampero base before packaging:
 
-Local Jetty uses port **8080** and context path **`/webapp`** (same as the Tomcat WAR and Vite `base`). Open `http://localhost:8080/webapp/`. The SPA and API share that origin (`/webapp/api/…`).
+```bash
+cd frontend && npm run build:pampero
+# or: mvn package -pl webapp -am -Dpampero.spa=true
+```
+
+Local Jetty uses port **8080** and context path **`/webapp`** (default Vite `base`). Open `http://localhost:8080/webapp/`. The SPA and API share that origin (`/webapp/api/…`).
 
 ### SPA dev server (optional)
 

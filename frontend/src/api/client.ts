@@ -406,9 +406,8 @@ export class HypermediaClient {
 
   /**
    * Arma el request, agrega Authorization, absorbe tokens de la respuesta y, ante 401,
-   * reintenta UNA vez con el refresh token — sobre el mismo request, sin roundtrip dedicado
-   * (§1.8). Devuelve la `Response` cruda: la capa de arriba decide cómo leer el body
-   * (JSON/texto vía `toApiResponse`, o binario vía `.blob()` en {@link getBlob}).
+   * reintenta con el refresh token sobre el mismo request. Si el retry solo rota el par
+   * sin completar la operación, hace un tercer intento con el access absorbido.
    */
   private async fetchWithRetry(path: string, opts: RequestOptions, method: HttpMethod): Promise<Response> {
     const url = this.buildUrl(path, opts.query);
@@ -437,6 +436,12 @@ export class HypermediaClient {
       if (refresh) {
         const retryRes = await fetch(url, this.buildInit(requestOpts, `Bearer ${refresh}`));
         this.absorbAuthHeaders(retryRes.headers);
+        if (retryRes.status === 401) {
+          const freshAccess = this.tokens.getAccessToken();
+          if (freshAccess && freshAccess !== access) {
+            return fetch(url, this.buildInit(requestOpts, `Bearer ${freshAccess}`));
+          }
+        }
         return retryRes;
       }
     }

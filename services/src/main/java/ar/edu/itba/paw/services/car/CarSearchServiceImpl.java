@@ -203,7 +203,7 @@ public class CarSearchServiceImpl implements CarSearchService {
         final BigDecimal maxPrice = priceMax != null && priceMax.compareTo(BigDecimal.ZERO) >= 0 ? priceMax : null;
         // OwnerCarSearchCriteria persists statuses as the lowercase DB token (matches Car.Status
         // converter); the previous LISTING_STATUSES whitelist hard-coded {active,paused,finished}
-        // which mismatched the dropdown options exposed by CarEnumOptions. Trusting the typed enum
+        // which mismatched the dropdown options the SPA exposes. Trusting the typed enum
         // list lets every Car.Status value flow through correctly.
         final List<String> statuses = enumDbTokens(carStatus);
         final List<String> ratingBands = collectRatingBandParams(rating);

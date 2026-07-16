@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Assertions;
@@ -133,12 +134,10 @@ class ReservationPricingServiceImplTest {
         final OffsetDateTime start = AvailabilityPeriod.parseWallLocalDateTimeToUtc("2026-06-08T10:00");
         final OffsetDateTime end = AvailabilityPeriod.parseWallLocalDateTimeToUtc("2026-06-12T18:00");
         Mockito.when(carAvailabilityService.findById(availabilityId)).thenReturn(Optional.of(offered));
-        Mockito.when(carAvailabilityService.findEffectiveForDayByCar(carId, LocalDate.of(2026, 6, 8)))
-                .thenReturn(Optional.of(offered));
-        Mockito.when(carAvailabilityService.findEffectiveForDayByCar(carId, LocalDate.of(2026, 6, 9)))
-                .thenReturn(Optional.of(offered));
-        Mockito.when(carAvailabilityService.findEffectiveForDayByCar(carId, LocalDate.of(2026, 6, 10)))
-                .thenReturn(Optional.of(withdrawn));
+        // Newer rows first (createdAt DESC, id DESC): withdrawn on 10th wins that day.
+        Mockito.when(carAvailabilityService.findOverlappingRangeByCar(
+                        carId, LocalDate.of(2026, 6, 8), LocalDate.of(2026, 6, 12)))
+                .thenReturn(List.of(withdrawn, offered));
 
         // 2. Act
         final boolean fits = pricingService.reservationIntervalFitsCarAvailability(
@@ -176,6 +175,9 @@ class ReservationPricingServiceImplTest {
         Mockito.when(carService.getCarById(carId)).thenReturn(Optional.of(car));
         Mockito.when(reservationTimingPolicy.getPickupLeadHours()).thenReturn(1);
         Mockito.when(reservationTimingPolicy.getMaxBillableDaysPerReservation()).thenReturn(30);
+        Mockito.when(carAvailabilityService.findOverlappingRangeByCar(
+                        Mockito.eq(carId), Mockito.any(LocalDate.class), Mockito.any(LocalDate.class)))
+                .thenReturn(List.of(offered));
         Mockito.when(carAvailabilityService.findEffectiveForDayByCar(Mockito.eq(carId), Mockito.any(LocalDate.class)))
                 .thenReturn(Optional.of(offered));
         Mockito.when(reservationService.hasActiveOverlapByCar(carId, start, end)).thenReturn(true);

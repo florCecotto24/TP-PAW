@@ -90,6 +90,12 @@ public interface UserService {
     void patchUser(long userId, UserPatchCommand patch, long actingUserId);
 
     /**
+     * Authorizes a {@code PATCH /users/{id}} command without mutating. Callers that apply password
+     * before profile/admin fields must invoke this first so a mixed body cannot partially commit.
+     */
+    void assertCanPatchUser(long userId, UserPatchCommand patch, long actingUserId);
+
+    /**
      * Stores a new profile picture and removes the previous image row when present.
      * @throws ar.edu.itba.paw.exception.image.ImageValidationException when payload exceeds configured max size
      */

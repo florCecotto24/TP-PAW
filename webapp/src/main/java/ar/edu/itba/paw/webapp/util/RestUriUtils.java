@@ -185,7 +185,7 @@ public final class RestUriUtils {
             final String endDate) {
         return uriInfo.getBaseUriBuilder()
                 .path("cars").path(String.valueOf(carId))
-                .path("availabilities").path("range")
+                .path("availabilities")
                 .queryParam("from", startDate)
                 .queryParam("until", endDate)
                 .build();
@@ -233,6 +233,30 @@ public final class RestUriUtils {
                 .path("reservations")
                 .path(String.valueOf(reservationId))
                 .build();
+    }
+
+    /**
+     * Extracts the reservation id from a canonical {@code /reservations/{id}} URI
+     * (absolute or relative).
+     */
+    public static Optional<Long> parseReservationId(final String reservationUri) {
+        if (reservationUri == null || reservationUri.isBlank()) {
+            return Optional.empty();
+        }
+        final String path = reservationUri.split("\\?")[0].replaceAll("/+$", "");
+        final int lastSlash = path.lastIndexOf('/');
+        if (lastSlash < 0 || lastSlash == path.length() - 1) {
+            return Optional.empty();
+        }
+        final String parent = path.substring(0, lastSlash);
+        if (!parent.endsWith("/reservations") && !parent.endsWith("reservations")) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(Long.parseLong(path.substring(lastSlash + 1)));
+        } catch (final NumberFormatException e) {
+            return Optional.empty();
+        }
     }
 
     public static URI reservationMessagesUri(final UriInfo uriInfo, final long reservationId) {

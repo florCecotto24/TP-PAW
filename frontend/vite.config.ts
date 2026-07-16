@@ -3,8 +3,35 @@ import type { IncomingMessage } from 'node:http';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-/** Vite dev + base `/webapp/`: do not proxy the SPA shell or HMR to the API backend. */
-function bypassWebappDevProxy(req: IncomingMessage): string | undefined {
+/** Local Jetty context (`webapp.war` → `/webapp`). */
+const LOCAL_CONTEXT = '/webapp';
+
+function normalizeBase(path: string): string {
+  const trimmed = path.trim();
+  if (!trimmed || trimmed === '/') {
+    return '/';
+  }
+  return trimmed.endsWith('/') ? trimmed : `${trimmed}/`;
+}
+
+/**
+ * base del bundler:
+ * - test → `/` (URNs relativas en Vitest)
+ * - {@code VITE_BASE} → override (Pampero: `/paw-2026a-08/`)
+ * - default → `/webapp/` (Jetty local)
+ */
+function resolveBase(mode: string): string {
+  if (mode === 'test') {
+    return '/';
+  }
+  if (process.env.VITE_BASE) {
+    return normalizeBase(process.env.VITE_BASE);
+  }
+  return normalizeBase(LOCAL_CONTEXT);
+}
+
+/** Vite dev: do not proxy the SPA shell or HMR to the API backend. */
+function bypassLocalDevProxy(req: IncomingMessage): string | undefined {
   const url = req.url ?? '';
   const accept = req.headers.accept ?? '';
   if (accept.includes('text/html')) {
@@ -25,19 +52,14 @@ function bypassWebappDevProxy(req: IncomingMessage): string | undefined {
   return undefined;
 }
 
-// Build de producción 100% estático (Pampero = Tomcat sin Node, sin SSR).
-// El WAR se despliega como /webapp → base '/webapp/' (LINEAMIENTOS: configurar el bundler).
-// outDir:'dist' + war-plugin copia dist/ a la raíz del WAR.
-// Vitest corre con mode 'test' por defecto: ahí forzamos base '/' porque los
-// tests ejercitan lógica pura (resolveApiUrl, sessionStore) contra URNs
-// relativas tal cual las devuelve la API, sin querer el prefijo de despliegue.
+// Build estático (Pampero = Tomcat sin Node). outDir dist + war-plugin → raíz del WAR.
 export default defineConfig(({ mode }) => ({
   plugins: [react()],
-  base: mode === 'test' ? '/' : '/webapp/',
+  base: resolveBase(mode),
   build: {
     outDir: 'dist',
     assetsDir: 'public',
-    minify: 'esbuild', // minifica JS + CSS
+    minify: 'esbuild',
     rollupOptions: {
       output: {
         entryFileNames: 'public/[name].[hash].js',
@@ -47,20 +69,19 @@ export default defineConfig(({ mode }) => ({
     },
   },
   server: {
-    // Dev server: proxy API to Jetty/Tomcat at context /webapp.
     proxy: {
       '/api': {
-        target: 'http://localhost:8080/webapp',
+        target: `http://localhost:8080${LOCAL_CONTEXT}`,
         changeOrigin: true,
       },
-      '/webapp/api': {
+      [`${LOCAL_CONTEXT}/api`]: {
         target: 'http://localhost:8080',
         changeOrigin: true,
       },
-      '/webapp': {
+      [LOCAL_CONTEXT]: {
         target: 'http://localhost:8080',
         changeOrigin: true,
-        bypass: bypassWebappDevProxy,
+        bypass: bypassLocalDevProxy,
       },
     },
   },

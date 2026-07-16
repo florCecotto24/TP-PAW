@@ -64,16 +64,17 @@ public class UserProfileMediaServiceImplTest {
     @Test
     public void testUploadValidatedProfileDocumentDoesNotThrowForLicense() {
         // 1. Arrange
+        final byte[] pdfBytes = {0x25, 0x50, 0x44, 0x46, 0x2d}; // "%PDF-" magic header
         final User user = User.identities(1L, "u@mail.com", "A", "B");
         Mockito.when(userService.getUserById(1L)).thenReturn(Optional.of(user));
-        Mockito.when(storedFileService.create(1L, "licencia.pdf", "application/pdf", new byte[] {1, 2, 3}))
+        Mockito.when(storedFileService.create(1L, "licencia.pdf", "application/pdf", pdfBytes))
                 .thenReturn(StoredFile.identified(10L,
                         User.identities(1L, "u@test.com", "U", "U"),
-                        "licencia.pdf", "application/pdf", new byte[] {1, 2, 3}, null));
+                        "licencia.pdf", "application/pdf", pdfBytes, null));
 
         // 2. Execute and 3. Assert
         Assertions.assertDoesNotThrow(() -> profileMediaService.uploadValidatedProfileDocument(
-                1L, UserDocumentType.LICENSE, "licencia.pdf", "application/pdf", new byte[] {1, 2, 3}));
+                1L, UserDocumentType.LICENSE, "licencia.pdf", "application/pdf", pdfBytes));
     }
 
     @Test

@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.services.user;
 
 
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -57,6 +58,11 @@ public class AdminServiceImpl implements AdminService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AdminServiceImpl.class);
 
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+    private static final int BOOTSTRAP_PASSWORD_LENGTH = 32;
+    private static final char[] BOOTSTRAP_PASSWORD_ALPHABET =
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789".toCharArray();
+
     private final UserService userService;
     private final CarService carService;
     private final CarBrandService carBrandService;
@@ -66,6 +72,7 @@ public class AdminServiceImpl implements AdminService {
     private final ReservationMessageService reservationMessageService;
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
+    private final PasswordResetService passwordResetService;
 
     @Autowired
     public AdminServiceImpl(
@@ -77,7 +84,8 @@ public class AdminServiceImpl implements AdminService {
             final ReservationWorkflowService reservationWorkflowService,
             final ReservationMessageService reservationMessageService,
             final EmailService emailService,
-            final PasswordEncoder passwordEncoder) {
+            final PasswordEncoder passwordEncoder,
+            final PasswordResetService passwordResetService) {
         this.userService = userService;
         this.carService = carService;
         this.carBrandService = carBrandService;
@@ -87,6 +95,7 @@ public class AdminServiceImpl implements AdminService {
         this.reservationMessageService = reservationMessageService;
         this.emailService = emailService;
         this.passwordEncoder = passwordEncoder;
+        this.passwordResetService = passwordResetService;
     }
 
     @Override
@@ -106,20 +115,28 @@ public class AdminServiceImpl implements AdminService {
             final String email,
             final String forename,
             final String surname,
-            final String temporaryPassword,
             final long assignedByUserId,
             final Locale locale) {
         assertAdminCaller(assignedByUserId);
+        final String bootstrapPassword = randomBootstrapPassword();
         final User newUser = userService.createAdminUserWithEncodedPassword(
-                email, forename, surname, passwordEncoder.encode(temporaryPassword), assignedByUserId);
+                email, forename, surname, passwordEncoder.encode(bootstrapPassword), assignedByUserId);
+        passwordResetService.initiatePasswordReset(email, locale);
         emailService.sendAdminInvitation(
                 AdminInvitationEmailPayload.builder()
                         .messageLocale(locale)
                         .recipientEmail(email)
                         .recipientFullName(forename + " " + surname)
-                        .plainPassword(temporaryPassword)
                         .build());
         return newUser;
+    }
+
+    private static String randomBootstrapPassword() {
+        final char[] buf = new char[BOOTSTRAP_PASSWORD_LENGTH];
+        for (int i = 0; i < buf.length; i++) {
+            buf[i] = BOOTSTRAP_PASSWORD_ALPHABET[SECURE_RANDOM.nextInt(BOOTSTRAP_PASSWORD_ALPHABET.length)];
+        }
+        return new String(buf);
     }
 
     @Override

@@ -665,10 +665,6 @@ h3 { letter-spacing: -0.015em; }
     box-shadow: var(--shadow-card) !important;
 }
 
-.pickup-map-placeholder {
-    background: var(--color-surface-elevated) !important;
-}
-
 .detail-price-amount {
     color: var(--color-primary) !important;
 }
@@ -1396,8 +1392,24 @@ hr {
     color: var(--color-text-muted) !important;
 }
 
+.carouselHeader__nav-slot {
+    flex: 0 0 34px;
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.carouselHeader__nav-slot-placeholder {
+    display: block;
+    width: 34px;
+    height: 34px;
+}
+
 .carouselHeader .btn-outline-secondary,
-.carouselHeader .btn-outline-primary {
+.carouselHeader .btn-outline-primary,
+.carouselHeader__nav .btn-outline-secondary {
     width: 34px !important;
     height: 34px !important;
     padding: 0 !important;

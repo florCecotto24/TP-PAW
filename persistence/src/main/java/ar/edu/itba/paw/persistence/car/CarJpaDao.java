@@ -289,16 +289,17 @@ public class CarJpaDao implements CarDao {
         }
         if (criteria.getMinPrice() != null || criteria.getMaxPrice() != null) {
             params.put("ownerOfferedKind", CarAvailability.Kind.OFFERED);
-        }
-        if (criteria.getMinPrice() != null) {
             jpql.append("AND EXISTS (SELECT 1 FROM CarAvailability la WHERE la.car = c "
-                    + "AND la.kind = :ownerOfferedKind AND la.dayPrice >= :ownerMinPrice) ");
-            params.put("ownerMinPrice", criteria.getMinPrice());
-        }
-        if (criteria.getMaxPrice() != null) {
-            jpql.append("AND EXISTS (SELECT 1 FROM CarAvailability la WHERE la.car = c "
-                    + "AND la.kind = :ownerOfferedKind AND la.dayPrice <= :ownerMaxPrice) ");
-            params.put("ownerMaxPrice", criteria.getMaxPrice());
+                    + "AND la.kind = :ownerOfferedKind ");
+            if (criteria.getMinPrice() != null) {
+                jpql.append("AND la.dayPrice >= :ownerMinPrice ");
+                params.put("ownerMinPrice", criteria.getMinPrice());
+            }
+            if (criteria.getMaxPrice() != null) {
+                jpql.append("AND la.dayPrice <= :ownerMaxPrice ");
+                params.put("ownerMaxPrice", criteria.getMaxPrice());
+            }
+            jpql.append(") ");
         }
         // Must mirror the native content query's excludeCarId (see appendOwnerCarNativeSqlFilters): without
         // it the COUNT overcounts by one whenever a car is excluded, so the total diverges from the page.
@@ -553,8 +554,9 @@ public class CarJpaDao implements CarDao {
         final StringBuilder idSql = new StringBuilder(
                 "SELECT c.id FROM cars c "
                 + OWNER_NOT_BLOCKED_JOIN
-                + "JOIN car_availability la ON la.car_id = c.id "
-                + "JOIN car_models cm ON cm.id = c.model_id "
+                + "JOIN car_models cm ON cm.id = c.model_id AND cm.validated = TRUE "
+                + "JOIN car_brands cb ON cb.id = cm.brand_id AND cb.validated = TRUE "
+                + "JOIN car_availability la ON la.car_id = c.id AND la.kind = '" + KIND_OFFERED + "' "
                 + "WHERE c.status = '" + STATUS_ACTIVE + "' "
                 + "AND c.id <> :carId ");
         if (refType != null) {
@@ -571,13 +573,9 @@ public class CarJpaDao implements CarDao {
         }
         idSql.append("GROUP BY c.id ORDER BY c.rating_avg DESC NULLS LAST, c.id ASC");
 
-        // The id-only query already encodes every WHERE clause that gates a similar listing
-        // (active status, owner not blocked, availability window, same body type / category,
-        // optional browseWallDate, optional excludeOwnerUserId). The downstream filter is
-        // only {@code filter(Objects::nonNull)}, which can drop a row solely if the car was hard-
-        // deleted between the id query and the entity-fetch JPQL — practically impossible inside
-        // the same transaction. Pulling 4× the requested limit was loading three quarters of the
-        // rows into memory just to discard them. Cap at the exact limit.
+        // The id-only query already encodes browse eligibility (active, offered availability,
+        // validated brand/model, owner not blocked, same type, optional date / exclude-owner).
+        // Cap at the exact limit — no overfetch for a filter that only drops hard-deleted races.
         @SuppressWarnings("unchecked")
         final List<Number> ids = bindParams(em.createNativeQuery(idSql.toString()), params)
                 .setMaxResults(limit)

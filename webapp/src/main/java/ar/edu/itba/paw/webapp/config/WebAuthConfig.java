@@ -105,8 +105,9 @@ public class WebAuthConfig {
     @Bean
     public JwtAuthenticationFilter jwtAuthenticationFilter(
             final AuthenticationManager authenticationManager,
-            final TokenService tokenService) {
-        return new JwtAuthenticationFilter(authenticationManager, tokenService);
+            final TokenService tokenService,
+            final UserService userService) {
+        return new JwtAuthenticationFilter(authenticationManager, tokenService, userService);
     }
 
     @Bean
@@ -142,10 +143,12 @@ public class WebAuthConfig {
                         // Conservative CSP. Scripts stay 'self' (the Vite bundle is same-origin). Google
                         // Fonts are allowed explicitly (the SPA loads them from fonts.googleapis.com /
                         // fonts.gstatic.com); 'unsafe-inline' on style-src covers React/Bootstrap inline
-                        // styles. Everything else is locked to self, images also allow data: URIs, no
-                        // plugins (object-src 'none'), no framing ancestors, fixed base-uri.
+                        // styles. Images/media also allow {@code data:} and {@code blob:} (local upload
+                        // previews via {@code URL.createObjectURL}). Everything else is locked to self,
+                        // no plugins (object-src 'none'), no framing ancestors, fixed base-uri.
                         .contentSecurityPolicy(csp -> csp.policyDirectives(
-                                "default-src 'self'; img-src 'self' data:; "
+                                "default-src 'self'; img-src 'self' data: blob:; "
+                                        + "media-src 'self' blob:; "
                                         + "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
                                         + "font-src 'self' https://fonts.gstatic.com; "
                                         + "object-src 'none'; base-uri 'self'; frame-ancestors 'none'")))

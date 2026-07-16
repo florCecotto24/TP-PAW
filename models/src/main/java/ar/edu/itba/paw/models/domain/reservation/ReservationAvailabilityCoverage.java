@@ -67,7 +67,7 @@ public class ReservationAvailabilityCoverage {
         if (!(o instanceof ReservationAvailabilityCoverage)) {
             return false;
         }
-        return EntityEquality.equalsByEmbeddedId(this.id, ((ReservationAvailabilityCoverage) o).id);
+        return EntityEquality.equalsByEmbeddedId(this.id, ((ReservationAvailabilityCoverage) o).getId());
     }
 
     @Override

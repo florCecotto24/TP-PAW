@@ -11,6 +11,7 @@ import java.time.OffsetDateTime;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Optional;
 
 import org.slf4j.Logger;
@@ -214,12 +215,15 @@ public class ReservationPricingServiceImpl implements ReservationPricingService 
     @Transactional(readOnly = true)
     public Optional<ReservationPlan> planReservationByCar(
             final long carId, final LocalDate firstBillableDay, final LocalDate lastBillableDay) {
+        // One overlapping-range query; effective row per day is the first cover in
+        // (createdAt DESC, id DESC) order — same precedence as findEffectiveForDayByCar.
+        final List<CarAvailability> overlapping =
+                carAvailabilityService.findOverlappingRangeByCar(carId, firstBillableDay, lastBillableDay);
         BigDecimal total = BigDecimal.ZERO;
         final LinkedHashSet<Long> coveringIds = new LinkedHashSet<>();
         CarAvailability firstDayAvailability = null;
         for (LocalDate day = firstBillableDay; !day.isAfter(lastBillableDay); day = day.plusDays(1)) {
-            final Optional<CarAvailability> effective =
-                    carAvailabilityService.findEffectiveForDayByCar(carId, day);
+            final Optional<CarAvailability> effective = resolveEffectiveForDay(overlapping, day);
             if (effective.isEmpty() || effective.get().getKind() == CarAvailability.Kind.WITHDRAWN) {
                 return Optional.empty();
             }
@@ -308,20 +312,26 @@ public class ReservationPricingServiceImpl implements ReservationPricingService 
             if (firstDay.isBefore(av.getStartInclusive()) || lastDay.isAfter(av.getEndInclusive())) {
                 return false;
             }
-            for (LocalDate day = firstDay; !day.isAfter(lastDay); day = day.plusDays(1)) {
-                final Optional<CarAvailability> eff = carAvailabilityService.findEffectiveForDayByCar(carId, day);
-                if (eff.isEmpty() || eff.get().getKind() == CarAvailability.Kind.WITHDRAWN) {
-                    return false;
-                }
-            }
-            return true;
         }
+        final List<CarAvailability> overlapping =
+                carAvailabilityService.findOverlappingRangeByCar(carId, firstDay, lastDay);
         for (LocalDate day = firstDay; !day.isAfter(lastDay); day = day.plusDays(1)) {
-            final Optional<CarAvailability> eff = carAvailabilityService.findEffectiveForDayByCar(carId, day);
+            final Optional<CarAvailability> eff = resolveEffectiveForDay(overlapping, day);
             if (eff.isEmpty() || eff.get().getKind() == CarAvailability.Kind.WITHDRAWN) {
                 return false;
             }
         }
         return true;
+    }
+
+    /**
+     * First overlapping row that covers {@code day}. {@code overlapping} must already be ordered by
+     * {@code createdAt DESC, id DESC} (see {@code CarAvailabilityDao#findOverlappingRangeByCar}).
+     */
+    private static Optional<CarAvailability> resolveEffectiveForDay(
+            final List<CarAvailability> overlapping, final LocalDate day) {
+        return overlapping.stream()
+                .filter(a -> !a.getStartInclusive().isAfter(day) && !a.getEndInclusive().isBefore(day))
+                .findFirst();
     }
 }

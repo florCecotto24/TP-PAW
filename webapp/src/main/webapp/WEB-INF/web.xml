@@ -30,6 +30,10 @@
     <listener-class>ar.edu.itba.paw.webapp.listener.JdbcDriverDeregistrationListener</listener-class>
   </listener>
 
+  <listener>
+    <listener-class>ar.edu.itba.paw.webapp.listener.SessionTrackingDisablingListener</listener-class>
+  </listener>
+
   <!-- 1. La API REST la atiende el filtro Jersey bajo /api/* (recursos JAX-RS en /users, /cars, …). -->
 
   <filter>
@@ -48,22 +52,26 @@
   <filter-mapping>
     <filter-name>unconditionalCacheFilter</filter-name>
     <url-pattern>/*</url-pattern>
+    <dispatcher>REQUEST</dispatcher>
+    <dispatcher>FORWARD</dispatcher>
   </filter-mapping>
 
+  <!-- Request UTF-8 only: do not force response charset (breaks image/* + nosniff in <img>). -->
   <filter>
     <filter-name>characterEncodingFilter</filter-name>
-    <filter-class>org.springframework.web.filter.CharacterEncodingFilter</filter-class>
-    <init-param>
-      <param-name>encoding</param-name>
-      <param-value>UTF-8</param-value>
-    </init-param>
-    <init-param>
-      <param-name>forceEncoding</param-name>
-      <param-value>true</param-value>
-    </init-param>
+    <filter-class>ar.edu.itba.paw.webapp.filter.Utf8RequestEncodingFilter</filter-class>
   </filter>
   <filter-mapping>
     <filter-name>characterEncodingFilter</filter-name>
+    <url-pattern>/*</url-pattern>
+  </filter-mapping>
+
+  <filter>
+    <filter-name>rydenLocaleFilter</filter-name>
+    <filter-class>org.springframework.web.filter.DelegatingFilterProxy</filter-class>
+  </filter>
+  <filter-mapping>
+    <filter-name>rydenLocaleFilter</filter-name>
     <url-pattern>/*</url-pattern>
   </filter-mapping>
 
@@ -100,11 +108,26 @@
       <param-name>jersey.config.servlet.filter.forwardOn404</param-name>
       <param-value>false</param-value>
     </init-param>
+    <init-param>
+      <!-- Strip /api so @Path("/cars") matches /api/cars when the matched servlet is default "/". -->
+      <param-name>jersey.config.servlet.filter.contextPath</param-name>
+      <param-value>/api</param-value>
+    </init-param>
   </filter>
   <filter-mapping>
     <filter-name>jersey</filter-name>
     <url-pattern>/api/*</url-pattern>
   </filter-mapping>
+
+  <!--
+    Catch-all so Tomcat runs the filter chain on /api/* and SPA deep-links.
+    Without this, unmatched paths 404 before SpaFallback/Jersey. Do not restore the old
+    jsp-file /* mapping — it reintroduces JSESSIONID.
+  -->
+  <servlet-mapping>
+    <servlet-name>default</servlet-name>
+    <url-pattern>/</url-pattern>
+  </servlet-mapping>
 
   <!-- 2. Archivos estáticos -> servlet por defecto -->
   <servlet-mapping>
@@ -119,15 +142,11 @@
     <servlet-name>default</servlet-name>
     <url-pattern>/public/*</url-pattern>
   </servlet-mapping>
-
-  <!-- 3. Todo lo demás -> index.html (deep-links SPA; rutas que coinciden con la API se resuelven antes vía SpaFallbackFilter + Jersey). -->
-  <servlet>
-    <servlet-name>index</servlet-name>
-    <jsp-file>/index.html</jsp-file>
-  </servlet>
   <servlet-mapping>
-    <servlet-name>index</servlet-name>
-    <url-pattern>/*</url-pattern>
+    <servlet-name>default</servlet-name>
+    <url-pattern>/index.html</url-pattern>
   </servlet-mapping>
+
+  <!-- Deep-links SPA: SpaFallbackFilter forwards HTML navigations to /index.html (default servlet). -->
 
 </web-app>

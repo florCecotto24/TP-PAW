@@ -162,9 +162,9 @@ export default function ReceiptUploadPicker({
   const submitLabel = confirming || busy ? copy.confirming : copy.confirmUpload;
 
   return (
-    <div className={className}>
-      <div className="d-flex align-items-stretch gap-2 ryden-payment-receipt__form">
-        <label className="form-control d-flex align-items-center mb-0 flex-grow-1 min-w-0 position-relative ryden-payment-receipt__file-label">
+    <div className={className ? `${className} min-w-0` : 'min-w-0'}>
+      <div className="d-flex flex-wrap align-items-stretch gap-2 ryden-payment-receipt__form">
+        <label className="form-control d-flex align-items-center mb-0 position-relative ryden-payment-receipt__file-label">
           <span
             className={`text-truncate pe-1 flex-grow-1 min-w-0${file ? '' : ' text-muted'}`}
             title={file?.name}
@@ -184,24 +184,21 @@ export default function ReceiptUploadPicker({
         </label>
         <button
           type="button"
-          className="btn btn-sm btn-primary flex-shrink-0 d-inline-flex align-items-center justify-content-center gap-1 px-2"
+          className="btn btn-sm btn-primary d-inline-flex align-items-center justify-content-center gap-1 px-2 ryden-payment-receipt__submit"
           disabled={!canSubmit}
           aria-label={copy.uploadAria}
           title={copy.uploadAria}
           onClick={() => void handleConfirm()}
         >
           <i className="bi bi-cloud-arrow-up" aria-hidden="true" />
-          <span className="d-none d-sm-inline">{submitLabel}</span>
+          <span className="text-truncate">{submitLabel}</span>
         </button>
       </div>
 
       {file ? (
-        <div className="border rounded-3 p-3 bg-white mt-3">
-          <div className="d-flex flex-column flex-sm-row gap-3 align-items-start">
-            <div
-              className="rounded-3 overflow-hidden border bg-body-tertiary flex-shrink-0 d-flex align-items-center justify-content-center"
-              style={{ width: 140, height: 105 }}
-            >
+        <div className="border rounded-3 p-3 bg-white mt-3 overflow-hidden">
+          <div className="d-flex gap-2 align-items-center mb-2">
+            <div className="ryden-payment-receipt__preview rounded border bg-body-tertiary flex-shrink-0 d-flex align-items-center justify-content-center overflow-hidden">
               {previewUrl ? (
                 <img
                   src={previewUrl}
@@ -210,41 +207,38 @@ export default function ReceiptUploadPicker({
                   style={{ objectFit: 'cover' }}
                 />
               ) : (
-                <div className="text-center text-secondary px-2">
-                  <i className="bi bi-file-earmark-pdf fs-2 d-block" aria-hidden="true" />
-                  <span className="small">PDF</span>
-                </div>
+                <i className="bi bi-file-earmark-pdf fs-4 text-secondary" aria-hidden="true" />
               )}
             </div>
-            <div className="min-w-0 flex-grow-1">
-              <p className="fw-semibold mb-1 text-truncate" title={file.name}>
+            <div className="ryden-payment-receipt__details flex-grow-1">
+              <p className="fw-semibold small mb-0 text-truncate" title={file.name}>
                 {file.name}
               </p>
-              <p className="small text-secondary mb-3">
+              <p className="small text-secondary mb-0">
                 {(file.size / (1024 * 1024)).toFixed(2)} MB
               </p>
-              <div className="d-flex flex-wrap gap-2">
-                <label className={`btn btn-outline-secondary btn-sm mb-0${locked ? ' disabled' : ''}`}>
-                  {copy.replaceFile}
-                  <input
-                    ref={replaceInputRef}
-                    type="file"
-                    className="visually-hidden"
-                    accept={accept}
-                    disabled={locked}
-                    onChange={(e) => applyFile(e.target.files?.[0] ?? null)}
-                  />
-                </label>
-                <button
-                  type="button"
-                  className="btn btn-outline-danger btn-sm"
-                  disabled={locked}
-                  onClick={clearSelection}
-                >
-                  {copy.removeFile}
-                </button>
-              </div>
             </div>
+          </div>
+          <div className="d-flex flex-wrap gap-2 ryden-payment-receipt__actions">
+            <label className={`btn btn-outline-secondary btn-sm mb-0${locked ? ' disabled' : ''}`}>
+              {copy.replaceFile}
+              <input
+                ref={replaceInputRef}
+                type="file"
+                className="visually-hidden"
+                accept={accept}
+                disabled={locked}
+                onChange={(e) => applyFile(e.target.files?.[0] ?? null)}
+              />
+            </label>
+            <button
+              type="button"
+              className="btn btn-outline-danger btn-sm"
+              disabled={locked}
+              onClick={clearSelection}
+            >
+              {copy.removeFile}
+            </button>
           </div>
         </div>
       ) : null}

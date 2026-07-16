@@ -30,6 +30,10 @@ public final class BinaryContent {
         return new BinaryContent(bytes, contentType, null);
     }
 
+    /**
+     * Returns the backing buffer directly (not a defensive copy): download payloads are large and
+     * this value flows straight into the HTTP response. Callers must treat the array as read-only.
+     */
     public byte[] getBytes() {
         return bytes;
     }

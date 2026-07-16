@@ -184,7 +184,7 @@ public class Review {
         if (!(o instanceof Review)) {
             return false;
         }
-        return EntityEquality.equalsByLongId(this, this.id, ((Review) o).id);
+        return EntityEquality.equalsByLongId(this, getId(), ((Review) o).getId());
     }
 
     @Override

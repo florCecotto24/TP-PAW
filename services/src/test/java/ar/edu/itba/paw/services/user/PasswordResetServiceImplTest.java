@@ -55,7 +55,8 @@ class PasswordResetServiceImplTest {
                 8, 72, 200, 50, 30, 500, "^[0-9+]+$");
         service = new PasswordResetServiceImpl(
                 dao, emailService, passwordEncoder, validationPolicy,
-                VerificationCodePolicy.fromValidatedConfiguration(6, 5), userService);
+                VerificationCodePolicy.fromValidatedConfiguration(6, 5), userService,
+                new OtpAttemptLimiter(8, java.time.Duration.ofMinutes(15)));
     }
 
     @Test

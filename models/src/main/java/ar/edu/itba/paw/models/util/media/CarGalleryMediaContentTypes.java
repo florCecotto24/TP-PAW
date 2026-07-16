@@ -1,5 +1,7 @@
 package ar.edu.itba.paw.models.util.media;
 
+import java.util.Locale;
+
 import ar.edu.itba.paw.models.domain.file.Image;
 
 /** Allowed MIME types for car gallery uploads (photos and short videos). */
@@ -18,7 +20,7 @@ public final class CarGalleryMediaContentTypes {
 
     public static boolean isVideoContentType(final String contentType, final String fileName) {
         if (contentType != null && !contentType.isBlank()) {
-            final String t = contentType.trim().toLowerCase();
+            final String t = contentType.trim().toLowerCase(Locale.ROOT);
             if (t.startsWith("video/")) {
                 return isAllowedVideoType(t);
             }
@@ -36,7 +38,7 @@ public final class CarGalleryMediaContentTypes {
         if (fileName == null || fileName.isBlank()) {
             return false;
         }
-        final String lower = fileName.trim().toLowerCase();
+        final String lower = fileName.trim().toLowerCase(Locale.ROOT);
         final int dot = lower.lastIndexOf('.');
         if (dot < 0 || dot == lower.length() - 1) {
             return false;

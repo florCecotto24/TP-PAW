@@ -5,6 +5,7 @@
 // DELETE — nunca armamos URLs a mano (LINEAMIENTOS, navegación por links).
 
 import type { Links } from '../../api/types';
+import type { MessageAttachmentDto } from '../reservations/types';
 import { lastPathSegment } from '../../api/uri';
 
 export type { UserDto } from '../../api/types';
@@ -88,6 +89,7 @@ export interface MessageDto {
   createdAt?: string;
   seen?: boolean;
   hasAttachment?: boolean;
+  attachment?: MessageAttachmentDto | null;
   links: Links; // self, reservation, sender, attachment?
 }
 

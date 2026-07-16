@@ -44,7 +44,7 @@ public final class CacheableBinaryResponses {
         noStore.setNoCache(true);
         final String safeName = sanitizeFileName(downloadFileName);
         return Response.ok(content.getBytes())
-                .type(content.getContentType())
+                .type(mediaTypeWithoutCharset(content.getContentType()))
                 .cacheControl(noStore)
                 .header("X-Content-Type-Options", "nosniff")
                 .header("Content-Disposition", "attachment; filename=\"" + safeName + "\"")
@@ -68,10 +68,22 @@ public final class CacheableBinaryResponses {
             return notModified.cacheControl(noCacheMustRevalidate()).build();
         }
         return Response.ok(content.getBytes())
-                .type(content.getContentType())
+                .type(mediaTypeWithoutCharset(content.getContentType()))
                 .tag(etag)
                 .cacheControl(noCacheMustRevalidate())
                 .build();
+    }
+
+    /**
+     * Binary {@code Content-Type} must not carry a {@code charset} parameter: browsers with
+     * {@code nosniff} treat {@code image/png;charset=UTF-8} as non-image and {@code <img>} fails.
+     */
+    private static String mediaTypeWithoutCharset(final String contentType) {
+        if (contentType == null || contentType.isBlank()) {
+            return "application/octet-stream";
+        }
+        final int semi = contentType.indexOf(';');
+        return semi < 0 ? contentType.trim() : contentType.substring(0, semi).trim();
     }
 
     private static CacheControl noCacheMustRevalidate() {

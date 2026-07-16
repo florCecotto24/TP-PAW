@@ -78,11 +78,23 @@ export interface ReservationPatchDto {
  * Mensaje de chat de una reserva. `links`: self, reservation, sender,
  * attachment (si hay).
  */
+export interface MessageAttachmentDto {
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+  kind: 'IMAGE' | 'PDF' | 'DOCUMENT' | 'VIDEO' | 'GENERIC';
+}
+
+/**
+ * Mensaje de chat de una reserva. `links`: self, reservation, sender,
+ * attachment (si hay).
+ */
 export interface MessageDto {
   body: string;
   createdAt: string;
   seen: boolean;
   hasAttachment: boolean;
+  attachment?: MessageAttachmentDto | null;
   links: Links;
 }
 

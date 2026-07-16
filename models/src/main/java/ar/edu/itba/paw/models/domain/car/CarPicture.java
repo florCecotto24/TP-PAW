@@ -163,7 +163,7 @@ public class CarPicture {
         if (!(o instanceof CarPicture)) {
             return false;
         }
-        return EntityEquality.equalsByLongId(this, this.id, ((CarPicture) o).id);
+        return EntityEquality.equalsByLongId(this, getId(), ((CarPicture) o).getId());
     }
 
     @Override

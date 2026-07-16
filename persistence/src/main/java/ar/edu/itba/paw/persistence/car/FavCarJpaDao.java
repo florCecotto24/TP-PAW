@@ -154,8 +154,8 @@ public class FavCarJpaDao implements FavCarDao {
         final List<Car> cars = em.createQuery(
                         "FROM Car c "
                                 + "JOIN FETCH c.owner "
-                                + "JOIN FETCH c.carModel cm "
-                                + "JOIN FETCH cm.brand "
+                                + "LEFT JOIN FETCH c.carModel cm "
+                                + "LEFT JOIN FETCH cm.brand "
                                 + "WHERE c.id IN :ids",
                         Car.class)
                 .setParameter("ids", orderedIds)

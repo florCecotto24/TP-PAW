@@ -158,7 +158,10 @@ export default function AdminReservationChatPage() {
                       </div>
                       {attachmentUri ? (
                         <div className="mb-2">
-                          <ChatAttachmentPreview attachmentUri={attachmentUri} />
+                          <ChatAttachmentPreview
+                            attachmentUri={attachmentUri}
+                            attachmentMeta={message.attachment ?? undefined}
+                          />
                         </div>
                       ) : null}
                       {bodyText ? <p className="mb-0">{bodyText}</p> : null}

@@ -276,7 +276,7 @@ describe('openapi.yaml contract (frontend)', () => {
   it('testMessageDtoShapeMatchesOpenApi', () => {
     // 1.Arrange
     const spec = schemaProperties(yaml, 'MessageDto');
-    const frontendShape = ['body', 'createdAt', 'seen', 'hasAttachment', 'links'];
+    const frontendShape = ['attachment', 'body', 'createdAt', 'hasAttachment', 'links', 'seen'];
 
     // 2.Act
     frontendShape.sort();

@@ -3,6 +3,7 @@ package ar.edu.itba.paw.webapp.controller.user;
 import java.io.IOException;
 import java.io.InputStream;
 
+import java.util.Locale;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
@@ -13,6 +14,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.NotFoundException;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.method.P;
@@ -81,7 +83,7 @@ public class UserDocumentController {
                 ? httpHeaders.getMediaType().toString()
                 : MediaType.APPLICATION_OCTET_STREAM;
         userService.uploadValidatedProfileDocument(
-                id, type, type.name().toLowerCase(), contentType, bytes);
+                id, type, type.name().toLowerCase(Locale.ROOT), contentType, bytes);
         return Response.noContent().build();
     }
 
@@ -103,12 +105,12 @@ public class UserDocumentController {
 
     private static UserDocumentType parseDocumentType(final String raw) {
         if (raw == null) {
-            throw new javax.ws.rs.NotFoundException();
+            throw new NotFoundException();
         }
-        return switch (raw.toLowerCase()) {
+        return switch (raw.toLowerCase(Locale.ROOT)) {
             case "license" -> UserDocumentType.LICENSE;
             case "identity" -> UserDocumentType.IDENTITY;
-            default -> throw new javax.ws.rs.NotFoundException();
+            default -> throw new NotFoundException();
         };
     }
 }

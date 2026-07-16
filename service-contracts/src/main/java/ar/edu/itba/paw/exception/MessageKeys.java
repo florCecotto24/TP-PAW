@@ -64,6 +64,7 @@ public final class MessageKeys {
     public static final String USER_PROFILE_BIRTH_DATE_FUTURE = "user.profile.birthDateFuture";
     public static final String USER_VERIFICATION_CODE_INVALID = "user.verification.codeInvalid";
     public static final String USER_VERIFICATION_CODE_ALREADY_ACTIVE = "user.verification.codeAlreadyActive";
+    public static final String USER_OTP_ATTEMPTS_EXCEEDED = "user.otp.attemptsExceeded";
     public static final String USER_PASSWORD_RESET_CODE_INVALID = "user.passwordReset.codeInvalid";
     public static final String USER_PASSWORD_RESET_CODE_ALREADY_ACTIVE = "user.passwordReset.codeAlreadyActive";
     public static final String USER_PASSWORD_CURRENT_INCORRECT = "user.password.currentIncorrect";
@@ -105,10 +106,8 @@ public final class MessageKeys {
     public static final String CAR_AVAILABILITY_NOT_OFFERED = "carAvailability.notOffered";
     public static final String CAR_AVAILABILITY_CHECKOUT_NOT_AFTER_CHECKIN = "carAvailability.times.checkOutNotAfterCheckIn";
     public static final String CAR_AVAILABILITY_CHECKINOUT_MIN_GAP = "carAvailability.times.minGapHours";
-    public static final String CAR_NOT_OWNED = "car.notOwned";
     public static final String PAGINATION_LIMIT_POSITIVE = "pagination.limit.positive";
     public static final String CAR_AVAILABILITY_PICKUP_LOCATION_REQUIRED = "carAvailability.pickupLocation.required";
-    public static final String CAR_AVAILABILITY_NEIGHBORHOOD_INVALID = "carAvailability.neighborhood.invalid";
     public static final String CAR_AVAILABILITY_PICKUP_STREET_NUMBER_DIGITS_ONLY = "carAvailability.pickupStreetNumber.digitsOnly";
     public static final String CAR_AVAILABILITY_PICKUP_STREET_NUMBER_MAX_DIGITS = "carAvailability.pickupStreetNumber.maxDigits";
     public static final String CAR_PUBLISH_CBU_REQUIRED = "car.publish.cbuRequired";
@@ -142,6 +141,8 @@ public final class MessageKeys {
     // catalog
     public static final String CATALOG_BRAND_NOT_FOUND = "catalog.brand.notFound";
     public static final String CATALOG_MODEL_NOT_FOUND = "catalog.model.notFound";
+    public static final String CATALOG_BRAND_ALREADY_EXISTS = "catalog.brand.alreadyExists";
+    public static final String CATALOG_MODEL_ALREADY_EXISTS = "catalog.model.alreadyExists";
 
     // car (extra)
     public static final String CAR_RESUME_NOT_ADMIN_PAUSED = "car.resume.notAdminPaused";

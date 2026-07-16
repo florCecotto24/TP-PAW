@@ -68,6 +68,9 @@ class ReservationMessageServiceImplTest {
     @Mock
     private Environment environment;
 
+    @Mock
+    private ReservationLifecycleRowProcessor lifecycleRowProcessor;
+
     private RecordingEmailService emailService;
 
     private ReservationMessageServiceImpl service;
@@ -90,7 +93,8 @@ class ReservationMessageServiceImplTest {
                 storedFileService,
                 ReservationMessageValidationPolicy.fromValidatedBodyMaxLength(1000),
                 ReservationChatPolicy.fromValidatedConfiguration(7, 50),
-                chatAttachmentUploadPolicy);
+                chatAttachmentUploadPolicy,
+                lifecycleRowProcessor);
     }
 
     private static Reservation reservation(final Reservation.Status status) {
@@ -114,13 +118,17 @@ class ReservationMessageServiceImplTest {
 
     private void stubParticipantAndSender() {
         final Reservation res = reservation(Reservation.Status.ACCEPTED);
+        final User rider = User.identities(RIDER_ID, "r@test.com", "R", "Rider");
         // lenient(): shared helper — not every test using it reaches the participant lookup
         // (e.g. attachment validation short-circuits on body/file checks before consulting the
         // sender). Strict-stubs would flag these as unnecessary on those paths.
         Mockito.lenient().when(reservationService.getRiderReservationById(RIDER_ID, RESERVATION_ID))
                 .thenReturn(Optional.of(res));
-        Mockito.lenient().when(userService.getUserById(RIDER_ID))
-                .thenReturn(Optional.of(User.identities(RIDER_ID, "r@test.com", "R", "Rider")));
+        Mockito.lenient().when(userService.getUserById(RIDER_ID)).thenReturn(Optional.of(rider));
+    }
+
+    private static User riderUser() {
+        return User.identities(RIDER_ID, "r@test.com", "R", "Rider");
     }
 
     @Test
@@ -271,7 +279,7 @@ class ReservationMessageServiceImplTest {
         final ReservationMessage saved = Mockito.mock(ReservationMessage.class);
         Mockito.when(saved.getId()).thenReturn(7L);
         Mockito.when(saved.getReservationId()).thenReturn(RESERVATION_ID);
-        Mockito.when(saved.getSenderUserId()).thenReturn(RIDER_ID);
+        Mockito.when(saved.getSender()).thenReturn(riderUser());
         Mockito.when(saved.getBody()).thenReturn("See attached");
         Mockito.when(saved.getCreatedAt()).thenReturn(OffsetDateTime.now(ZoneOffset.UTC));
         Mockito.when(saved.getAttachment()).thenReturn(storedFile);
@@ -286,6 +294,7 @@ class ReservationMessageServiceImplTest {
         Assertions.assertEquals(7L, dto.getId());
         Assertions.assertNotNull(dto.getAttachment());
         Assertions.assertEquals("receipt.pdf", dto.getAttachment().getFileName());
+        Assertions.assertEquals(3L, dto.getAttachment().getSizeBytes());
         Assertions.assertEquals("PDF", dto.getAttachment().getKind().name());
     }
 
@@ -306,7 +315,7 @@ class ReservationMessageServiceImplTest {
         final ReservationMessage saved = Mockito.mock(ReservationMessage.class);
         Mockito.when(saved.getId()).thenReturn(8L);
         Mockito.when(saved.getReservationId()).thenReturn(RESERVATION_ID);
-        Mockito.when(saved.getSenderUserId()).thenReturn(RIDER_ID);
+        Mockito.when(saved.getSender()).thenReturn(riderUser());
         Mockito.when(saved.getBody()).thenReturn("");
         Mockito.when(saved.getCreatedAt()).thenReturn(OffsetDateTime.now(ZoneOffset.UTC));
         Mockito.when(saved.getAttachment()).thenReturn(storedFile);
@@ -330,7 +339,7 @@ class ReservationMessageServiceImplTest {
         final ReservationMessage saved = Mockito.mock(ReservationMessage.class);
         Mockito.when(saved.getId()).thenReturn(1L);
         Mockito.when(saved.getReservationId()).thenReturn(RESERVATION_ID);
-        Mockito.when(saved.getSenderUserId()).thenReturn(RIDER_ID);
+        Mockito.when(saved.getSender()).thenReturn(riderUser());
         Mockito.when(saved.getBody()).thenReturn("Hello");
         Mockito.when(saved.getCreatedAt()).thenReturn(OffsetDateTime.now(ZoneOffset.UTC));
         Mockito.when(saved.getAttachment()).thenReturn(null);
@@ -395,7 +404,7 @@ class ReservationMessageServiceImplTest {
         Mockito.when(message.isSeen()).thenReturn(false);
 
         Mockito.when(reservationMessageDao.findPendingEmailNotification()).thenReturn(List.of(message));
-        Mockito.when(reservationMessageDao.markEmailNotified(List.of(55L))).thenReturn(1);
+        Mockito.when(lifecycleRowProcessor.markChatDigestNotified(List.of(55L))).thenReturn(true);
         Mockito.when(userService.getUserById(OWNER_ID)).thenReturn(Optional.of(owner));
         Mockito.when(userService.resolveMailLocaleFor(owner)).thenReturn(Locale.ENGLISH);
         Mockito.when(mailPublicUrls.absolutePath("/my-reservations/30/chat?role=owner"))

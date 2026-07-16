@@ -34,6 +34,8 @@ The app is served at `http://localhost:8080/` with context path **`/webapp`** (s
 - **SPA UI**: `http://localhost:8080/webapp/...` (client routes)
 - **REST API**: `http://localhost:8080/webapp/api/...`
 
+On **Pampero** the public URL is **`…/paw-2026a-08/`**. Before uploading the WAR, build the SPA with `npm run build:pampero` (or `mvn … -Dpampero.spa=true`) so Vite `base` is `/paw-2026a-08/`.
+
 During SPA development, Vite typically serves the UI on its own port with `base: '/'` and proxies API calls to Jetty.
 
 ## Building and running
@@ -65,7 +67,7 @@ PostgreSQL **`DataSource`** is built in **`RydenDataSourceFactory`**: idempotent
 
 Tests use **in-memory HSQLDB** via **`TestPersistenceConfig`** (`schema-hsqldb.sql` under `persistence/src/test/resources`) — no PostgreSQL required for tests.
 
-At runtime, **`WebConfig#entityManagerFactory`** configures Hibernate with `hibernate.hbm2ddl.auto=update` for local convenience when `@Entity` / `@Column` evolve; production schema changes must still ship as **Flyway** migrations (`V<number>__<description>.sql`), not auto-DDL alone. Flyway flags in **`RydenDataSourceFactory`**: `baselineOnMigrate(true)`, `baselineVersion("1")`, `failOnMissingLocations(true)`.
+At runtime, **`application.properties`** sets `hibernate.hbm2ddl.auto=update` for local convenience when `@Entity` / `@Column` evolve (`WebConfig#entityManagerFactory` reads that property); production schema changes must still ship as **Flyway** migrations (`V<number>__<description>.sql`), not auto-DDL alone. Flyway flags in **`RydenDataSourceFactory`**: `baselineOnMigrate(true)`, `baselineVersion("1")`, `failOnMissingLocations(true)`.
 
 ## Architecture
 
@@ -85,7 +87,7 @@ frontend  →  (assets into WAR)  webapp → services → persistence → models
 
 - **models** — Organised by *feature/role* rather than by type:
   - `domain/` — JPA entities (`@Entity`): `Car`, `User`, `CarAvailability`, `Reservation`, `Image`, `CarPicture`, `StoredFile`, `AvailabilityPeriod`, etc.
-  - `dto/` — transport / page-model objects grouped by business domain: `dto/car/` (cards, projections, market insight + `dto/car/detail/`), `dto/profile/`, `dto/reservation/` (cards, page models, message DTOs). `dto/Page<T>` is the only generic that stays in the root. REST wire DTOs for the API live under **`webapp/.../dto/rest/`**, not here.
+  - `dto/` — transport / page-model objects grouped by business domain: `dto/car/` (cards, projections, market insight, gallery items), `dto/profile/`, `dto/reservation/` (cards, page models, message DTOs), `dto/file/` (`BinaryContent`). `dto/Page<T>` is the only generic that stays in the root. REST wire DTOs for the API live under **`webapp/.../dto/rest/`**, not here.
   - `email/` — typed mail payloads consumed by `services/mail/`.
   - `pagination/` — `Page` slice (`SingleLayerPageWindow`) and `UiPaging`. UI page sizes live in `AppPaginationProperties` (webapp); DAOs paginate in SQL with `LIMIT`/`OFFSET` from those sizes. Services do not read pagination policy.
   - `security/` — `UserRole`.
@@ -95,7 +97,7 @@ frontend  →  (assets into WAR)  webapp → services → persistence → models
 - **service-contracts** — Service interfaces, shared exceptions, `MessageKeys` for i18n codes.
 - **services** — Business logic, email, async mail tasks, scheduling.
 - **frontend** — Vite + React 18 + TypeScript SPA (`ryden-spa`). Feature-sliced UI under `frontend/src/features/`; hypermedia client under `frontend/src/api/`.
-- **webapp** — Jersey JAX-RS resources (`controller/`, mapped at `/api/*`), REST DTOs (`dto/rest/`), JWT security, `SpaFallbackFilter`, `application/application.properties`, static SPA shell (`index.html` + `/public/`), Thymeleaf mail under `classpath:mail/`.
+- **webapp** — Jersey JAX-RS resources (`controller/`, filter-mapped at `/api/*`), REST DTOs (`dto/rest/`), JWT security, `SpaFallbackFilter`, `application/application.properties`, static SPA shell merged at build time (`index.html` + `/public/` from `frontend/dist/`). Mail SMTP properties under `classpath:mail/config/`; HTML templates and `MailMessages` live in **`services`** (`classpath:mail/html/`, `classpath:mail/messages/`).
 
 ### Key conventions
 
@@ -105,7 +107,7 @@ frontend  →  (assets into WAR)  webapp → services → persistence → models
 - **Enum persistence**: taxonomy enums (`Car.Type`, …) may use `@Enumerated(EnumType.STRING)`; lifecycle enums (`Car.Status`, `Reservation.Status`) use **`AttributeConverter`** implementations that persist **lowercase** names to match legacy SQL and `LOWER(status)` filters.
 - **IDs**: sequences use `@GeneratedValue(strategy = GenerationType.SEQUENCE, …)` with `@SequenceGenerator(…, allocationSize = 1)` aligned with PostgreSQL sequences.
 - **Pagination**: paginate in SQL (`LIMIT`/`OFFSET` + separate `COUNT`) — never overfetch and slice in memory. For entity queries with joins, avoid relying on `setFirstResult` / `setMaxResults` alone on large sets — prefer ID-page + `IN` fetch or DTO-native queries.
-- **Configuration**: Java `@Configuration` (`WebConfig`, `SpringMailConfig`, `WebAuthConfig`, …) plus `web.xml` for servlet bootstrap (Jersey `ServletContainer` on `/api/*`). Properties from `application.properties`; profile overrides from `application-{profile}.properties` if present.
+- **Configuration**: Java `@Configuration` (`WebConfig`, `SpringMailConfig`, `WebAuthConfig`, …) plus `web.xml` for servlet/filter bootstrap (Jersey `ServletContainer` as a **filter** on `/api/*`). Properties from `application/application.properties`; profile overrides from `application/application-{profile}.properties` if present. `hibernate.hbm2ddl.auto` is set in **`application.properties`** (local default `update`; deployed example uses `none`) — not in `WebConfig` itself.
 - **Dependency versions**: Root `pom.xml` `<dependencyManagement>`; child POMs omit versions where managed. JPA stack: Hibernate 5.6.x, `javax.persistence-api` 2.2, `spring-orm` aligned with Spring 5.3. Jersey version: `jersey.version` in root POM.
 - **UI**: source in `frontend/src/`; production assets come from `frontend/dist/` (`index.html` + `/public/`) and are merged into the WAR and Jetty composite webapp at build time. Static images not produced by Vite live under `webapp/src/main/webapp/assets/`. Deep links are handled by `SpaFallbackFilter` (HTML GETs → `/index.html`).
 - **Component scan** (`WebConfig`): `ar.edu.itba.paw.webapp.controller`, `.exception.mapper`, `.util`, `.support`, `.security`, `.validation`, `.config.properties`, plus `ar.edu.itba.paw.services`, `.persistence`, `.mail`, `.policy`, `.scheduling`, `.util`. **Excludes** Spring `@Controller` (no MVC controllers). Servlet listeners are declared in `WEB-INF/web.xml`.
@@ -123,7 +125,7 @@ Key enums (on model classes): `Car.Type`, `Car.Powertrain`, `Car.Transmission`, 
 - **ORM**: Hibernate / JPA (`EntityManager`, `LocalContainerEntityManagerFactoryBean` in `WebConfig`).
 - **API contract**: repo-root **`openapi.yaml`** (vendor MIME types, hypermedia links, JWT headers, `Link` pagination). Consumed by backend and frontend contract tests — not a generated client.
 - **Web UI**: React 18 + TypeScript + Vite 5, React Router 6, TanStack Query, Zustand, Bootstrap 5 + react-bootstrap, i18next, Flatpickr.
-- **Email**: JavaMail, **Thymeleaf** HTML (`webapp/src/main/resources/mail/html/`), separate `ResourceBundleMessageSource` for mail copy (`mail/MailMessages` + locale variants).
+- **Email**: JavaMail, **Thymeleaf** HTML (`services/src/main/resources/mail/html/`), separate `ResourceBundleMessageSource` for mail copy (`mail/messages/MailMessages` + `_es` / `_en`). SMTP config in `webapp` (`mail/config/emailconfig.properties`, `mail/config/javamail.properties`).
 - **Build**: Maven reactor including `frontend`. **Runtime**: Jetty (`jetty-maven-plugin` on the `webapp` module) or Tomcat WAR.
 
 ## Database
@@ -136,20 +138,20 @@ Tests use **in-memory HSQLDB** via `TestPersistenceConfig` (`schema-hsqldb.sql` 
 
 Flyway is configured in **`RydenDataSourceFactory`**: `baselineOnMigrate(true)`, `baselineVersion("1")`, `failOnMissingLocations(true)`.
 
-New migrations: `V<number>__<description>.sql` (e.g. `V4__add_reviews.sql`). Examples: `V2__users_extend_profile_and_auth.sql`, `V3__email_verification_codes.sql`.
+New migrations: `V<number>__<description>.sql` (e.g. `V45__car_catalog_name_unique.sql`). Recent examples: `V44__reviews_strong_entity_id.sql`, `V2__users_extend_profile_and_auth.sql`, `V3__email_verification_codes.sql`. Do not rename historical Flyway files once applied — checksums must stay stable across deploys.
 
 ## Internationalization (i18n)
 
 - **Server messages / errors**: `ReloadableResourceBundleMessageSource` with `classpath:messages/messages` and `classpath:messages/exception/exception-messages`. Used by Jersey exception mappers, Bean Validation, and related server copy. Spanish and English property files.
 - **Server locale**: `RydenLocaleResolver` — **does not** use `Accept-Language`. Priority: signed-in user's `latest_locale`, else `RYDEN_LOCALE` cookie, else **Spanish** (`SupportedLocales.DEFAULT`). `LocaleMessages` resolves keys via `MessageSource` + `LocaleContextHolder`.
 - **SPA UI**: **i18next** + react-i18next in `frontend/src/i18n/` — default **`es`**, fallback **`en`**. Feature modules export `*I18n` `{ es, en }` (e.g. `features/profile/i18n.ts`) merged with shared `locales/*.json`. Logged-in preference can sync via user `latestLocale` (PATCH `/users/{id}`).
-- **Mail**: `mail/MailMessages.properties` and `mail/MailMessages_es.properties`. `@Async` mail must not rely on `LocaleContextHolder` — capture locale on the request thread (e.g. reservation mail payload getters).
+- **Mail**: `mail/messages/MailMessages.properties`, `MailMessages_es.properties`, `MailMessages_en.properties` under **services**. `@Async` mail must not rely on `LocaleContextHolder` — capture locale on the request thread (e.g. reservation mail payload getters).
 - **Exception keys**: `exception-messages.properties`, aligned with `ar.edu.itba.paw.exception.MessageKeys`.
 
 ## Email
 
-- Configured in `SpringMailConfig` (`mail/emailconfig.properties`, `mail/javamail.properties`).
-- HTML templates use keys such as `mail.reservationConfirmation.*`.
+- Configured in `SpringMailConfig` (`mail/config/emailconfig.properties`, `mail/config/javamail.properties` under webapp).
+- HTML templates use keys such as `mail.reservationConfirmation.*` (templates under `services/.../mail/html/`).
 - Async sending uses `mailTaskExecutor` from `WebConfig`.
 
 ## Security
@@ -238,14 +240,14 @@ Domain / validation exception copy: **`exception-messages.properties`** (+ `_es`
 
 ### Application properties
 
-- **Main**: `webapp/src/main/resources/application/application.properties` — port, context path (`/webapp`), uploads, validation, pagination, reservation timing, JWT, `app.scheduler.*` crons/zones.
-- **Profiles**: `application-local.properties`, `application-deployed.properties` (examples in folder); secrets not committed.
-- **Mail**: `mail/emailconfig.properties`, `mail/javamail.properties` under `webapp/src/main/resources/mail/`.
+- **Main**: `webapp/src/main/resources/application/application.properties` — port, context path (`/webapp` local; Pampero `…/paw-2026a-08`), uploads, validation, pagination, reservation timing, JWT, `app.scheduler.*` crons/zones.
+- **Profiles**: `application/application-local.properties`, `application/application-deployed.properties` (examples in folder); secrets not committed.
+- **Mail**: `mail/config/emailconfig.properties`, `mail/config/javamail.properties` under `webapp/src/main/resources/mail/`.
 
 ### Directory structure (per module)
 
 - `src/main/java`, `src/main/resources`, `src/test/java` as usual.
-- `webapp/src/main/webapp`: `WEB-INF/web.xml`, `assets/` (static images). Vite output (`index.html`, `public/*`) is **not** committed here — it is copied from `frontend/dist/` at build time.
+- `webapp/src/main/webapp`: `WEB-INF/web.xml`, `assets/` (static images). Vite output (`index.html`, `public/*`) is **not** committed under `webapp/src/main/webapp` — it is copied from `frontend/dist/` into the WAR / Jetty composite at build time.
 - `frontend/src`: see **Frontend SPA conventions** above.
 
 ### Key services and DAOs (orientation)
@@ -316,7 +318,7 @@ rg "this\\.[a-zA-Z0-9_]+\\(" services/src/main/java/ar/edu/itba/paw/services
 
 - **Resource identity on GET**: Identifiers that name the resource being accessed (`carId`, `userId`, `reservationId`, `documentType`, …) belong in the path as JAX-RS `@PathParam`s — e.g. `GET /cars/{carId}`, `GET /users/{userId}/profile`, `GET /users/{userId}/documents/{documentType}` — not as `@QueryParam`s. Prefer `/cars/123` over `/car-detail?carId=123`.
 - **Query params for everything else**: Pagination, sorting, filters, and UI state (`page`, `sort`, `status`, `role`, `src`, `fromCar`, `tab`, …) stay as query params.
-- **Consistency**: New resources, OpenAPI paths, SPA routes (`frontend/src/routes/paths.ts`), mail CTA URLs, and client `follow()` targets must agree. Canonical API base: `/webapp/api`. Canonical SPA examples: owner car detail and reservation detail paths in `paths.ts`.
+- **Consistency**: New resources, OpenAPI paths, SPA routes (`frontend/src/routes/paths.ts`), mail CTA URLs, and client `follow()` targets must agree. Canonical API base (local): `/webapp/api`. Pampero: `/paw-2026a-08/api`. Canonical SPA examples: owner car detail and reservation detail paths in `paths.ts`.
 - **Contract source of truth**: [openapi.yaml](openapi.yaml) at the repo root — agents should consult it for MIME types, link relations, auth headers, and collection shapes before inventing endpoints.
 
 ### Hypermedia collections (embedded teasers vs link-only)
