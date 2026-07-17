@@ -27,10 +27,11 @@ import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.models.domain.car.CarBrand;
 import ar.edu.itba.paw.models.domain.car.CarModel;
 import ar.edu.itba.paw.models.domain.reservation.Reservation;
-import ar.edu.itba.paw.models.domain.reservation.ReservationMessage;
 import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.reservation.ReservationCard;
+import ar.edu.itba.paw.models.dto.reservation.ReservationMessageDto;
+import ar.edu.itba.paw.models.util.search.ReservationSearchCriteria;
 import ar.edu.itba.paw.models.security.UserRole;
 import ar.edu.itba.paw.models.email.admin.AdminInvitationEmailPayload;
 import ar.edu.itba.paw.models.email.listing.CarPausedByAdminOwnerEmailPayload;
@@ -53,7 +54,6 @@ import ar.edu.itba.paw.services.reservation.ReservationWorkflowService;
  * {@link ReservationService}, {@link ReservationMessageService}).</p>
  */
 @Service
-@Transactional
 public class AdminServiceImpl implements AdminService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AdminServiceImpl.class);
@@ -99,18 +99,21 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
+    @Transactional
     public void promoteUserToAdmin(final long targetUserId, final long assignedByUserId) {
         assertAdminCaller(assignedByUserId);
         userService.promoteToAdmin(targetUserId, assignedByUserId);
     }
 
     @Override
+    @Transactional
     public void demoteUserFromAdmin(final long targetUserId, final long assignedByUserId) {
         assertAdminCaller(assignedByUserId);
         userService.demoteFromAdmin(targetUserId, assignedByUserId);
     }
 
     @Override
+    @Transactional
     public User createAdminUser(
             final String email,
             final String forename,
@@ -140,6 +143,7 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
+    @Transactional
     public void blockUser(final long targetUserId, final long actingAdminId) {
         assertAdminCaller(actingAdminId);
         if (actingAdminId == targetUserId) {
@@ -156,6 +160,7 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
+    @Transactional
     public void unblockUser(final long targetUserId, final long actingAdminId) {
         assertAdminCaller(actingAdminId);
         userService.unblockUser(targetUserId);
@@ -179,6 +184,7 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
+    @Transactional
     public void adminPauseCar(final long carId, final long actingAdminId, final Locale locale) {
         assertAdminCaller(actingAdminId);
         final Car car = carService.getCarById(carId)
@@ -204,6 +210,7 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
+    @Transactional
     public void adminResumeCar(final long carId, final long actingAdminId) {
         assertAdminCaller(actingAdminId);
         carService.releaseAdminCarPause(carId);
@@ -211,6 +218,7 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
+    @Transactional
     public void validateCarBrand(final long brandId) {
         if (carBrandService.findById(brandId).isEmpty()) {
             throw new CarBrandNotFoundException(brandId);
@@ -219,17 +227,28 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
+    @Transactional
     public void rejectCarBrand(final long brandId) {
         carBrandService.findById(brandId).ifPresent(brand -> {
             LOGGER.atWarn()
                     .addArgument(brandId)
                     .addArgument(brand.getName())
-                    .log("Admin rejecting brand id={} name='{}'; cars referencing this brand/model become orphaned");
+                    .log("Admin rejecting brand id={} name='{}'; clearing car model FKs before delete");
+            // Mirror rejectCatalogEntry: clear cars.model_id before deleting models/brand,
+            // otherwise FK fk_cars_model_id (no ON DELETE SET NULL) yields 500.
+            final List<CarModel> models = carModelService.findByBrandIdOrdered(brandId);
+            for (final CarModel model : models) {
+                for (final Car car : carService.findCarsByModelId(model.getId())) {
+                    carService.clearCarModel(car.getId());
+                }
+                carModelService.deleteById(model.getId());
+            }
             carBrandService.deleteById(brandId);
         });
     }
 
     @Override
+    @Transactional
     public void validateCarModel(final long modelId) {
         if (carModelService.findById(modelId).isEmpty()) {
             throw new CarModelNotFoundException(modelId);
@@ -238,11 +257,13 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
+    @Transactional
     public void rejectCarModel(final long modelId) {
         carModelService.deleteById(modelId);
     }
 
     @Override
+    @Transactional
     public void validateCatalogEntry(final long modelId, final Locale locale) {
         final CarModel model = carModelService.findById(modelId)
                 .orElseThrow(() -> new CarModelNotFoundException(modelId));
@@ -251,9 +272,13 @@ public class AdminServiceImpl implements AdminService {
         final String brandName = brand.getName();
         final String modelName = model.getName();
         final List<Car> affectedCars = carService.findCarsByModelId(modelId);
+        // Approving a pending model also validates its brand when that brand is still pending
+        // (admin catalog: one click on the model should clear both pending rows).
         if (brandWillBeValidated) {
+            brand.setValidated(true);
             carBrandService.markAsValidated(brand.getId());
         }
+        model.setValidated(true);
         carModelService.markAsValidated(modelId);
         for (final Car car : affectedCars) {
             final User owner = car.getOwner();
@@ -273,6 +298,7 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
+    @Transactional
     public void rejectCatalogEntry(final long modelId, final Locale locale) {
         final CarModel model = carModelService.findById(modelId)
                 .orElseThrow(() -> new CarModelNotFoundException(modelId));
@@ -355,14 +381,8 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<Car> findAdminPausedCars() {
-        return carService.findAdminPausedCars();
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public Page<ReservationCard> listAllReservations(final int page, final int pageSize) {
-        return reservationService.findAllReservationCards(page, pageSize);
+    public Page<ReservationCard> listAllReservations(final ReservationSearchCriteria criteria) {
+        return reservationService.findAllReservationCards(criteria);
     }
 
     @Override
@@ -373,13 +393,14 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<ReservationMessage> getAdminChatMessages(final long reservationId, final int offset, final int limit) {
+    public List<ReservationMessageDto> getAdminChatMessages(
+            final long reservationId, final int offset, final int limit) {
         return reservationMessageService.getAdminChatMessages(reservationId, offset, limit);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<ReservationMessage> getChatMessagesAfter(
+    public List<ReservationMessageDto> getChatMessagesAfter(
             final long reservationId, final long afterMessageId, final int limit) {
         return reservationMessageService.findMessagesAfter(reservationId, afterMessageId, limit);
     }

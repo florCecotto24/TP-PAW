@@ -243,6 +243,23 @@ export class HypermediaClient {
   }
 
   /**
+   * Shared token refresh used by HypermediaClient and XHR uploads (chat).
+   * Concurrent callers await the same in-flight refresh (N-21).
+   */
+  public async refreshSessionTokens(): Promise<void> {
+    const refresh = this.tokens.getRefreshToken();
+    if (!refresh) {
+      throw new ApiError(401);
+    }
+    if (!this.refreshInFlight) {
+      this.refreshInFlight = this.performTokenRefresh().finally(() => {
+        this.refreshInFlight = null;
+      });
+    }
+    await this.refreshInFlight;
+  }
+
+  /**
    * Renueva el par de tokens con el refresh antes del request si el access venció.
    * Evita mandar Bearer expirado (ruido en server) y el roundtrip 401→refresh.
    */
@@ -252,12 +269,7 @@ export class HypermediaClient {
     if (!access || !refresh || !isAccessTokenExpired(access)) {
       return;
     }
-    if (!this.refreshInFlight) {
-      this.refreshInFlight = this.performTokenRefresh().finally(() => {
-        this.refreshInFlight = null;
-      });
-    }
-    await this.refreshInFlight;
+    await this.refreshSessionTokens();
   }
 
   /** GET {@link AUTH_PROBE_PATH} con Bearer refresh; absorbe X-Access-Token / X-Refresh-Token. */
@@ -490,6 +502,11 @@ export class HypermediaClient {
       if (etag) {
         this.conditionalGetCache.set(cacheKey, { etag, data: apiRes.data });
       }
+    }
+    // Mutations invalidate the whole conditional-GET cache (N-20): otherwise a later
+    // GET with a stale ETag can 304 and return pre-mutation bodies until logout.
+    if (method !== 'GET' && res.status >= 200 && res.status < 300) {
+      this.conditionalGetCache.clear();
     }
     return apiRes;
   }

@@ -29,6 +29,7 @@ import ar.edu.itba.paw.models.domain.file.StoredFile;
 import ar.edu.itba.paw.models.domain.reservation.Reservation;
 import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.models.dto.Page;
+import ar.edu.itba.paw.models.dto.reservation.BlockingReservationProjection;
 import ar.edu.itba.paw.models.dto.reservation.ReservationCard;
 import ar.edu.itba.paw.models.util.search.ReservationSearchCriteria;
 import ar.edu.itba.paw.models.util.time.BillableDays;
@@ -38,6 +39,9 @@ import static ar.edu.itba.paw.persistence.util.JpaQueryUtils.bindParams;
 @Transactional(readOnly = true)
 @Repository
 public class ReservationJpaDao implements ReservationDao {
+
+    private static final String SELECT_BLOCKING_PROJECTION =
+            "SELECT new " + BlockingReservationProjection.class.getName() + "(";
 
     private static final List<Reservation.Status> BLOCKING_STATUSES = Arrays.asList(
             Reservation.Status.PENDING, Reservation.Status.ACCEPTED, Reservation.Status.STARTED);
@@ -124,36 +128,43 @@ public class ReservationJpaDao implements ReservationDao {
     }
 
     @Override
-    public List<Reservation> findBlockingByCarId(final long carId) {
+    public List<BlockingReservationProjection> findBlockingByCarId(final long carId) {
         return em.createQuery(
-                        "FROM Reservation r WHERE r.car.id = :carId AND r.status IN :statuses ORDER BY r.startDate ASC",
-                        Reservation.class)
+                        SELECT_BLOCKING_PROJECTION
+                                + "r.id, r.car.id, r.startDate, r.endDate, r.status) "
+                                + "FROM Reservation r WHERE r.car.id = :carId AND r.status IN :statuses "
+                                + "ORDER BY r.startDate ASC",
+                        BlockingReservationProjection.class)
                 .setParameter("carId", carId)
                 .setParameter("statuses", BLOCKING_STATUSES)
                 .getResultList();
     }
 
     @Override
-    public List<Reservation> findBlockingByCarIds(final Collection<Long> carIds) {
+    public List<BlockingReservationProjection> findBlockingByCarIds(final Collection<Long> carIds) {
         if (carIds == null || carIds.isEmpty()) {
             return List.of();
         }
         return em.createQuery(
-                        "FROM Reservation r WHERE r.car.id IN :carIds AND r.status IN :statuses "
+                        SELECT_BLOCKING_PROJECTION
+                                + "r.id, r.car.id, r.startDate, r.endDate, r.status) "
+                                + "FROM Reservation r WHERE r.car.id IN :carIds AND r.status IN :statuses "
                                 + "ORDER BY r.car.id ASC, r.startDate ASC",
-                        Reservation.class)
+                        BlockingReservationProjection.class)
                 .setParameter("carIds", carIds)
                 .setParameter("statuses", BLOCKING_STATUSES)
                 .getResultList();
     }
 
     @Override
-    public List<Reservation> findBlockingByCarIdExcluding(final long carId, final long excludingReservationId) {
+    public List<BlockingReservationProjection> findBlockingByCarIdExcluding(
+            final long carId, final long excludingReservationId) {
         return em.createQuery(
-                        "FROM Reservation r "
+                        SELECT_BLOCKING_PROJECTION
+                                + "r.id, r.car.id, r.startDate, r.endDate, r.status) FROM Reservation r "
                                 + "WHERE r.car.id = :carId AND r.status IN :statuses AND r.id <> :excludeId "
                                 + "ORDER BY r.startDate ASC",
-                        Reservation.class)
+                        BlockingReservationProjection.class)
                 .setParameter("carId", carId)
                 .setParameter("statuses", BLOCKING_STATUSES)
                 .setParameter("excludeId", excludingReservationId)
@@ -161,12 +172,14 @@ public class ReservationJpaDao implements ReservationDao {
     }
 
     @Override
-    public List<Reservation> findBlockingByCarIdInRange(
+    public List<BlockingReservationProjection> findBlockingByCarIdInRange(
             final long carId, final OffsetDateTime from, final OffsetDateTime to) {
         return em.createQuery(
-                        "FROM Reservation r WHERE r.car.id = :carId AND r.status IN :statuses "
+                        SELECT_BLOCKING_PROJECTION
+                                + "r.id, r.car.id, r.startDate, r.endDate, r.status) "
+                                + "FROM Reservation r WHERE r.car.id = :carId AND r.status IN :statuses "
                                 + "AND r.startDate < :to AND r.endDate > :from ORDER BY r.startDate ASC",
-                        Reservation.class)
+                        BlockingReservationProjection.class)
                 .setParameter("carId", carId)
                 .setParameter("statuses", BLOCKING_STATUSES)
                 .setParameter("from", from)
@@ -272,6 +285,17 @@ public class ReservationJpaDao implements ReservationDao {
     @Override
     public Optional<Reservation> getReservationById(final long id) {
         return Optional.ofNullable(em.find(Reservation.class, id));
+    }
+
+    @Override
+    public Optional<Reservation> getReservationByIdForMail(final long id) {
+        return em.createQuery(
+                        "FROM Reservation r "
+                                + FETCH_RESERVATION_CAR_CATALOG_FOR_MAIL
+                                + "WHERE r.id = :id",
+                        Reservation.class)
+                .setParameter("id", id)
+                .getResultList().stream().findAny();
     }
 
     @Override
@@ -580,19 +604,6 @@ public class ReservationJpaDao implements ReservationDao {
                         OffsetDateTime.class)
                 .setParameter("id", reservationId)
                 .getResultList().stream().findFirst();
-    }
-
-    @Override
-    public List<Reservation> findCarFinishedReservations(final long ownerId, final long carId) {
-        return em.createQuery(
-                        "FROM Reservation r "
-                                + "WHERE r.car.owner.id = :ownerId AND r.car.id = :carId "
-                                + "AND r.status = :status",
-                        Reservation.class)
-                .setParameter("ownerId", ownerId)
-                .setParameter("carId", carId)
-                .setParameter("status", Reservation.Status.FINISHED)
-                .getResultList();
     }
 
     @Override
@@ -906,11 +917,15 @@ public class ReservationJpaDao implements ReservationDao {
     @Override
     @Transactional
     public int attachRefundReceipt(final long reservationId, final long ownerUserId, final long storedFileId) {
+        // PESSIMISTIC_WRITE on the reservation row only (same pattern as attachPaymentReceiptAndAccept).
+        // Ownership uses getOwnerId() on the car proxy — no JOIN FETCH that would widen FOR UPDATE.
         final Reservation r = em.find(Reservation.class, reservationId, LockModeType.PESSIMISTIC_WRITE);
-        if (r == null
-                || r.getCar().getOwner().getId() != ownerUserId
+        if (r == null) {
+            return 0;
+        }
+        if (r.getCar().getOwnerId() != ownerUserId
                 || !r.isPaymentRefundRequired()
-                || r.getPaymentRefundReceiptFile().isPresent()) {
+                || r.getPaymentRefundReceiptFileId().isPresent()) {
             return 0;
         }
         final Reservation.Status s = r.getStatus();
@@ -1061,13 +1076,29 @@ public class ReservationJpaDao implements ReservationDao {
     }
 
     @Override
-    public Page<ReservationCard> findAllReservationCards(final int page, final int pageSize) {
-        final Number total = (Number) em.createQuery("SELECT COUNT(r) FROM Reservation r").getSingleResult();
-        final String idSql = "SELECT r.id FROM reservations r ORDER BY r.created_at DESC, r.id DESC LIMIT :limit OFFSET :offset";
-        final Map<String, Object> params = new LinkedHashMap<>();
-        params.put("limit", pageSize);
-        params.put("offset", page * pageSize);
-        final List<ReservationCard> content = loadReservationCardsByIdNativeQuery(idSql, params);
+    public Page<ReservationCard> findAllReservationCards(final ReservationSearchCriteria criteria) {
+        final int page = criteria.getPage();
+        final int pageSize = criteria.getPageSize();
+        final Map<String, Object> countParams = new HashMap<>();
+        final StringBuilder countSql = new StringBuilder(
+                "SELECT COUNT(*) FROM reservations r "
+                        + "JOIN cars c ON c.id = r.car_id "
+                        + "WHERE 1=1 ");
+        appendReservationFilters(countSql, countParams, criteria);
+        final Number total = (Number) bindParams(em.createNativeQuery(countSql.toString()), countParams).getSingleResult();
+
+        final int offset = page * pageSize;
+        final Map<String, Object> listParams = new HashMap<>();
+        listParams.put("limit", pageSize);
+        listParams.put("offset", offset);
+        final StringBuilder idSql = new StringBuilder(
+                "SELECT r.id FROM reservations r "
+                        + "JOIN cars c ON c.id = r.car_id "
+                        + "WHERE 1=1 ");
+        appendReservationFilters(idSql, listParams, criteria);
+        idSql.append("ORDER BY ").append(buildReservationOrderBy(criteria.getSortBy(), criteria.getSortDirection()))
+                .append(" LIMIT :limit OFFSET :offset");
+        final List<ReservationCard> content = loadReservationCardsByIdNativeQuery(idSql.toString(), listParams);
         return new Page<>(content, page, pageSize, total != null ? total.longValue() : 0L);
     }
 

@@ -28,13 +28,24 @@ class MyHubSortSanitizerTest {
     @Test
     void testSanitizeReturnsDefaultWhenNotInWhitelist() {
         // 1.Arrange
-        final String evil = "name,desc";
+        final String evil = "drop,table";
 
         // 2.Act
         final String result = MyHubSortSanitizer.sanitize(evil, DEFAULT_SORT);
 
         // 3.Assert
         Assertions.assertEquals(DEFAULT_SORT, result);
+    }
+
+    @Test
+    void testSanitizeAcceptsNameSort() {
+        // 1.Arrange / 2.Act
+        final String nameAsc = MyHubSortSanitizer.sanitize("name,asc", DEFAULT_SORT);
+        final String nameDesc = MyHubSortSanitizer.sanitize("name,desc", DEFAULT_SORT);
+
+        // 3.Assert
+        Assertions.assertEquals("name,asc", nameAsc);
+        Assertions.assertEquals("name,desc", nameDesc);
     }
 
     @Test

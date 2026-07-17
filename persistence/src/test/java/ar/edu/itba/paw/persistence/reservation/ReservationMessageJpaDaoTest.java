@@ -91,14 +91,15 @@ class ReservationMessageJpaDaoTest extends DaoIntegrationTestSupport {
     }
 
     @Test
-    void testFindByReservationIdAfterIdOrderByCreatedAtAscReturnsOnlyNewerRows() {
+    void testFindProjectedByReservationIdAfterIdOrderByCreatedAtAscReturnsOnlyNewerRows() {
         // 1. Arrange — seed three messages via JdbcTemplate so the DAO under test is only exercised in Act.
         final long firstId = insertMessage(reservationId, riderId, "First");
         insertMessage(reservationId, riderId, "Second");
         insertMessage(reservationId, riderId, "Third");
 
         // 2. Act
-        final var messages = dao.findByReservationIdAfterIdOrderByCreatedAtAsc(reservationId, firstId, 10);
+        final var messages =
+                dao.findProjectedByReservationIdAfterIdOrderByCreatedAtAsc(reservationId, firstId, 10);
 
         // 3. Assert
         Assertions.assertEquals(2, messages.size());
@@ -107,13 +108,13 @@ class ReservationMessageJpaDaoTest extends DaoIntegrationTestSupport {
     }
 
     @Test
-    void testFindByReservationIdOrderByCreatedAtAscReturnsInsertedRows() {
+    void testFindProjectedByReservationIdOrderByCreatedAtAscReturnsInsertedRows() {
         // 1. Arrange — seed via JdbcTemplate.
         insertMessage(reservationId, riderId, "First");
         insertMessage(reservationId, riderId, "Second");
 
         // 2. Act
-        final var messages = dao.findByReservationIdOrderByCreatedAtAsc(reservationId, 0, 10);
+        final var messages = dao.findProjectedByReservationIdOrderByCreatedAtAsc(reservationId, 0, 10);
 
         // 3. Assert
         Assertions.assertEquals(2, messages.size());
@@ -124,18 +125,7 @@ class ReservationMessageJpaDaoTest extends DaoIntegrationTestSupport {
     @Test
     void testCreateWithAttachmentPersistsForeignKey() {
         // 1. Arrange — seed a stored file directly; the DAO call we test is the one in Act.
-        final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
-        jdbcTemplate.update(
-                "INSERT INTO stored_files (uploader_user_id, file_name, content_type, byte_array, size_bytes, created_at) "
-                        + "VALUES (?, ?, ?, ?, ?, ?)",
-                riderId,
-                "photo.png",
-                "image/png",
-                new byte[] {1, 2, 3},
-                3L,
-                now);
-        final long fileId =
-                jdbcTemplate.queryForObject("SELECT id FROM stored_files WHERE file_name = ?", Long.class, "photo.png");
+        final long fileId = insertStoredFile("photo.png", "image/png", new byte[] {1, 2, 3});
 
         // 2. Act
         final ReservationMessage created = dao.create(reservationId, riderId, "", fileId);
@@ -150,6 +140,26 @@ class ReservationMessageJpaDaoTest extends DaoIntegrationTestSupport {
     }
 
     @Test
+    void testFindProjectedByReservationIdReturnsAttachmentMetadata() {
+        // 1. Arrange — metadata projection must not require hydrating StoredFile.data.
+        final long fileId = insertStoredFile("receipt.pdf", "application/pdf", new byte[] {1, 2, 3, 4});
+        dao.create(reservationId, riderId, "", fileId);
+        em.flush();
+
+        // 2. Act
+        final var messages = dao.findProjectedByReservationIdOrderByCreatedAtAsc(reservationId, 0, 10);
+
+        // 3. Assert
+        Assertions.assertEquals(1, messages.size());
+        Assertions.assertEquals(fileId, messages.get(0).getAttachmentFileId());
+        Assertions.assertEquals("receipt.pdf", messages.get(0).getAttachmentFileName());
+        Assertions.assertEquals("application/pdf", messages.get(0).getAttachmentContentType());
+        Assertions.assertEquals(4L, messages.get(0).getAttachmentSizeBytes());
+        Assertions.assertEquals(riderId, messages.get(0).getSenderUserId());
+        Assertions.assertEquals("Rider", messages.get(0).getSenderForename());
+    }
+
+    @Test
     void testFindPendingEmailNotificationReturnsOnlyUnnotifiedUnseenMessages() {
         // 1. Arrange — three messages: one pending, one already notified, one already seen.
         final long pendingId = insertMessage(reservationId, riderId, "Pending");
@@ -157,7 +167,7 @@ class ReservationMessageJpaDaoTest extends DaoIntegrationTestSupport {
         insertMessageWithFlags(reservationId, riderId, "Seen", false, true);
 
         // 2. Act
-        final var pendingMessages = dao.findPendingEmailNotification();
+        final var pendingMessages = dao.findPendingEmailNotification(200);
 
         // 3. Assert
         Assertions.assertEquals(1, pendingMessages.size());
@@ -203,7 +213,7 @@ class ReservationMessageJpaDaoTest extends DaoIntegrationTestSupport {
         insertMessageWithFlags(reservationId, riderId, "Unread until owner opens chat", false, true);
 
         // 2. Act
-        final var pendingMessages = dao.findPendingEmailNotification();
+        final var pendingMessages = dao.findPendingEmailNotification(200);
 
         // 3. Assert
         Assertions.assertTrue(pendingMessages.isEmpty());
@@ -231,6 +241,20 @@ class ReservationMessageJpaDaoTest extends DaoIntegrationTestSupport {
 
     private long insertMessage(final long reservationId, final long senderUserId, final String body) {
         return insertMessageWithFlags(reservationId, senderUserId, body, false, false);
+    }
+
+    private long insertStoredFile(final String fileName, final String contentType, final byte[] data) {
+        final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        jdbcTemplate.update(
+                "INSERT INTO stored_files (uploader_user_id, file_name, content_type, byte_array, size_bytes, created_at) "
+                        + "VALUES (?, ?, ?, ?, ?, ?)",
+                riderId,
+                fileName,
+                contentType,
+                data,
+                (long) data.length,
+                now);
+        return jdbcTemplate.queryForObject("SELECT id FROM stored_files WHERE file_name = ?", Long.class, fileName);
     }
 
     private long insertMessageWithFlags(

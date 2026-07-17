@@ -70,7 +70,7 @@ export default function ReservationConfirmationPage() {
     try {
       await uploadReceipt(uri, file);
       setUploadDone(true);
-      await queryClient.invalidateQueries({ queryKey: ['reservations', 'confirmation', reservationUri] });
+      await queryClient.invalidateQueries({ queryKey: ['reservations'] });
     } finally {
       setUploading(false);
     }

@@ -21,9 +21,11 @@ import ar.edu.itba.paw.models.dto.reservation.ReservationCard;
 import ar.edu.itba.paw.models.util.search.MyHubSortSanitizer;
 import ar.edu.itba.paw.models.util.search.ReservationSearchCriteria;
 import ar.edu.itba.paw.services.reservation.ReservationService;
+import ar.edu.itba.paw.services.user.AdminService;
 import ar.edu.itba.paw.webapp.api.common.PaginationLinks;
 import ar.edu.itba.paw.webapp.api.common.VndMediaType;
 import ar.edu.itba.paw.webapp.dto.rest.LinksDto;
+import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
 import ar.edu.itba.paw.webapp.util.RestUriUtils;
 
 /**
@@ -36,9 +38,53 @@ public final class ReservationListSupport {
     private static final String DEFAULT_HUB_SORT = "date,desc";
 
     private final ReservationService reservationService;
+    private final AdminService adminService;
+    private final ReservationResourceAccess reservationResourceAccess;
 
-    public ReservationListSupport(final ReservationService reservationService) {
+    public ReservationListSupport(
+            final ReservationService reservationService,
+            final AdminService adminService,
+            final ReservationResourceAccess reservationResourceAccess) {
         this.reservationService = reservationService;
+        this.adminService = adminService;
+        this.reservationResourceAccess = reservationResourceAccess;
+    }
+
+    public Response listForViewer(
+            final PaginationParams paging,
+            final Long riderId,
+            final Long ownerId,
+            final Long carId,
+            final List<String> status,
+            final List<String> riderStatus,
+            final List<String> category,
+            final List<String> transmission,
+            final List<String> powertrain,
+            final BigDecimal priceMin,
+            final BigDecimal priceMax,
+            final List<String> rating,
+            final String q,
+            final String sort,
+            final RydenUserDetails viewer,
+            final UriInfo uriInfo) {
+        final Page<ReservationCard> resultPage;
+        if (riderId != null) {
+            reservationResourceAccess.requireSelfOrAdmin(riderId, viewer);
+            resultPage = reservationService.getRiderReservationCards(buildListCriteria(
+                    null, riderId, carId, status, riderStatus, category, transmission, powertrain,
+                    priceMin, priceMax, rating, q, paging.getZeroBasedPage(), paging.getPageSize(), sort));
+        } else if (ownerId != null) {
+            reservationResourceAccess.requireSelfOrAdmin(ownerId, viewer);
+            resultPage = reservationService.getOwnerReservationCards(buildListCriteria(
+                    ownerId, null, carId, status, riderStatus, category, transmission, powertrain,
+                    priceMin, priceMax, rating, q, paging.getZeroBasedPage(), paging.getPageSize(), sort));
+        } else {
+            reservationResourceAccess.requireAdmin();
+            resultPage = adminService.listAllReservations(buildListCriteria(
+                    null, null, carId, status, riderStatus, category, transmission, powertrain,
+                    priceMin, priceMax, rating, q, paging.getZeroBasedPage(), paging.getPageSize(), sort));
+        }
+        return pagedReservations(resultPage, paging, uriInfo);
     }
 
     public ReservationSearchCriteria buildListCriteria(

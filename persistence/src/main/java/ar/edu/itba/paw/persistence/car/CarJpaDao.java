@@ -246,8 +246,14 @@ public class CarJpaDao implements CarDao {
     );
 
     private static String buildCarOrderBy(final String sortBy, final String sortDirection) {
-        final String col = CAR_SORT_COLUMNS.getOrDefault(sortBy, "c.id");
         final String dir = "asc".equalsIgnoreCase(sortDirection) ? "ASC" : "DESC";
+        if ("name".equals(sortBy)) {
+            // Aggregates are required because the owner-cards ID query groups by car id.
+            return "LOWER(COALESCE(MAX(cb.name), '')) " + dir
+                    + ", LOWER(COALESCE(MAX(cm.name), '')) " + dir
+                    + ", c.id ASC";
+        }
+        final String col = CAR_SORT_COLUMNS.getOrDefault(sortBy, "c.id");
         return col + " " + dir + " NULLS LAST, c.id ASC";
     }
 
@@ -437,22 +443,42 @@ public class CarJpaDao implements CarDao {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
+    public List<Long> findCarIdsByStatusAfter(final Car.Status status, final Long afterId, final int limit) {
+        final int safeLimit = Math.max(1, limit);
+        final long minExclusive = afterId == null ? 0L : afterId;
+        final List<Number> rows = em.createNativeQuery(
+                        "SELECT c.id FROM cars c "
+                                + "WHERE c.status = :status AND c.id > :afterId "
+                                + "ORDER BY c.id ASC LIMIT :limit")
+                .setParameter("status", enumDbValue(status))
+                .setParameter("afterId", minExclusive)
+                .setParameter("limit", safeLimit)
+                .getResultList();
+        return rows.stream().map(Number::longValue).collect(Collectors.toList());
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
     public Page<Car> findAllCarsPaginated(final int page, final int pageSize) {
         final int safePage = Math.max(0, page);
         final int safePageSize = Math.max(1, pageSize);
-        final long total = em.createQuery("SELECT COUNT(c) FROM Car c", Long.class)
-                .getSingleResult();
+        final long total = ((Number) em.createNativeQuery("SELECT COUNT(*) FROM cars")
+                .getSingleResult()).longValue();
         if (total == 0L) {
             return new Page<>(List.of(), safePage, safePageSize, 0L);
         }
-        final List<Long> carIds = em.createQuery(
-                        "SELECT c.id FROM Car c ORDER BY c.createdAt DESC, c.id DESC", Long.class)
-                .setFirstResult(safePage * safePageSize)
-                .setMaxResults(safePageSize)
+        final List<Number> idRows = em.createNativeQuery(
+                        "SELECT c.id FROM cars c "
+                                + "ORDER BY c.created_at DESC, c.id DESC "
+                                + "LIMIT :limit OFFSET :offset")
+                .setParameter("limit", safePageSize)
+                .setParameter("offset", safePage * safePageSize)
                 .getResultList();
-        if (carIds.isEmpty()) {
+        if (idRows.isEmpty()) {
             return new Page<>(List.of(), safePage, safePageSize, total);
         }
+        final List<Long> carIds = idRows.stream().map(Number::longValue).collect(Collectors.toList());
         final List<Car> cars = em.createQuery(
                         "FROM Car c "
                                 + "LEFT JOIN FETCH c.owner o "
@@ -571,14 +597,14 @@ public class CarJpaDao implements CarDao {
             idSql.append("AND c.owner_id <> :excludeOwnerUserId ");
             params.put("excludeOwnerUserId", excludeOwnerUserId);
         }
-        idSql.append("GROUP BY c.id ORDER BY c.rating_avg DESC NULLS LAST, c.id ASC");
+        idSql.append("GROUP BY c.id ORDER BY c.rating_avg DESC NULLS LAST, c.id ASC LIMIT :limit");
+        params.put("limit", Math.max(1, limit));
 
         // The id-only query already encodes browse eligibility (active, offered availability,
         // validated brand/model, owner not blocked, same type, optional date / exclude-owner).
         // Cap at the exact limit — no overfetch for a filter that only drops hard-deleted races.
         @SuppressWarnings("unchecked")
         final List<Number> ids = bindParams(em.createNativeQuery(idSql.toString()), params)
-                .setMaxResults(limit)
                 .getResultList();
 
         if (ids.isEmpty()) {
@@ -1102,8 +1128,11 @@ public class CarJpaDao implements CarDao {
     }
 
     private static String buildCarBrowseOrderBy(final String sortBy, final String sortDirection) {
-        final String col = CAR_BROWSE_SORT_COLUMNS.getOrDefault(sortBy, "c.created_at");
         final String dir = "asc".equalsIgnoreCase(sortDirection) ? "ASC" : "DESC";
+        if ("name".equals(sortBy)) {
+            return "LOWER(MAX(cb.name)) " + dir + ", LOWER(MAX(cm.name)) " + dir + ", c.id ASC";
+        }
+        final String col = CAR_BROWSE_SORT_COLUMNS.getOrDefault(sortBy, "c.created_at");
         if ("rating".equals(sortBy)) {
             return col + " " + dir + " NULLS LAST, c.created_at DESC, c.id ASC";
         }

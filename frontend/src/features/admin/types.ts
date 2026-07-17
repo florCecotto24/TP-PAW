@@ -104,7 +104,7 @@ export interface ModelDto {
   type?: CarType;
   brandName?: string;
   validated: boolean;
-  links: Links; // self, brand
+  links: Links; // self, brand, price-insight
 }
 
 /** Marca pendiente junto a sus modelos pendientes (vista de catálogo admin). */

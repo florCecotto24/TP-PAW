@@ -26,6 +26,16 @@ const CAR_STATUSES: readonly CarStatus[] = [
   'deactivated',
 ];
 
+/** Sort JSP whitelist — valores fuera de lista se descartan (V-10). */
+const MY_CARS_JSP_SORTS = new Set([
+  'date,desc',
+  'date,asc',
+  'price,asc',
+  'price,desc',
+  'rating,desc',
+  'rating,asc',
+]);
+
 export interface MyCarsFilters {
   q?: string;
   status?: CarStatus[];
@@ -71,7 +81,7 @@ export function parseMyCarsFilters(params: URLSearchParams): MyCarsFilters {
     priceMin: toNonNegativeNumber(params.get('priceMin')),
     priceMax: toNonNegativeNumber(params.get('priceMax')),
     rating: readAll(params, 'rating').filter((r) => ['3', '4', '5'].includes(r)),
-    sort: sortRaw || undefined,
+    sort: sortRaw && MY_CARS_JSP_SORTS.has(sortRaw) ? sortRaw : undefined,
   };
 
   if (
@@ -87,8 +97,10 @@ export function parseMyCarsFilters(params: URLSearchParams): MyCarsFilters {
 }
 
 export function myCarsPageIndex(params: URLSearchParams): number {
-  const raw = Number(params.get('page') ?? '0');
-  return Number.isFinite(raw) && raw >= 0 ? Math.floor(raw) : 0;
+  const raw = params.get('page');
+  if (raw == null || raw.trim() === '') return 0;
+  const n = Number(raw);
+  return Number.isInteger(n) && n >= 0 ? n : 0;
 }
 
 export function hasActiveMyCarsFilters(params: URLSearchParams): boolean {

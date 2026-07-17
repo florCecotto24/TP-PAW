@@ -148,17 +148,15 @@ export function apiAssetUrl(uri: string): string {
 }
 
 /**
- * Cover thumbnail for a car: prefers {@code links.cover} when the API projects it;
- * otherwise falls back to {@code {carSelf}/pictures/primary}.
+ * Cover thumbnail for a car. A missing {@code links.cover} means the representation
+ * has no cover; callers must not fabricate a sub-resource URI.
  */
 export function carCoverAssetUrl(
-  carSelfUri: string | null | undefined,
+  _carSelfUri: string | null | undefined,
   coverLink?: string | null,
 ): string | null {
   if (coverLink) return apiAssetUrl(coverLink);
-  if (!carSelfUri) return null;
-  const base = carSelfUri.split('?')[0].replace(/\/$/, '');
-  return apiAssetUrl(`${base}/pictures/primary`);
+  return null;
 }
 
 /** Profile picture link from a hypermedia `links` block, or null when absent. */
@@ -169,25 +167,24 @@ export function profilePictureAssetUrl(
   return path ? apiAssetUrl(path) : null;
 }
 
-/** Derives the profile-picture sub-resource URL from a user `self` URN. */
-export function profilePictureAssetUrlFromSelf(selfUri: string | null | undefined): string | null {
-  if (!selfUri) return null;
-  const base = selfUri.split('?')[0].replace(/\/+$/, '');
-  return apiAssetUrl(`${base}/profile-picture`);
+/**
+ * Kept for source compatibility only. A user self URI is not a typed
+ * profile-picture relation, so this intentionally never manufactures a URL.
+ */
+export function profilePictureAssetUrlFromSelf(_selfUri: string | null | undefined): string | null {
+  return null;
 }
 
 /**
- * Resolves a profile picture for display. Prefers `links.profilePicture`; while the
- * user DTO is still loading, falls back to `{self}/profile-picture` from the session URN.
+ * Resolves a profile picture from its typed link. Until the user representation
+ * is loaded there is intentionally no image URL: a client cannot infer ACLs or
+ * sub-resource paths from {@code self}.
  */
 export function resolveProfilePictureAssetUrl(
-  links: { profilePicture?: string; self?: string; [rel: string]: string | undefined } | null | undefined,
-  sessionUserUri?: string | null,
+  links: { profilePicture?: string; [rel: string]: string | undefined } | null | undefined,
+  _sessionUserUri?: string | null,
 ): string | null {
-  const fromLinks = profilePictureAssetUrl(links);
-  if (fromLinks) return fromLinks;
-  if (links && !links.profilePicture) return null;
-  return profilePictureAssetUrlFromSelf(links?.self ?? sessionUserUri);
+  return profilePictureAssetUrl(links);
 }
 
 /**

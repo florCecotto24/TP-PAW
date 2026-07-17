@@ -15,6 +15,7 @@ import ar.edu.itba.paw.models.domain.reservation.ReservationParticipantRole;
 import ar.edu.itba.paw.models.domain.file.StoredFile;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.file.BinaryContent;
+import ar.edu.itba.paw.models.dto.reservation.BlockingReservationProjection;
 import ar.edu.itba.paw.models.dto.reservation.ReservationCard;
 import ar.edu.itba.paw.models.util.search.ReservationSearchCriteria;
 
@@ -26,6 +27,11 @@ public interface ReservationService {
 
     /** Loads a reservation by id when present (no participant check). */
     Optional<Reservation> getReservationById(long id);
+
+    /**
+     * Like {@link #getReservationById}, with car/owner/catalog preloaded for mail after the session ends.
+     */
+    Optional<Reservation> getReservationByIdForMail(long id);
 
     /** Reservation row only if {@code riderId} is the rider on that reservation. */
     Optional<Reservation> getRiderReservationById(long riderId, long reservationId);
@@ -278,7 +284,7 @@ public interface ReservationService {
     /**
      * Reservations in {@code pending}, {@code accepted}, or {@code started} for one car (availability overlap checks).
      */
-    List<Reservation> findBlockingReservationsByCarId(long carId);
+    List<BlockingReservationProjection> findBlockingReservationsByCarId(long carId);
 
     /**
      * Batch variant of {@link #findBlockingReservationsByCarId(long)} returning blocking
@@ -286,7 +292,7 @@ public interface ReservationService {
      * reservation are absent from the returned map. Used by schedulers / batch flows so the
      * caller does not issue one query per car.
      */
-    Map<Long, List<Reservation>> findBlockingReservationsByCarIds(Collection<Long> carIds);
+    Map<Long, List<BlockingReservationProjection>> findBlockingReservationsByCarIds(Collection<Long> carIds);
 
     /**
      * Same as {@link #findBlockingReservationsByCarId(long)} but excludes the reservation whose id
@@ -294,14 +300,16 @@ public interface ReservationService {
      * rider-side reservation edit flow (the reservation under edit must not subtract days from its
      * own bookable window).
      */
-    List<Reservation> findBlockingReservationsByCarIdExcluding(long carId, long excludingReservationId);
+    List<BlockingReservationProjection> findBlockingReservationsByCarIdExcluding(
+            long carId, long excludingReservationId);
 
     /**
      * Blocking reservations for {@code carId} whose date range intersects {@code [from, to)} (UTC).
      * Used by the owner availability-edit flow to decide whether withdrawing a set of days would
      * conflict with an already-active reservation.
      */
-    List<Reservation> findBlockingReservationsByCarIdInRange(long carId, OffsetDateTime from, OffsetDateTime to);
+    List<BlockingReservationProjection> findBlockingReservationsByCarIdInRange(
+            long carId, OffsetDateTime from, OffsetDateTime to);
 
     /**
      * Reservations whose pickup {@code start_date} lies in {@code [from, to)} (UTC), for the day-before reminder
@@ -316,8 +324,8 @@ public interface ReservationService {
     // rule "each service may only call its own DAO".
     // -----------------------------------------------------------------------------------------------------------
 
-    /** Admin-only: paginated list of every reservation in the system as display cards. */
-    Page<ReservationCard> findAllReservationCards(int page, int pageSize);
+    /** Admin-only: paginated list of every reservation in the system as display cards (filters/sort applied). */
+    Page<ReservationCard> findAllReservationCards(ReservationSearchCriteria criteria);
 
     /** Teaser projection for a single reservation (summary MIME on item GET). */
     Optional<ReservationCard> findReservationCardById(long reservationId);
@@ -501,9 +509,6 @@ public interface ReservationService {
 
     /** Earliest {@code start_date} of an accepted/started reservation on the car strictly after {@code after}. */
     Optional<OffsetDateTime> findCarNextActiveReservationDate(long ownerId, long carId, OffsetDateTime after);
-
-    /** Finished reservations for the car (owner analytics). */
-    List<Reservation> findCarFinishedReservations(long ownerId, long carId);
 
     /**
      * Start/end bounds of finished reservations for the car (owner analytics).

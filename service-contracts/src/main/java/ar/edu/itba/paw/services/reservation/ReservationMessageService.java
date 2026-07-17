@@ -71,11 +71,11 @@ public interface ReservationMessageService {
     // check is performed: the caller (admin facade) decides who is allowed to read.
     // -----------------------------------------------------------------------------------------------------------
 
-    /** Admin-only: raw page of chat messages for a reservation, no participant check applied. */
-    List<ReservationMessage> getAdminChatMessages(long reservationId, int offset, int limit);
+    /** Admin-only: chat message page for a reservation, no participant check applied. */
+    List<ReservationMessageDto> getAdminChatMessages(long reservationId, int offset, int limit);
 
     /** Admin-only: messages with id greater than {@code afterMessageId}, ascending, capped at {@code limit}. */
-    List<ReservationMessage> findMessagesAfter(long reservationId, long afterMessageId, int limit);
+    List<ReservationMessageDto> findMessagesAfter(long reservationId, long afterMessageId, int limit);
 
     /** Total number of chat messages for a reservation. */
     long countMessages(long reservationId);
@@ -86,4 +86,7 @@ public interface ReservationMessageService {
 
     /** Admin-scoped message fetch (no participant gate). */
     Optional<ReservationMessage> findMessageForAdmin(long reservationId, long messageId);
+
+    /** Admin-scoped message DTO fetch (no participant gate). */
+    Optional<ReservationMessageDto> findMessageDtoForAdmin(long reservationId, long messageId);
 }

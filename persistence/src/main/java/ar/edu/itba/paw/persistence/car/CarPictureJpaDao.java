@@ -1,11 +1,14 @@
 package ar.edu.itba.paw.persistence.car;
 
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
@@ -18,7 +21,6 @@ import ar.edu.itba.paw.models.domain.car.CarPicture;
 import ar.edu.itba.paw.models.domain.file.Image;
 import ar.edu.itba.paw.models.domain.file.StoredFile;
 import ar.edu.itba.paw.models.dto.car.CarPictureSummary;
-import ar.edu.itba.paw.persistence.car.CarPictureDao;
 
 @Transactional(readOnly = true)
 @Repository
@@ -70,51 +72,103 @@ public class CarPictureJpaDao implements CarPictureDao {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public List<CarPicture> findByCarIdOrderByDisplayOrderAsc(
             final long carId, final int offset, final int limit) {
-        return em.createQuery(
+        final int safeOffset = Math.max(0, offset);
+        final int safeLimit = Math.max(1, limit);
+        final List<Number> idRows = em.createNativeQuery(
+                        "SELECT cp.id FROM car_pictures cp "
+                                + "WHERE cp.car_id = :carId "
+                                + "ORDER BY cp.display_order ASC, cp.id ASC "
+                                + "LIMIT :limit OFFSET :offset")
+                .setParameter("carId", carId)
+                .setParameter("limit", safeLimit)
+                .setParameter("offset", safeOffset)
+                .getResultList();
+        if (idRows.isEmpty()) {
+            return List.of();
+        }
+        final List<Long> ids = idRows.stream().map(Number::longValue).collect(Collectors.toList());
+        final List<CarPicture> hydrated = em.createQuery(
                         "FROM CarPicture cp "
                                 + "LEFT JOIN FETCH cp.image "
                                 + "LEFT JOIN FETCH cp.storedFile "
-                                + "WHERE cp.car.id = :carId ORDER BY cp.displayOrder ASC",
+                                + "WHERE cp.id IN :ids",
                         CarPicture.class)
-                .setParameter("carId", carId)
-                .setFirstResult(Math.max(0, offset))
-                .setMaxResults(Math.max(1, limit))
+                .setParameter("ids", ids)
                 .getResultList();
+        return hydratePicturesInOrder(ids, hydrated);
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public List<CarPictureSummary> findSummariesByCarIdOrderByDisplayOrderAsc(
             final long carId, final int offset, final int limit) {
-        // Projection with a plain LEFT JOIN (NOT JOIN FETCH): only the scalar contentType columns are
-        // read, so the image/stored-file byte[] blobs of the whole page are never loaded into memory.
-        return em.createQuery(
-                        "SELECT NEW ar.edu.itba.paw.models.dto.car.CarPictureSummary("
-                                + "cp.id, cp.car.id, cp.displayOrder, img.contentType, sf.contentType) "
-                                + "FROM CarPicture cp "
-                                + "LEFT JOIN cp.image img "
-                                + "LEFT JOIN cp.storedFile sf "
-                                + "WHERE cp.car.id = :carId ORDER BY cp.displayOrder ASC",
-                        CarPictureSummary.class)
+        // Native page of scalar columns only — image/stored-file byte[] blobs stay out of memory.
+        final int safeOffset = Math.max(0, offset);
+        final int safeLimit = Math.max(1, limit);
+        final List<Object[]> rows = em.createNativeQuery(
+                        "SELECT cp.id, cp.car_id, cp.display_order, img.content_type AS image_content_type, sf.content_type AS stored_file_content_type "
+                                + "FROM car_pictures cp "
+                                + "LEFT JOIN images img ON img.id = cp.image_id "
+                                + "LEFT JOIN stored_files sf ON sf.id = cp.stored_file_id "
+                                + "WHERE cp.car_id = :carId "
+                                + "ORDER BY cp.display_order ASC, cp.id ASC "
+                                + "LIMIT :limit OFFSET :offset")
                 .setParameter("carId", carId)
-                .setFirstResult(Math.max(0, offset))
-                .setMaxResults(Math.max(1, limit))
+                .setParameter("limit", safeLimit)
+                .setParameter("offset", safeOffset)
                 .getResultList();
+        final List<CarPictureSummary> summaries = new ArrayList<>(rows.size());
+        for (final Object[] row : rows) {
+            summaries.add(new CarPictureSummary(
+                    ((Number) row[0]).longValue(),
+                    ((Number) row[1]).longValue(),
+                    ((Number) row[2]).intValue(),
+                    (String) row[3],
+                    (String) row[4]));
+        }
+        return summaries;
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public Optional<CarPicture> findFirstByCarIdOrderByDisplayOrderAsc(final long carId) {
+        final List<Number> idRows = em.createNativeQuery(
+                        "SELECT cp.id FROM car_pictures cp "
+                                + "WHERE cp.car_id = :carId "
+                                + "ORDER BY cp.display_order ASC, cp.id ASC "
+                                + "LIMIT 1")
+                .setParameter("carId", carId)
+                .getResultList();
+        if (idRows.isEmpty()) {
+            return Optional.empty();
+        }
+        final long pictureId = idRows.get(0).longValue();
         final List<CarPicture> rows = em.createQuery(
                         "FROM CarPicture cp "
                                 + "LEFT JOIN FETCH cp.image "
                                 + "LEFT JOIN FETCH cp.storedFile "
-                                + "WHERE cp.car.id = :carId ORDER BY cp.displayOrder ASC",
+                                + "WHERE cp.id = :pictureId",
                         CarPicture.class)
-                .setParameter("carId", carId)
-                .setMaxResults(1)
+                .setParameter("pictureId", pictureId)
                 .getResultList();
         return rows.isEmpty() ? Optional.empty() : Optional.of(rows.get(0));
+    }
+
+    private static List<CarPicture> hydratePicturesInOrder(
+            final List<Long> ids, final List<CarPicture> hydrated) {
+        final Map<Long, CarPicture> byId = hydrated.stream()
+                .collect(Collectors.toMap(CarPicture::getId, Function.identity()));
+        final List<CarPicture> ordered = new ArrayList<>(ids.size());
+        for (final Long id : ids) {
+            final CarPicture picture = byId.get(id);
+            if (picture != null) {
+                ordered.add(picture);
+            }
+        }
+        return ordered;
     }
 
     @Override
@@ -135,6 +189,16 @@ public class CarPictureJpaDao implements CarPictureDao {
                 .setParameter("storedFileId", storedFileId)
                 .getSingleResult();
         return count != null && count > 0;
+    }
+
+    @Override
+    public List<Long> findCarIdsByImageId(final long imageId) {
+        // Scalar car.id only: ACL callers need membership, not gallery entities or image blobs.
+        return em.createQuery(
+                        "SELECT DISTINCT cp.car.id FROM CarPicture cp WHERE cp.image.id = :imageId",
+                        Long.class)
+                .setParameter("imageId", imageId)
+                .getResultList();
     }
 
     @Override

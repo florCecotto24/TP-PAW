@@ -35,7 +35,6 @@ export const MediaTypes = {
   neighborhood: 'application/vnd.paw.neighborhood.v1+json',
   bookableSegment: 'application/vnd.paw.bookablesegment.v1+json',
   credential: 'application/vnd.paw.credential.v1+json',
-  emailVerificationCode: 'application/vnd.paw.emailverificationcode.v1+json',
   error: 'application/vnd.paw.error.v1+json',
   validationError: 'application/vnd.paw.validation-error.v1+json',
 } as const;

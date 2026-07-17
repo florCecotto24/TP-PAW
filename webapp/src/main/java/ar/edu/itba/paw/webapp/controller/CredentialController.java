@@ -18,6 +18,8 @@ import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 /**
  * Top-level temporary credentials ({@code POST /credentials}).
  * Issues a password-reset OTP by email (anti-enumeration: always {@code 200 OK} with empty body).
+ * Issuance is intentionally not IP-rate-limited; failed Basic OTP attempts
+ * are rate-limited by {@code OtpAttemptLimiter}.
  */
 @Path("/credentials")
 @Component

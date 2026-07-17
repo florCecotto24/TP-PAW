@@ -27,7 +27,9 @@ public final class ModelDto {
         dto.validated = model.isValidated();
         dto.links = LinksDto.ofSelf(
                         RestUriUtils.modelUri(uriInfo, model.getBrandId(), model.getId()).toString())
-                .withRelated("brand", RestUriUtils.brandUri(uriInfo, model.getBrandId()).toString());
+                .withRelated("brand", RestUriUtils.brandUri(uriInfo, model.getBrandId()).toString())
+                .withRelated("price-insight",
+                        RestUriUtils.modelPriceInsightUri(uriInfo, model.getBrandId(), model.getId()).toString());
         return dto;
     }
 

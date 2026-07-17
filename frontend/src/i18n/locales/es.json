@@ -135,6 +135,7 @@
       "reservation.rider.cannotReserveOwnListing": "No podés reservar tu propio auto.",
       "reservation.rider.documentationRequired": "Necesitás validar tus documentos para reservar.",
       "reservation.rider.ownerBlocked": "El dueño no puede recibir reservas en este momento.",
+      "reservation.rider.riderBlocked": "Tu cuenta está bloqueada, así que no podés crear nuevas reservas.",
       "review.alreadySubmitted": "Ya dejaste una reseña para esta reserva.",
       "review.notAllowed": "No se puede reseñar esta reserva.",
       "admin.block.cannotBlockSelf": "No podés bloquearte a vos mismo.",

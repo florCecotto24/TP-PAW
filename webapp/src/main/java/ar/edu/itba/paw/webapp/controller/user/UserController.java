@@ -1,8 +1,5 @@
 package ar.edu.itba.paw.webapp.controller.user;
 
-import java.net.URI;
-import java.util.List;
-
 import javax.validation.Valid;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DefaultValue;
@@ -15,7 +12,6 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
-import javax.ws.rs.core.GenericEntity;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
@@ -29,28 +25,21 @@ import org.springframework.stereotype.Component;
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.user.UserNotFoundException;
 import ar.edu.itba.paw.models.domain.user.User;
-import ar.edu.itba.paw.models.dto.Page;
-import ar.edu.itba.paw.models.dto.profile.UserPatchCommand;
-import ar.edu.itba.paw.services.user.AdminService;
 import ar.edu.itba.paw.services.user.UserService;
-import ar.edu.itba.paw.webapp.api.common.PaginationLinks;
 import ar.edu.itba.paw.webapp.api.common.VndMediaType;
-import ar.edu.itba.paw.webapp.dto.rest.UserPrivateDto;
 import ar.edu.itba.paw.webapp.form.admin.CreateAdminUserForm;
 import ar.edu.itba.paw.webapp.form.user.RegistrationAccountForm;
 import ar.edu.itba.paw.webapp.form.user.UserPatchForm;
-import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
 import ar.edu.itba.paw.webapp.support.CurrentUserResolver;
-import ar.edu.itba.paw.webapp.support.FormValidationSupport;
-import ar.edu.itba.paw.webapp.support.PaginationParams;
 import ar.edu.itba.paw.webapp.support.PaginationSupport;
+import ar.edu.itba.paw.webapp.support.UserCollectionSupport;
 import ar.edu.itba.paw.webapp.support.UserPatchSupport;
 import ar.edu.itba.paw.webapp.support.UserRepresentationSupport;
-import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 import ar.edu.itba.paw.webapp.validation.constraint.user.ValidUserRole;
 
 /**
  * Users resource ({@code /users}, {@code /users/{id}}).
+ * HTTP routing only; collection / PATCH binding lives in {@code *Support} helpers.
  *
  * Public vs private representations are selected via {@code Accept} (two fixed schemas),
  * not by trimming fields for the same MIME type.
@@ -64,10 +53,9 @@ import ar.edu.itba.paw.webapp.validation.constraint.user.ValidUserRole;
 public class UserController {
 
     private final UserService userService;
-    private final AdminService adminService;
-    private final FormValidationSupport formValidationSupport;
     private final CurrentUserResolver currentUserResolver;
     private final UserRepresentationSupport userRepresentationSupport;
+    private final UserCollectionSupport userCollectionSupport;
     private final UserPatchSupport userPatchSupport;
     private final PaginationSupport paginationSupport;
 
@@ -80,17 +68,15 @@ public class UserController {
     @Autowired
     public UserController(
             final UserService userService,
-            final AdminService adminService,
-            final FormValidationSupport formValidationSupport,
             final CurrentUserResolver currentUserResolver,
             final UserRepresentationSupport userRepresentationSupport,
+            final UserCollectionSupport userCollectionSupport,
             final UserPatchSupport userPatchSupport,
             final PaginationSupport paginationSupport) {
         this.userService = userService;
-        this.adminService = adminService;
-        this.formValidationSupport = formValidationSupport;
         this.currentUserResolver = currentUserResolver;
         this.userRepresentationSupport = userRepresentationSupport;
+        this.userCollectionSupport = userCollectionSupport;
         this.userPatchSupport = userPatchSupport;
         this.paginationSupport = paginationSupport;
     }
@@ -104,44 +90,20 @@ public class UserController {
             @QueryParam("blocked") final Boolean blocked,
             @QueryParam("role") @ValidUserRole final String role,
             @QueryParam("q") final String query) {
-        final PaginationParams paging = paginationSupport.forDefaultCollection(page, pageSizeParam);
-        final Page<User> usersPage = adminService.listUsers(
-                paging.getZeroBasedPage(), paging.getPageSize(), blocked, role, query);
-        if (usersPage.getTotalItems() == 0L) {
-            return Response.noContent().build();
-        }
-        final List<UserPrivateDto> dtos = userRepresentationSupport.toPrivateDtos(usersPage.getContent(), uriInfo);
-        final Response.ResponseBuilder builder = Response.ok(new GenericEntity<List<UserPrivateDto>>(dtos) {})
-                .type(VndMediaType.USER_PRIVATE_V1_JSON)
-                .header("X-Total-Count", usersPage.getTotalItems());
-        PaginationLinks.add(
-                builder, uriInfo, paging.getPage(), paging.getPageSize(), (int) usersPage.getTotalItems());
-        return builder.build();
+        return userCollectionSupport.list(
+                paginationSupport.forDefaultCollection(page, pageSizeParam),
+                blocked,
+                role,
+                query,
+                uriInfo);
     }
 
     @POST
     @Consumes(VndMediaType.USER_V1_JSON)
     @Produces(VndMediaType.USER_V1_JSON)
     public Response register(final RegistrationAccountForm form) {
-        formValidationSupport.validate(form, ValidationGroups.OnRegistration.class);
-        final User created = userService.registerUserRequiringAccountConfirmation(
-                form.getEmail(),
-                form.getForename(),
-                form.getSurname(),
-                form.getPassword(),
-                form.getPasswordConfirm(),
-                LocaleContextHolder.getLocale());
-
-        final URI location = uriInfo.getBaseUriBuilder()
-                .path("users")
-                .path(String.valueOf(created.getId()))
-                .build();
-        final Response body = userRepresentationSupport.buildUserResponse(
-                created, uriInfo, null, httpHeaders);
-        return Response.fromResponse(body)
-                .status(Response.Status.CREATED)
-                .location(location)
-                .build();
+        return userCollectionSupport.register(
+                form, LocaleContextHolder.getLocale(), uriInfo, httpHeaders);
     }
 
     /**
@@ -154,24 +116,11 @@ public class UserController {
     @Produces(VndMediaType.USER_PRIVATE_V1_JSON)
     @PreAuthorize("@userResourceAccess.isAdmin()")
     public Response createAdminUser(final CreateAdminUserForm form) {
-        formValidationSupport.validate(form, ValidationGroups.OnCreateAdminUser.class);
-        final long actingAdminId = currentUserResolver.requireUserId();
-        final User created = adminService.createAdminUser(
-                form.getEmail(),
-                form.getForename(),
-                form.getSurname(),
-                actingAdminId,
-                LocaleContextHolder.getLocale());
-
-        final URI location = uriInfo.getBaseUriBuilder()
-                .path("users")
-                .path(String.valueOf(created.getId()))
-                .build();
-        return Response.status(Response.Status.CREATED)
-                .location(location)
-                .type(VndMediaType.USER_PRIVATE_V1_JSON)
-                .entity(userRepresentationSupport.toPrivateDto(created, uriInfo))
-                .build();
+        return userCollectionSupport.createAdminUser(
+                form,
+                currentUserResolver.requireUserId(),
+                LocaleContextHolder.getLocale(),
+                uriInfo);
     }
 
     @GET
@@ -188,16 +137,7 @@ public class UserController {
     @Path("/{id}")
     @PreAuthorize("@userResourceAccess.isSelfOrAdmin(#id, @currentUserResolver.currentPrincipalOrNull())")
     public Response deleteUser(@P("id") @PathParam("id") final long id) {
-        userService.getUserById(id)
-                .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
-        final RydenUserDetails viewer = currentUserResolver.currentPrincipalOrNull();
-        final long actingUserId = viewer.getUserId();
-        if (actingUserId == id) {
-            userService.deleteUser(id);
-        } else {
-            adminService.deleteUser(id, actingUserId);
-        }
-        return Response.noContent().build();
+        return userCollectionSupport.delete(id, currentUserResolver.currentPrincipalOrNull());
     }
 
     // Not a @PreAuthorize candidate: password reset uses OTP credentials in the security
@@ -207,32 +147,7 @@ public class UserController {
     @Consumes(VndMediaType.USER_V1_JSON)
     @Produces({VndMediaType.USER_V1_JSON, VndMediaType.USER_PRIVATE_V1_JSON})
     public Response patchUser(@PathParam("id") final long id, @Valid final UserPatchForm patch) {
-        final User user = userService.getUserById(id)
-                .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
-        final RydenUserDetails viewer = currentUserResolver.currentPrincipalOrNull();
-        final UserPatchCommand command = userPatchSupport.toPatchCommand(patch);
-
-        // Authorize profile/admin fields before any mutation so a password+admin body cannot
-        // commit the password and then 403 on the admin facet.
-        if (command.hasProfileFields() || command.hasAdminFields()) {
-            final long actingUserId = viewer != null
-                    ? viewer.getUserId()
-                    : currentUserResolver.requireUserId();
-            userService.assertCanPatchUser(id, command, actingUserId);
-        }
-
-        if (patch.getPassword() != null) {
-            userPatchSupport.applyPasswordPatch(user, patch, viewer);
-        }
-        if (command.hasProfileFields() || command.hasAdminFields()) {
-            final long actingUserId = viewer != null
-                    ? viewer.getUserId()
-                    : currentUserResolver.requireUserId();
-            userService.patchUser(id, command, actingUserId);
-        }
-
-        final User updated = userService.getUserById(id)
-                .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
-        return userRepresentationSupport.buildUserResponse(updated, uriInfo, viewer, httpHeaders);
+        return userPatchSupport.apply(
+                id, patch, currentUserResolver.currentPrincipalOrNull(), uriInfo, httpHeaders);
     }
 }

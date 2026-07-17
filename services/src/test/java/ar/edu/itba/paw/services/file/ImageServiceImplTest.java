@@ -66,8 +66,8 @@ public class ImageServiceImplTest {
 
     @Test
     public void testCreateImage() {
-        // 1. Arrange
-        final byte[] imageData = {0x00, 0x01, 0x02, 0x03};
+        // 1. Arrange — PNG magic bytes so BinaryMagicBytes accepts the payload
+        final byte[] imageData = {(byte) 0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00};
         final Image image = Image.identified(1L, "imageName", "image/png", imageData);
         Mockito.when(imageDao.createImage("imageName", "image/png", imageData)).thenReturn(image);
 

@@ -37,6 +37,7 @@ export default function OwnerCarDetailPage() {
   });
   const errorMessage = useApiErrorMessage();
   const currentUser = useSessionStore((s) => s.currentUser);
+  const currentUserRole = currentUser?.role;
   const ownerId = useCurrentUserId();
 
   const [car, setCar] = useState<CarDto | null>(null);
@@ -46,6 +47,7 @@ export default function OwnerCarDetailPage() {
   const [showDeactivate, setShowDeactivate] = useState(false);
   const [showPause, setShowPause] = useState(false);
   const [showRemoveInsurance, setShowRemoveInsurance] = useState(false);
+  const [showReplaceInsurance, setShowReplaceInsurance] = useState(false);
   const [insuranceSuccess, setInsuranceSuccess] = useState(false);
   const [insuranceRemoved, setInsuranceRemoved] = useState(false);
   const [insuranceViewError, setInsuranceViewError] = useState(false);
@@ -61,6 +63,8 @@ export default function OwnerCarDetailPage() {
 
   useEffect(() => {
     if (!carSelfUri || !ownerId) return;
+    // Wait for UserDto before ACL (N-40): ownerId comes from URN sync, but role arrives async.
+    if (currentUserRole == null) return;
     let active = true;
     setCar(null);
     setCoverImage(null);
@@ -71,7 +75,7 @@ export default function OwnerCarDetailPage() {
       .then((res) => {
         if (!active) return;
         const carOwnerId = idFromUri(res.data.links.owner);
-        if (carOwnerId !== ownerId && currentUser?.role !== 'admin') {
+        if (carOwnerId !== ownerId && currentUserRole !== 'admin') {
           navigate(paths.myCars, { replace: true });
           return;
         }
@@ -88,8 +92,7 @@ export default function OwnerCarDetailPage() {
         setError(errorMessage(err, 'owner.detail.errors.loadFailed'));
       });
     return () => { active = false; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [carSelfUri, ownerId]);
+  }, [carSelfUri, ownerId, currentUserRole, navigate, errorMessage]);
 
   // Imagen de portada de la cabecera (reservation-detail-car-media del JSP):
   // la primera imagen de la galería, si hay alguna.
@@ -201,6 +204,7 @@ export default function OwnerCarDetailPage() {
       const refreshed = await fetchCar(self);
       setCar(refreshed.data);
       setInsuranceSuccess(true);
+      setShowReplaceInsurance(false);
     } catch (err) {
       setError(errorMessage(err, 'owner.detail.errors.insuranceFailed'));
       throw err;
@@ -223,6 +227,7 @@ export default function OwnerCarDetailPage() {
       const refreshed = await fetchCar(self);
       setCar(refreshed.data);
       setInsuranceRemoved(true);
+      setShowReplaceInsurance(false);
     } catch (err) {
       setError(errorMessage(err, 'owner.detail.errors.insuranceDeleteFailed'));
     } finally {
@@ -572,46 +577,77 @@ export default function OwnerCarDetailPage() {
                 <p className="small text-secondary mb-2">{t('owner.detail.insurance.hint')}</p>
                 {car.hasInsurance ? (
                   <div className="d-flex flex-wrap gap-2 mb-2">
-                    <button
+                    <Button
                       type="button"
-                      className="btn btn-sm btn-outline-primary"
+                      variant="outline-primary"
+                      size="sm"
                       onClick={() => void onViewInsurance()}
                       disabled={insuranceViewBusy || busy}
                     >
                       {t('owner.detail.insurance.viewDocument')}
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="button"
-                      className="btn btn-sm btn-outline-danger"
+                      variant="outline-danger"
+                      size="sm"
                       onClick={() => setShowRemoveInsurance(true)}
                       disabled={busy}
                     >
                       {t('owner.detail.insurance.removeDocument')}
-                    </button>
+                    </Button>
+                    {!showReplaceInsurance && (
+                      <Button
+                        type="button"
+                        variant="outline-primary"
+                        size="sm"
+                        onClick={() => setShowReplaceInsurance(true)}
+                        disabled={busy}
+                      >
+                        {t('owner.detail.insurance.replace')}
+                      </Button>
+                    )}
                   </div>
                 ) : null}
-                <label className="form-label small mb-1" htmlFor="detailInsurance">
-                  {car.hasInsurance ? t('owner.detail.insurance.replace') : t('owner.detail.insurance.upload')}
-                </label>
-                <ReceiptUploadPicker
-                  id="detailInsurance"
-                  disabled={busy}
-                  busy={busy}
-                  onConfirm={onInsuranceConfirm}
-                  labels={{
-                    chooseFile: t('owner.detail.insurance.chooseFile'),
-                    confirmUpload: t('owner.detail.insurance.confirmUpload'),
-                    confirming: t('owner.detail.insurance.confirming'),
-                    uploadAria: car.hasInsurance
-                      ? t('owner.detail.insurance.replace')
-                      : t('owner.detail.insurance.upload'),
-                    replaceFile: t('owner.detail.insurance.replaceFile'),
-                    removeFile: t('owner.detail.insurance.removeFile'),
-                    invalidFile: t('owner.detail.insurance.invalidFile'),
-                    fileTooLarge: t('owner.detail.insurance.fileTooLarge', { maxMb: 5 }),
-                    uploadError: t('owner.detail.errors.insuranceFailed'),
-                  }}
-                />
+                {(!car.hasInsurance || showReplaceInsurance) && (
+                  <div>
+                    <label className="form-label small mb-1" htmlFor="detailInsurance">
+                      {car.hasInsurance
+                        ? t('owner.detail.insurance.replace')
+                        : t('owner.detail.insurance.upload')}
+                    </label>
+                    <ReceiptUploadPicker
+                      id="detailInsurance"
+                      disabled={busy}
+                      busy={busy}
+                      onConfirm={onInsuranceConfirm}
+                      labels={{
+                        chooseFile: t('owner.detail.insurance.chooseFile'),
+                        confirmUpload: t('owner.detail.insurance.confirmUpload'),
+                        confirming: t('owner.detail.insurance.confirming'),
+                        uploadAria: car.hasInsurance
+                          ? t('owner.detail.insurance.replace')
+                          : t('owner.detail.insurance.upload'),
+                        replaceFile: t('owner.detail.insurance.replaceFile'),
+                        removeFile: t('owner.detail.insurance.removeFile'),
+                        invalidFile: t('owner.detail.insurance.invalidFile'),
+                        fileTooLarge: t('owner.detail.insurance.fileTooLarge', { maxMb: 5 }),
+                        uploadError: t('owner.detail.errors.insuranceFailed'),
+                      }}
+                    />
+                    {car.hasInsurance && showReplaceInsurance && (
+                      <Button
+                        type="button"
+                        variant="outline-secondary"
+                        size="sm"
+                        className="mt-2"
+                        onClick={() => setShowReplaceInsurance(false)}
+                        disabled={busy}
+                      >
+                        {t('owner.detail.cancel')}
+                      </Button>
+                    )}
+                  </div>
+                )}
                 {insuranceSuccess ? (
                   <div className="alert alert-success mt-2 mb-0 py-2 small" role="alert">
                     {t('owner.detail.insurance.uploadSuccess')}

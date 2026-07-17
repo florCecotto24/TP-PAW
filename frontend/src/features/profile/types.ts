@@ -8,6 +8,7 @@ export interface Links {
   profilePicture?: string;
   cars?: string;
   reservations?: string;
+  'owned-reservations'?: string;
   favorites?: string;
   identityDocument?: string;
   licenseDocument?: string;

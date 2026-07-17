@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Pagination, SortBar, LoadingBlock, AuthenticatedImg } from '../../components/ryden';
@@ -42,11 +42,23 @@ export default function MyCarsPage() {
 
   const filters = useMemo(() => parseMyCarsFilters(searchParams), [searchParams]);
   const pageIndex = myCarsPageIndex(searchParams);
-  const list = useMyCarsPage(ownerId, filters, pageIndex);
+  const list = useMyCarsPage(filters, pageIndex);
 
   const items = list.data?.items ?? [];
   const total = list.data?.total;
   const totalPages = myCarsPageCount(total);
+
+  useEffect(() => {
+    if (list.isLoading || total == null) return;
+    const maxPage = Math.max(0, totalPages - 1);
+    if (pageIndex > maxPage) {
+      const next = new URLSearchParams(searchParams);
+      if (maxPage <= 0) next.delete('page');
+      else next.set('page', String(maxPage));
+      setSearchParams(next, { replace: true });
+    }
+  }, [list.isLoading, total, totalPages, pageIndex, searchParams, setSearchParams]);
+
   const activeFilters = hasActiveMyCarsFilters(searchParams);
   const showFilters = items.length > 0 || activeFilters;
   const baseUrl = myCarsBasePath(searchParams);

@@ -20,6 +20,7 @@ import ar.edu.itba.paw.models.domain.car.CarModel;
 import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.models.security.UserRole;
 import ar.edu.itba.paw.services.user.AdminService;
+import ar.edu.itba.paw.services.user.UserReadinessService;
 import ar.edu.itba.paw.services.user.UserService;
 
 @ExtendWith(MockitoExtension.class)
@@ -38,6 +39,8 @@ class CarPublishingServiceImplTest {
     private CarModelService carModelService;
     @Mock
     private UserService userService;
+    @Mock
+    private UserReadinessService userReadinessService;
     @Mock
     private AdminService adminService;
 
@@ -98,7 +101,7 @@ class CarPublishingServiceImplTest {
         // 1.Arrange
         final User user = owner(UserRole.USER);
         Mockito.when(userService.getUserById(OWNER_ID)).thenReturn(Optional.of(user));
-        Mockito.when(userService.meetsPublishingPrerequisites(user)).thenReturn(true);
+        Mockito.when(userReadinessService.meetsPublishingPrerequisites(user)).thenReturn(true);
         Mockito.when(carBrandService.findOrCreateUnvalidated("Toyota")).thenReturn(Optional.of(brand(true)));
         Mockito.when(carModelService.findOrCreateUnvalidated(BRAND_ID, "Corolla", Car.Type.SEDAN))
                 .thenReturn(Optional.of(model(true)));
@@ -130,7 +133,7 @@ class CarPublishingServiceImplTest {
         // 1.Arrange
         final User user = owner(UserRole.USER);
         Mockito.when(userService.getUserById(OWNER_ID)).thenReturn(Optional.of(user));
-        Mockito.when(userService.meetsPublishingPrerequisites(user)).thenReturn(true);
+        Mockito.when(userReadinessService.meetsPublishingPrerequisites(user)).thenReturn(true);
         Mockito.when(carBrandService.findOrCreateUnvalidated("Toyota")).thenReturn(Optional.of(brand(false)));
         Mockito.when(carModelService.findOrCreateUnvalidated(BRAND_ID, "Corolla", Car.Type.SEDAN))
                 .thenReturn(Optional.of(model(false)));
@@ -162,7 +165,7 @@ class CarPublishingServiceImplTest {
         // 1.Arrange
         final User user = owner(UserRole.USER);
         Mockito.when(userService.getUserById(OWNER_ID)).thenReturn(Optional.of(user));
-        Mockito.when(userService.meetsPublishingPrerequisites(user)).thenReturn(false);
+        Mockito.when(userReadinessService.meetsPublishingPrerequisites(user)).thenReturn(false);
 
         // 2.Act / 3.Assert
         Assertions.assertThrows(

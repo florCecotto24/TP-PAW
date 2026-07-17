@@ -109,9 +109,11 @@ public class ReviewJpaDao implements ReviewDao {
     @Override
     @SuppressWarnings("unchecked")
     public Page<CarPublicReview> findCarPublicReviews(final long carId, final int page, final int pageSize) {
+        // Public car feed is rider→car only: owner→rider reviews rate the person, not the listing.
         final Long total = em.createQuery(
                         "SELECT COUNT(r) FROM Review r "
-                                + "WHERE r.reservation.car.id = :carId AND r.rating IS NOT NULL",
+                                + "WHERE r.reservation.car.id = :carId AND r.madeByRider = true "
+                                + "AND r.rating IS NOT NULL",
                         Long.class)
                 .setParameter("carId", carId)
                 .getSingleResult();
@@ -120,7 +122,8 @@ public class ReviewJpaDao implements ReviewDao {
                         "SELECT r.id "
                                 + "FROM reviews r "
                                 + "JOIN reservations res ON res.id = r.reservation_id "
-                                + "WHERE res.car_id = :carId AND r.rating IS NOT NULL "
+                                + "WHERE res.car_id = :carId AND r.made_by_rider = TRUE "
+                                + "AND r.rating IS NOT NULL "
                                 + "ORDER BY r.created_at DESC, r.id DESC "
                                 + "LIMIT :limit OFFSET :offset")
                 .setParameter("carId", carId)
@@ -147,9 +150,7 @@ public class ReviewJpaDao implements ReviewDao {
 
         final List<CarPublicReview> content = reviews.stream()
                 .map(r -> {
-                    final User reviewer = r.isMadeByRider()
-                            ? r.getReservation().getRider()
-                            : r.getReservation().getCar().getOwner();
+                    final User reviewer = r.getReservation().getRider();
                     return new CarPublicReview(
                             reviewer.getForename(),
                             reviewer.getSurname(),
@@ -167,7 +168,8 @@ public class ReviewJpaDao implements ReviewDao {
     public Page<Review> findPublicReviewsForCar(final long carId, final int page, final int pageSize) {
         final Long total = em.createQuery(
                         "SELECT COUNT(r) FROM Review r "
-                                + "WHERE r.reservation.car.id = :carId AND r.rating IS NOT NULL",
+                                + "WHERE r.reservation.car.id = :carId AND r.madeByRider = true "
+                                + "AND r.rating IS NOT NULL",
                         Long.class)
                 .setParameter("carId", carId)
                 .getSingleResult();
@@ -176,7 +178,8 @@ public class ReviewJpaDao implements ReviewDao {
                         "SELECT r.id "
                                 + "FROM reviews r "
                                 + "JOIN reservations res ON res.id = r.reservation_id "
-                                + "WHERE res.car_id = :carId AND r.rating IS NOT NULL "
+                                + "WHERE res.car_id = :carId AND r.made_by_rider = TRUE "
+                                + "AND r.rating IS NOT NULL "
                                 + "ORDER BY r.created_at DESC, r.id DESC "
                                 + "LIMIT :limit OFFSET :offset")
                 .setParameter("carId", carId)
@@ -207,7 +210,8 @@ public class ReviewJpaDao implements ReviewDao {
     public long countReviewsForCar(final long carId) {
         return em.createQuery(
                         "SELECT COUNT(r) FROM Review r "
-                                + "WHERE r.reservation.car.id = :carId AND r.rating IS NOT NULL",
+                                + "WHERE r.reservation.car.id = :carId AND r.madeByRider = true "
+                                + "AND r.rating IS NOT NULL",
                         Long.class)
                 .setParameter("carId", carId)
                 .getSingleResult();
@@ -217,7 +221,8 @@ public class ReviewJpaDao implements ReviewDao {
     public BigDecimal findAverageRatingForCar(final long carId) {
         final Double avg = em.createQuery(
                         "SELECT AVG(r.rating) FROM Review r "
-                                + "WHERE r.reservation.car.id = :carId AND r.rating IS NOT NULL",
+                                + "WHERE r.reservation.car.id = :carId AND r.madeByRider = true "
+                                + "AND r.rating IS NOT NULL",
                         Double.class)
                 .setParameter("carId", carId)
                 .getSingleResult();

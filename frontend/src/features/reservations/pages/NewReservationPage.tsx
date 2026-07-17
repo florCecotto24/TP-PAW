@@ -132,6 +132,7 @@ export default function NewReservationPage() {
   const carName = carNameParam || (carQuery.data ? `${carQuery.data.brandName} ${carQuery.data.modelName}` : '');
 
   const submitReservation = async () => {
+    if (submitting) return;
     if (!carUri || !selectedAvailability || !startIso || !endIso) {
       setActionError(t('res.new.missingParams'));
       return;
@@ -145,6 +146,7 @@ export default function NewReservationPage() {
         startDate: startIso,
         endDate: endIso,
       });
+      await queryClient.invalidateQueries({ queryKey: ['reservations'] });
       const reservationSelf = res.data?.links.self ?? res.location ?? null;
       const reservationId = idFromUri(reservationSelf ?? '');
       if (reservationId) {
@@ -177,7 +179,7 @@ export default function NewReservationPage() {
 
   const onSaveDocs = async () => {
     const user = userQuery.data;
-    if (!user) return;
+    if (!user || docsSaving) return;
     const needLicense = !licenseUploaded;
     const needIdentity = !identityUploaded;
     if ((needLicense && !pendingLicenseFile) || (needIdentity && !pendingIdentityFile)) {
@@ -337,7 +339,8 @@ export default function NewReservationPage() {
         onLicenseChange={setPendingLicenseFile}
         onIdentityChange={setPendingIdentityFile}
         onConfirm={() => void onSaveDocs()}
-        confirmButtonClass={`btn btn-primary${docsSaving ? ' disabled' : ''}`}
+        confirmButtonClass="btn btn-primary"
+        confirmDisabled={docsSaving}
       >
         <p className="mb-2 text-secondary text-center">{t('res.new.docs.modalBody')}</p>
         <p className="mb-3 text-secondary text-center">{t('res.new.docs.modalBodyFormats')}</p>

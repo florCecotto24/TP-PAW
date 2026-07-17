@@ -70,4 +70,28 @@ class StoredFileJpaDaoTest extends DaoIntegrationTestSupport {
         Assertions.assertNotNull(createdAt);
         Assertions.assertTrue(createdAt.isBefore(OffsetDateTime.now(ZoneOffset.UTC).plusSeconds(5)));
     }
+
+    @Test
+    void testDeleteByIdRemovesPersistedRow() {
+        // 1. Arrange
+        final StoredFile created = dao.create(uploaderId, "gone.pdf", "application/pdf", new byte[] {9});
+        em.flush();
+        final long id = created.getId();
+
+        // 2. Act
+        final boolean removed = dao.deleteById(id);
+        em.flush();
+
+        // 3. Assert
+        Assertions.assertTrue(removed);
+        final Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM stored_files WHERE id = ?", Integer.class, id);
+        Assertions.assertEquals(0, count);
+    }
+
+    @Test
+    void testDeleteByIdWhenMissingReturnsFalse() {
+        // 1. Arrange / 2. Act / 3. Assert
+        Assertions.assertFalse(dao.deleteById(9_999_999L));
+    }
 }

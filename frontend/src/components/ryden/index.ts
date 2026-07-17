@@ -93,8 +93,8 @@ export { default as ReviewImageInput } from './review/ReviewImageInput';
 export type { ReviewImageInputProps } from './review/ReviewImageInput';
 
 // Reservation
-export { default as CarReservationCard } from './reservation/CarReservationCard';
-export type { CarReservationCardProps, CarReservationCardData } from './reservation/CarReservationCard';
+export { default as CarReservationCard } from './reservation/ReservationCard';
+export type { CarReservationCardProps, CarReservationCardData } from './reservation/ReservationCard';
 export { default as ReceiptUploadPicker } from './reservation/ReceiptUploadPicker';
 export type {
   ReceiptUploadPickerProps,

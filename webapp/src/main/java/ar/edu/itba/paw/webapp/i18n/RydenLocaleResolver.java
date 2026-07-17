@@ -15,6 +15,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import ar.edu.itba.paw.models.util.rules.SupportedLocales;
+import ar.edu.itba.paw.services.user.UserLocaleService;
 import ar.edu.itba.paw.services.user.UserService;
 import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
 
@@ -34,10 +35,10 @@ public final class RydenLocaleResolver {
     private static final int COOKIE_MAX_AGE_SECONDS = (int) Duration.ofDays(365).toSeconds();
     private static final String REQUEST_CACHE_ATTR = RydenLocaleResolver.class.getName() + ".RESOLVED";
 
-    private final UserService userService;
+    private final UserLocaleService userLocaleService;
 
-    public RydenLocaleResolver(final UserService userService) {
-        this.userService = Objects.requireNonNull(userService, "userService");
+    public RydenLocaleResolver(final UserLocaleService userLocaleService) {
+        this.userLocaleService = Objects.requireNonNull(userLocaleService, "userLocaleService");
     }
 
     @NonNull
@@ -53,7 +54,7 @@ public final class RydenLocaleResolver {
 
     private Locale doResolveLocale(final HttpServletRequest request) {
         final Optional<Locale> fromUser = currentAuthenticatedUserId()
-                .flatMap(userService::findUserPreferredLocale);
+                .flatMap(userLocaleService::findUserPreferredLocale);
         if (fromUser.isPresent()) {
             return fromUser.get();
         }

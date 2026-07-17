@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { collectionQueryPath } from '../../../api/apiDiscovery';
@@ -8,22 +8,20 @@ import type { UserDto } from '../../../api/types';
 import { EmptyState, LoadingBlock } from '../../../components/ryden';
 import { useSessionStore } from '../../../session/sessionStore';
 import { openAuthenticatedBinary, patchUser, userDocumentPath } from '../api';
+import {
+  parseAdminUserFilters,
+  withAdminUserFilters,
+  type AdminBlockedFilter,
+  type AdminRoleFilter,
+  type AdminUserListFilters,
+} from '../adminListFilters';
 import AdminPageHeader from '../components/AdminPageHeader';
 import AdminPagination from '../components/AdminPagination';
 import { idFromSelf } from '../types';
 import { useAdminErrorMessage } from '../useAdminErrorMessage';
 import { usePagedList } from '../usePagedList';
 
-type RoleFilter = '' | 'user' | 'admin';
-type BlockedFilter = '' | 'true' | 'false';
-
-interface UserListFilters {
-  q: string;
-  role: RoleFilter;
-  blocked: BlockedFilter;
-}
-
-const EMPTY_FILTERS: UserListFilters = { q: '', role: '', blocked: '' };
+const EMPTY_FILTERS: AdminUserListFilters = { q: '', role: '', blocked: '' };
 
 function UserDocRow({
   type,
@@ -86,14 +84,21 @@ export default function AdminUsersPage() {
   const currentUser = useSessionStore((s) => s.currentUser);
   const currentUserId = idFromSelf(currentUser?.links);
 
-  const [draft, setDraft] = useState<UserListFilters>(EMPTY_FILTERS);
-  const [applied, setApplied] = useState<UserListFilters>(EMPTY_FILTERS);
+  const [searchParams, setSearchParams] = useSearchParams();
+  // Filtros aplicados viven en la URL (sanitizados); draft es solo el form editable.
+  const applied = useMemo(() => parseAdminUserFilters(searchParams), [searchParams]);
+  const [draft, setDraft] = useState<AdminUserListFilters>(() => parseAdminUserFilters(searchParams));
+
+  // Resync draft when applied filters change (back/forward), not on every page click.
+  const appliedKey = JSON.stringify(applied);
+  useEffect(() => {
+    setDraft(applied);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [appliedKey]);
 
   const [actionError, setActionError] = useState<string | null>(null);
   const [busySelf, setBusySelf] = useState<string | null>(null);
 
-  // La página vive en la URL (?page=N, 0-based como SearchPage) -> bookmarkeable y resiste refresh.
-  const [searchParams, setSearchParams] = useSearchParams();
   const pageIndex = pageIndexFromParams(searchParams);
   const goToPage = useCallback(
     (next: number) => setSearchParams(withPageIndex(searchParams, next)),
@@ -130,19 +135,19 @@ export default function AdminUsersPage() {
 
   const onSubmitFilters = (e: React.FormEvent) => {
     e.preventDefault();
-    setApplied({
+    const next: AdminUserListFilters = {
       q: draft.q.trim(),
       role: draft.role,
       blocked: draft.blocked,
-    });
+    };
+    setDraft(next);
     // Cambiar filtros vuelve a la primera página (el conteo cambia).
-    setSearchParams(withPageIndex(searchParams, 0));
+    setSearchParams(withPageIndex(withAdminUserFilters(searchParams, next), 0));
   };
 
   const onClearFilters = () => {
     setDraft(EMPTY_FILTERS);
-    setApplied(EMPTY_FILTERS);
-    setSearchParams(withPageIndex(searchParams, 0));
+    setSearchParams(withPageIndex(withAdminUserFilters(searchParams, EMPTY_FILTERS), 0));
   };
 
   const onViewDocument = async (user: UserDto, type: 'license' | 'identity') => {
@@ -179,7 +184,7 @@ export default function AdminUsersPage() {
             id="adminUserRole"
             className="form-select form-select-sm"
             value={draft.role}
-            onChange={(e) => setDraft((prev) => ({ ...prev, role: e.target.value as RoleFilter }))}
+            onChange={(e) => setDraft((prev) => ({ ...prev, role: e.target.value as AdminRoleFilter }))}
           >
             <option value="">{t('admin.users.filter.roleAll')}</option>
             <option value="user">{t('admin.users.roles.user')}</option>
@@ -195,7 +200,7 @@ export default function AdminUsersPage() {
             className="form-select form-select-sm"
             value={draft.blocked}
             onChange={(e) =>
-              setDraft((prev) => ({ ...prev, blocked: e.target.value as BlockedFilter }))
+              setDraft((prev) => ({ ...prev, blocked: e.target.value as AdminBlockedFilter }))
             }
           >
             <option value="">{t('admin.users.filter.statusAll')}</option>

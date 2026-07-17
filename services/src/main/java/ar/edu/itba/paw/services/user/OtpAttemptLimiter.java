@@ -8,12 +8,17 @@ import java.util.concurrent.ConcurrentMap;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import ar.edu.itba.paw.exception.user.OtpAttemptsExceededException;
+import ar.edu.itba.paw.models.domain.user.OtpAttemptWindow;
+import ar.edu.itba.paw.persistence.user.OtpAttemptWindowDao;
 
 /**
- * In-memory failed-attempt window for numeric OTPs (email verify / password reset).
- * Caps brute-force guessing of short codes without requiring a schema migration.
+ * Failed-attempt window for numeric OTPs (email verify / password reset).
+ * Persisted in {@code otp_attempt_windows} so restart / multi-node share the same quota.
+ * Unit tests may use {@link #forTests} (in-memory only).
  */
 @Component
 public class OtpAttemptLimiter {
@@ -23,17 +28,21 @@ public class OtpAttemptLimiter {
 
     private final int maxFailedAttempts;
     private final Duration lockoutWindow;
-    private final ConcurrentMap<String, Window> windows = new ConcurrentHashMap<>();
+    private final OtpAttemptWindowDao otpAttemptWindowDao;
+    /** Non-null only for {@link #forTests} — keeps unit tests free of a persistence layer. */
+    private final ConcurrentMap<String, Window> inMemoryWindows;
 
     @Autowired
-    public OtpAttemptLimiter(final Environment environment) {
+    public OtpAttemptLimiter(final Environment environment, final OtpAttemptWindowDao otpAttemptWindowDao) {
         this(
                 environment.getProperty(
                         "app.validation.otp-max-failed-attempts", Integer.class, DEFAULT_MAX_FAILED_ATTEMPTS),
                 Duration.ofMinutes(Math.max(
                         1,
                         environment.getProperty(
-                                "app.validation.otp-lockout-minutes", Integer.class, DEFAULT_LOCKOUT_MINUTES))));
+                                "app.validation.otp-lockout-minutes", Integer.class, DEFAULT_LOCKOUT_MINUTES))),
+                otpAttemptWindowDao,
+                null);
     }
 
     /**
@@ -41,43 +50,85 @@ public class OtpAttemptLimiter {
      * (Effective Java: prefer static factories over constructor overloading).
      */
     static OtpAttemptLimiter forTests(final int maxFailedAttempts, final Duration lockoutWindow) {
-        return new OtpAttemptLimiter(maxFailedAttempts, lockoutWindow);
+        return new OtpAttemptLimiter(maxFailedAttempts, lockoutWindow, null, new ConcurrentHashMap<>());
     }
 
-    private OtpAttemptLimiter(final int maxFailedAttempts, final Duration lockoutWindow) {
+    private OtpAttemptLimiter(
+            final int maxFailedAttempts,
+            final Duration lockoutWindow,
+            final OtpAttemptWindowDao otpAttemptWindowDao,
+            final ConcurrentMap<String, Window> inMemoryWindows) {
         this.maxFailedAttempts = Math.max(1, maxFailedAttempts);
         this.lockoutWindow = lockoutWindow == null || lockoutWindow.isNegative() || lockoutWindow.isZero()
                 ? Duration.ofMinutes(DEFAULT_LOCKOUT_MINUTES)
                 : lockoutWindow;
+        this.otpAttemptWindowDao = otpAttemptWindowDao;
+        this.inMemoryWindows = inMemoryWindows;
     }
 
+    @Transactional(readOnly = true)
     public void assertAllowed(final String emailKey) {
-        final Window window = windows.get(normalize(emailKey));
+        final String key = normalize(emailKey);
+        final Instant now = Instant.now();
+        if (inMemoryWindows != null) {
+            final Window window = inMemoryWindows.get(key);
+            if (window == null) {
+                return;
+            }
+            if (window.isExpired(now, lockoutWindow)) {
+                inMemoryWindows.remove(key, window);
+                return;
+            }
+            if (window.failures >= maxFailedAttempts) {
+                throw new OtpAttemptsExceededException();
+            }
+            return;
+        }
+        final OtpAttemptWindow window = otpAttemptWindowDao.findByEmailKey(key).orElse(null);
         if (window == null) {
             return;
         }
-        if (window.isExpired(Instant.now(), lockoutWindow)) {
-            windows.remove(normalize(emailKey), window);
+        if (isExpired(window.getWindowStart(), now)) {
             return;
         }
-        if (window.failures >= maxFailedAttempts) {
+        if (window.getFailures() >= maxFailedAttempts) {
             throw new OtpAttemptsExceededException();
         }
     }
 
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void recordFailure(final String emailKey) {
         final String key = normalize(emailKey);
         final Instant now = Instant.now();
-        windows.compute(key, (ignored, existing) -> {
-            if (existing == null || existing.isExpired(now, lockoutWindow)) {
-                return new Window(1, now);
-            }
-            return new Window(existing.failures + 1, existing.windowStart);
-        });
+        if (inMemoryWindows != null) {
+            inMemoryWindows.compute(key, (ignored, existing) -> {
+                if (existing == null || existing.isExpired(now, lockoutWindow)) {
+                    return new Window(1, now);
+                }
+                return new Window(existing.failures + 1, existing.windowStart);
+            });
+            return;
+        }
+        final OtpAttemptWindow existing = otpAttemptWindowDao.findByEmailKey(key).orElse(null);
+        if (existing == null || isExpired(existing.getWindowStart(), now)) {
+            otpAttemptWindowDao.upsert(key, 1, now);
+            return;
+        }
+        otpAttemptWindowDao.upsert(key, existing.getFailures() + 1, existing.getWindowStart());
     }
 
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void clear(final String emailKey) {
-        windows.remove(normalize(emailKey));
+        final String key = normalize(emailKey);
+        if (inMemoryWindows != null) {
+            inMemoryWindows.remove(key);
+            return;
+        }
+        otpAttemptWindowDao.deleteByEmailKey(key);
+    }
+
+    private boolean isExpired(final Instant windowStart, final Instant now) {
+        return windowStart.plus(lockoutWindow).isBefore(now);
     }
 
     private static String normalize(final String emailKey) {

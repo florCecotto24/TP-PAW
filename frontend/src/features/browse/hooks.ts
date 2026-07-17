@@ -121,10 +121,12 @@ export function pageCount(total: number | undefined, pageSize: number): number {
 // --- Detalle de auto ---------------------------------------------------------
 export function useCar(id: string | undefined, carSelf?: string | undefined) {
   return useQuery({
-    queryKey: ['browse', 'car', carSelf ?? id],
+    // Key by route id so list→detail (with state.self) and F5 (id-only) share cache
+    // and do not remount into isLoading when location.state is dropped.
+    queryKey: ['browse', 'car', id],
     enabled: !!(carSelf || id),
     queryFn: async () => {
-      const uri = carSelf ?? (id ? canonicalCarUri(id) : null);
+      const uri = carSelf?.trim() || (id ? canonicalCarUri(id) : null);
       if (!uri) throw new Error('missing car uri');
       const res = await sessionClient.follow<CarDto>(uri, { accept: MediaTypes.car });
       return res.data;

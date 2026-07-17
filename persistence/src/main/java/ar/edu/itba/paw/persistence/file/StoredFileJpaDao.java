@@ -34,4 +34,15 @@ public class StoredFileJpaDao implements StoredFileDao {
     public Optional<StoredFile> findById(final long id) {
         return Optional.ofNullable(em.find(StoredFile.class, id));
     }
+
+    @Override
+    @Transactional
+    public boolean deleteById(final long id) {
+        final StoredFile file = em.find(StoredFile.class, id);
+        if (file == null) {
+            return false;
+        }
+        em.remove(file);
+        return true;
+    }
 }

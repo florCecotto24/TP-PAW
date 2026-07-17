@@ -49,6 +49,13 @@ public class User {
     @Column(name = "password_hash", length = 255)
     private String passwordHash;
 
+    /**
+     * Credentials epoch embedded in JWTs. Incremented whenever the password hash changes
+     * so previously issued access/refresh tokens are rejected after change or reset.
+     */
+    @Column(name = "password_version", nullable = false)
+    private int passwordVersion;
+
     @Column(name = "email_validated")
     private Boolean emailValidated;
 
@@ -142,6 +149,7 @@ public class User {
         this.forename = b.forename;
         this.surname = b.surname;
         this.passwordHash = b.passwordHash;
+        this.passwordVersion = b.passwordVersion;
         this.emailValidated = b.emailValidated;
         this.phoneNumber = b.phoneNumber;
         this.birthDate = b.birthDate;
@@ -174,6 +182,7 @@ public class User {
         private String forename;
         private String surname;
         private String passwordHash;
+        private int passwordVersion;
         private Boolean emailValidated;
         private String phoneNumber;
         private LocalDate birthDate;
@@ -212,6 +221,11 @@ public class User {
 
         public Builder passwordHash(final String passwordHash) {
             this.passwordHash = passwordHash;
+            return this;
+        }
+
+        public Builder passwordVersion(final int passwordVersion) {
+            this.passwordVersion = passwordVersion;
             return this;
         }
 
@@ -318,6 +332,10 @@ public class User {
         return Optional.ofNullable(passwordHash);
     }
 
+    public int getPasswordVersion() {
+        return passwordVersion;
+    }
+
     public Optional<Boolean> getEmailValidated() {
         return Optional.ofNullable(emailValidated);
     }
@@ -419,6 +437,14 @@ public class User {
 
     public void setPasswordHash(final String passwordHash) {
         this.passwordHash = passwordHash;
+    }
+
+    public void setPasswordVersion(final int passwordVersion) {
+        this.passwordVersion = passwordVersion;
+    }
+
+    public void bumpPasswordVersion() {
+        this.passwordVersion++;
     }
 
     public void setEmailValidated(final Boolean emailValidated) {

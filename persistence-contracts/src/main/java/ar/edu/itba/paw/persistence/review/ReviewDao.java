@@ -34,7 +34,7 @@ public interface ReviewDao {
     /** Reviews for one reservation (0–2 rows). */
     List<Review> findReviewsForReservation(long reservationId);
 
-    /** Public reviews for a car, paginated. */
+    /** Rated rider→car reviews for a listing, paginated (excludes owner→rider). */
     Page<CarPublicReview> findCarPublicReviews(long carId, int page, int pageSize);
 
     /** Same rows as {@link #findCarPublicReviews} but returns hydrated {@link Review} entities. */
@@ -45,7 +45,7 @@ public interface ReviewDao {
      */
     Page<Review> findReviewsReceivedByUser(long userId, int page, int pageSize);
 
-    /** Total reviews stored against the car. */
+    /** Total rated rider→car reviews for the listing (excludes owner→rider reviews). */
     long countReviewsForCar(long carId);
 
     /**
@@ -68,9 +68,11 @@ public interface ReviewDao {
     Map<Long, BigDecimal> findAverageRatingsAsRiderForUserIds(Collection<Long> userIds);
 
     /**
-     * Average rating for a car's reviews (both sides). Returns {@code null} when no rated reviews
-     * exist; otherwise a value rounded to two decimals. The actual persistence of {@code cars.rating_avg}
-     * is the responsibility of {@link CarDao#updateRatingAvg(long, java.math.BigDecimal)}.
+     * Average rating of rider→car reviews for the listing ({@code madeByRider=true}). Owner→rider
+     * reviews are excluded so {@code cars.rating_avg} reflects vehicle quality, not rider scores.
+     * Returns {@code null} when no rated rider reviews exist; otherwise a value rounded to two
+     * decimals. Persistence of {@code cars.rating_avg} is via
+     * {@link CarDao#updateRatingAvg(long, java.math.BigDecimal)}.
      */
     BigDecimal findAverageRatingForCar(long carId);
 

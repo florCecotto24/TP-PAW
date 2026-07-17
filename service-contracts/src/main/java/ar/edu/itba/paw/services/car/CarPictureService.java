@@ -41,6 +41,12 @@ public interface CarPictureService {
     /** Whether the stored file is linked to a public car gallery video. */
     boolean isStoredFileInCarGallery(final long storedFileId);
 
+    /**
+     * Car ids whose galleries reference {@code imageId}; empty for non-gallery images.
+     * Id-only; does not materialize gallery rows or image bytes.
+     */
+    List<Long> findCarIdsByImageId(final long imageId);
+
     /** Removes a gallery row when it belongs to {@code carId}. */
     void deleteCarPictureForCar(final long carId, final long pictureId);
 }

@@ -263,7 +263,7 @@ describe('hypermedia contract (frontend)', () => {
       expect(url).toBe('/webapp/api/users/5/profile-picture');
     });
 
-    it('testProfilePictureAssetUrlFromSelfMatchesSubResourceShape', () => {
+    it('testProfilePictureAssetUrlFromSelfDoesNotFabricateSubResource', () => {
       // 1.Arrange
       vi.stubEnv('BASE_URL', '/webapp/');
 
@@ -271,7 +271,7 @@ describe('hypermedia contract (frontend)', () => {
       const url = profilePictureAssetUrlFromSelf('/users/9');
 
       // 3.Assert
-      expect(url).toBe('/webapp/api/users/9/profile-picture');
+      expect(url).toBeNull();
     });
 
     it('testCarCoverAssetUrlPrefersLinksCover', () => {
@@ -285,7 +285,7 @@ describe('hypermedia contract (frontend)', () => {
       expect(url).toBe('/webapp/api/cars/3/pictures/primary');
     });
 
-    it('testCarCoverAssetUrlFallsBackToPrimaryPictureEndpoint', () => {
+    it('testCarCoverAssetUrlDoesNotFabricatePrimaryPictureEndpoint', () => {
       // 1.Arrange
       vi.stubEnv('BASE_URL', '/webapp/');
 
@@ -293,7 +293,7 @@ describe('hypermedia contract (frontend)', () => {
       const url = carCoverAssetUrl('/cars/3');
 
       // 3.Assert
-      expect(url).toBe('/webapp/api/cars/3/pictures/primary');
+      expect(url).toBeNull();
     });
 
     it('testCanonicalApiUserPathNormalizesAuthenticatedUserLink', () => {

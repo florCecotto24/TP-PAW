@@ -114,12 +114,27 @@ public class CarPictureServiceImpl implements CarPictureService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<Long> findCarIdsByImageId(final long imageId) {
+        return carPictureDao.findCarIdsByImageId(imageId);
+    }
+
+    @Override
     @Transactional
     public void deleteCarPictureForCar(final long carId, final long pictureId) {
         final Optional<CarPicture> pictureOpt = carPictureDao.getCarPictureById(pictureId);
         if (pictureOpt.isEmpty() || pictureOpt.get().getCarId() != carId) {
             throw new ImageValidationException(MessageKeys.IMAGE_INVALID_ID);
         }
+        final CarPicture picture = pictureOpt.get();
+        final Long imageId = picture.getImageId();
+        final Long storedFileId = picture.getStoredFileId();
         carPictureDao.deleteCarPicture(pictureId);
+        if (imageId != null && imageId > 0) {
+            imageService.deleteImage(imageId);
+        }
+        if (storedFileId != null && storedFileId > 0) {
+            storedFileService.deleteById(storedFileId);
+        }
     }
 }

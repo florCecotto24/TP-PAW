@@ -4,6 +4,7 @@ import ar.edu.itba.paw.services.email.EmailService;
 import ar.edu.itba.paw.services.reservation.ReservationAvailabilityService;
 import ar.edu.itba.paw.services.reservation.ReservationLifecycleRowProcessor;
 import ar.edu.itba.paw.services.reservation.ReservationService;
+import ar.edu.itba.paw.services.user.UserLocaleService;
 import ar.edu.itba.paw.services.user.UserService;
 import ar.edu.itba.paw.util.CarAvailabilityAddressFormatter;
 import ar.edu.itba.paw.util.format.MoneyFormat;
@@ -39,7 +40,7 @@ public final class ReservationReminderScheduler {
     private final ReservationAvailabilityService reservationAvailabilityService;
     private final ReservationLifecycleRowProcessor lifecycleRowProcessor;
     private final CarAvailabilityAddressFormatter carAvailabilityAddressFormatter;
-    private final UserService userService;
+    private final UserLocaleService userLocaleService;
     private final EmailService emailService;
     private final MoneyFormat moneyFormat;
 
@@ -49,14 +50,14 @@ public final class ReservationReminderScheduler {
             final ReservationAvailabilityService reservationAvailabilityService,
             final ReservationLifecycleRowProcessor lifecycleRowProcessor,
             final CarAvailabilityAddressFormatter carAvailabilityAddressFormatter,
-            final UserService userService,
+            final UserLocaleService userLocaleService,
             final EmailService emailService,
             final MoneyFormat moneyFormat) {
         this.reservationService = reservationService;
         this.reservationAvailabilityService = reservationAvailabilityService;
         this.lifecycleRowProcessor = lifecycleRowProcessor;
         this.carAvailabilityAddressFormatter = carAvailabilityAddressFormatter;
-        this.userService = userService;
+        this.userLocaleService = userLocaleService;
         this.emailService = emailService;
         this.moneyFormat = moneyFormat;
     }
@@ -118,8 +119,8 @@ public final class ReservationReminderScheduler {
                         .ownerFullName(listingOwner.getForename() + " " + listingOwner.getSurname())
                         .ownerEmail(listingOwner.getEmail())
                         .reservationTotal(moneyFormat.format(reservation.getTotalPrice()))
-                        .riderMailLocale(userService.resolveMailLocaleFor(rider))
-                        .ownerMailLocale(userService.resolveMailLocaleFor(listingOwner))
+                        .riderMailLocale(userLocaleService.resolveMailLocaleFor(rider))
+                        .ownerMailLocale(userLocaleService.resolveMailLocaleFor(listingOwner))
                         .build();
                 LOGGER.atInfo().addArgument(rider.getEmail()).addArgument(reservation.getId())
                         .log("Queueing reservation reminder email to {} for reservation id={}");

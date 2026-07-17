@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Pagination, SortBar, LoadingBlock } from '../../../components/ryden';
@@ -14,16 +14,25 @@ import {
 import { pageCount, useSearchCarsPage } from '../hooks';
 import { filtersToSearchParams, parseFilters } from '../searchFilters';
 import { paths } from '../../../routes/paths';
+import { pageIndexFromParams, withPageIndex } from '../../../api/pageParam';
 
 export default function SearchPage() {
   const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const filters = useMemo(() => parseFilters(searchParams), [searchParams]);
-  const pageIndex = Math.max(0, Number(searchParams.get('page') ?? '0') || 0);
+  const pageIndex = pageIndexFromParams(searchParams);
   const search = useSearchCarsPage(filters, pageIndex + 1, SEARCH_PAGE_SIZE);
   const cars = search.data?.items ?? [];
   const total = search.data?.page.total;
   const totalPages = pageCount(total, SEARCH_PAGE_SIZE);
+
+  useEffect(() => {
+    if (search.isLoading || total == null) return;
+    const maxPage = Math.max(0, totalPages - 1);
+    if (pageIndex > maxPage) {
+      setSearchParams(withPageIndex(searchParams, maxPage), { replace: true });
+    }
+  }, [search.isLoading, total, totalPages, pageIndex, searchParams, setSearchParams]);
 
   const applyFilters = (next: typeof filters) => {
     const params = filtersToSearchParams(next);

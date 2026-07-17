@@ -165,6 +165,9 @@ public class WebAuthConfig {
                         .permitAll()
                         // CORS preflight (harmless when same-origin).
                         .requestMatchers(ant(HttpMethod.OPTIONS, "/**")).permitAll()
+                        // Sensitive car sub-resources: authenticated at the filter (defense in depth);
+                        // ownership remains enforced by @PreAuthorize on the resource.
+                        .requestMatchers(ant(HttpMethod.GET, "/api/cars/*/insurance")).authenticated()
                         // Public reads: catalog + public car/profile data (Jersey under /api/*).
                         .requestMatchers(
                                 ant(HttpMethod.GET, "/api"),

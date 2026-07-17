@@ -16,7 +16,7 @@ export default function CarCard({
 }) {
   const { t } = useTranslation();
   const href = carDetailHref(car);
-  const { favoritable, favorited, onToggleFavorite } = useBrowseCarFavorite(car);
+  const { favoritable, favorited, favoriteBusy, onToggleFavorite } = useBrowseCarFavorite(car);
 
   return (
     <ConsumerCarCard
@@ -26,10 +26,18 @@ export default function CarCard({
         favorited,
       }}
       href={href}
-      onToggleFavorite={favoritable ? () => onToggleFavorite() : undefined}
+      favoriteBusy={favoriteBusy}
+      onToggleFavorite={
+        favoritable
+          ? () => {
+              if (favoriteBusy) return;
+              onToggleFavorite();
+            }
+          : undefined
+      }
       overlay={action}
       imageSlot={
-        <CarCardImage coverUri={car.links.cover}>
+        <CarCardImage coverUri={car.links.cover} authenticated={favoritable}>
           {href ? (
             <span className="carcard-view-chip" aria-hidden="true">
               {t('carCard.viewChip')}

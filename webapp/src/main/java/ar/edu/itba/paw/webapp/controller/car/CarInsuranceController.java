@@ -3,15 +3,12 @@ package ar.edu.itba.paw.webapp.controller.car;
 import java.io.IOException;
 import java.io.InputStream;
 
-import javax.ws.rs.BadRequestException;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
-import javax.ws.rs.NotFoundException;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
-import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
@@ -22,56 +19,30 @@ import org.springframework.security.access.method.P;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Component;
 
-import ar.edu.itba.paw.exception.MessageKeys;
-import ar.edu.itba.paw.exception.car.CarNotFoundException;
-import ar.edu.itba.paw.models.domain.car.Car;
-import ar.edu.itba.paw.models.dto.file.BinaryContent;
-import ar.edu.itba.paw.services.car.CarService;
-import ar.edu.itba.paw.services.file.StoredFileService;
-import ar.edu.itba.paw.webapp.support.BinaryContentResponses;
-import ar.edu.itba.paw.webapp.support.BinaryPayloadSupport;
-import ar.edu.itba.paw.webapp.support.CacheableBinaryResponses;
-import ar.edu.itba.paw.webapp.support.facade.CarInsuranceUploadFacade;
+import ar.edu.itba.paw.webapp.support.CarInsuranceHttpSupport;
 
 /**
- * Car insurance document ({@code /cars/{id}/insurance}).
- *
- * The owner/admin gates are declarative ({@code @PreAuthorize}, backed by the
- * {@code carResourceAccess} bean referenced by name), so it isn't injected as a field.
+ * Car insurance document ({@code /cars/{id}/insurance}). HTTP routing only.
+ * Owner/admin gates are declarative ({@code @PreAuthorize} on {@code carResourceAccess}).
  */
 @Path("/cars/{id}/insurance")
 @Component
 public class CarInsuranceController {
 
-    private final CarService carService;
-    private final StoredFileService storedFileService;
-    private final CarInsuranceUploadFacade carInsuranceUploadFacade;
-    private final BinaryPayloadSupport binaryPayloadSupport;
+    private final CarInsuranceHttpSupport carInsuranceHttpSupport;
 
     @Context
     private HttpHeaders httpHeaders;
 
     @Autowired
-    public CarInsuranceController(
-            final CarService carService,
-            final StoredFileService storedFileService,
-            final CarInsuranceUploadFacade carInsuranceUploadFacade,
-            final BinaryPayloadSupport binaryPayloadSupport) {
-        this.carService = carService;
-        this.storedFileService = storedFileService;
-        this.carInsuranceUploadFacade = carInsuranceUploadFacade;
-        this.binaryPayloadSupport = binaryPayloadSupport;
+    public CarInsuranceController(final CarInsuranceHttpSupport carInsuranceHttpSupport) {
+        this.carInsuranceHttpSupport = carInsuranceHttpSupport;
     }
 
     @GET
     @PreAuthorize("@carResourceAccess.isOwnerOrAdminById(#id, @currentUserResolver.currentPrincipalOrNull())")
     public Response downloadInsurance(@P("id") @PathParam("id") final long carId) {
-        final Car car = requireCarExists(carId);
-        final Long fileId = car.getInsuranceFileId()
-                .orElseThrow(NotFoundException::new);
-        return storedFileService.findContentById(fileId)
-                .map(this::binaryResponse)
-                .orElseThrow(NotFoundException::new);
+        return carInsuranceHttpSupport.download(carId);
     }
 
     @PUT
@@ -79,49 +50,12 @@ public class CarInsuranceController {
     @PreAuthorize("@carResourceAccess.isOwnerById(#id, @currentUserResolver.currentPrincipalOrNull())")
     public Response uploadInsurance(@P("id") @PathParam("id") final long carId, final InputStream body)
             throws IOException {
-        final Car car = requireCarExists(carId);
-        final byte[] bytes = binaryPayloadSupport.readValidatedBody(body);
-        final String contentType = httpHeaders.getMediaType() != null
-                ? httpHeaders.getMediaType().toString()
-                : MediaType.APPLICATION_OCTET_STREAM;
-        final String filename = resolveUploadFileName(contentType);
-        final var outcome = carInsuranceUploadFacade.attemptUploadFromBytes(
-                car.getOwnerId(), carId, filename, contentType, bytes);
-        return switch (outcome.getStatus()) {
-            case OK -> Response.noContent().build();
-            case TOO_LARGE -> throw new WebApplicationException(Response.Status.REQUEST_ENTITY_TOO_LARGE);
-            case MISSING_FILE -> throw new BadRequestException(MessageKeys.CAR_INSURANCE_INVALID);
-            case BUSINESS_ERROR, READ_ERROR -> throw new BadRequestException(
-                    outcome.getLocalizedMessage().orElse(MessageKeys.CAR_INSURANCE_INVALID));
-        };
+        return carInsuranceHttpSupport.upload(carId, body, httpHeaders);
     }
 
     @DELETE
     @PreAuthorize("@carResourceAccess.isOwnerById(#id, @currentUserResolver.currentPrincipalOrNull())")
     public Response deleteInsurance(@P("id") @PathParam("id") final long carId) {
-        final Car car = requireCarExists(carId);
-        carService.clearCarInsuranceDocument(car.getOwnerId(), carId);
-        return Response.noContent().build();
-    }
-
-    private Car requireCarExists(final long carId) {
-        return carService.getCarById(carId)
-                .orElseThrow(() -> new CarNotFoundException(carId));
-    }
-
-    private Response binaryResponse(final BinaryContent content) {
-        // Insurance documents are owner/admin-only and sensitive: never cache, never sniff, always download.
-        final String name = content.getFileName() == null || content.getFileName().isBlank()
-                ? BinaryContentResponses.fallbackFileName("insurance", content.getContentType())
-                : content.getFileName();
-        return CacheableBinaryResponses.sensitive(content, name);
-    }
-
-    private String resolveUploadFileName(final String contentType) {
-        final String custom = httpHeaders.getHeaderString("X-Ryden-Filename");
-        if (custom != null && !custom.isBlank()) {
-            return custom.trim();
-        }
-        return BinaryContentResponses.fallbackFileName("insurance", contentType);
+        return carInsuranceHttpSupport.delete(carId);
     }
 }

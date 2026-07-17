@@ -41,6 +41,7 @@ class JwtTokenServiceTest {
                 .encodedPassword("irrelevant")
                 .authorities(authorities)
                 .roleAssignedBy(7L)
+                .passwordVersion(3)
                 .build();
     }
 
@@ -75,6 +76,7 @@ class JwtTokenServiceTest {
         assertEquals(JwtTokenType.ACCESS, parsed.type());
         assertEquals(42L, parsed.principal().getUserId());
         assertEquals("ana@example.com", parsed.principal().getUsername());
+        assertEquals(3, parsed.principal().getPasswordVersion());
         assertNull(parsed.principal().getForename());
         assertNull(parsed.principal().getSurname());
         assertTrue(parsed.principal().getRoleAssignedBy().isEmpty());

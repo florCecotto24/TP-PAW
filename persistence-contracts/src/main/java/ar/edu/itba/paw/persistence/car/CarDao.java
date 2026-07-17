@@ -54,6 +54,12 @@ public interface CarDao {
     /** All cars whose status equals {@code status}. */
     List<Car> findCarsByStatus(Car.Status status);
 
+    /**
+     * Up to {@code limit} car ids with the given status and {@code id > afterId} (use {@code null}
+     * or {@code 0} to start), ordered by id ascending — keyset paging for scheduled sweeps.
+     */
+    List<Long> findCarIdsByStatusAfter(Car.Status status, Long afterId, int limit);
+
     /** Admin-only: paginated list of all cars in the catalog. */
     Page<Car> findAllCarsPaginated(int page, int pageSize);
 

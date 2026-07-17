@@ -65,12 +65,16 @@ public final class CacheableBinaryResponses {
         final EntityTag etag = new EntityTag(sha256Hex(content.getBytes()));
         final Response.ResponseBuilder notModified = request.evaluatePreconditions(etag);
         if (notModified != null) {
-            return notModified.cacheControl(noCacheMustRevalidate()).build();
+            return notModified
+                    .cacheControl(noCacheMustRevalidate())
+                    .header("X-Content-Type-Options", "nosniff")
+                    .build();
         }
         return Response.ok(content.getBytes())
                 .type(mediaTypeWithoutCharset(content.getContentType()))
                 .tag(etag)
                 .cacheControl(noCacheMustRevalidate())
+                .header("X-Content-Type-Options", "nosniff")
                 .build();
     }
 

@@ -14,6 +14,8 @@ import ar.edu.itba.paw.services.user.EmailVerificationService;
 /**
  * Re-issues the email-verification OTP for a pending account ({@code POST /users/{id}/credentials}).
  * Anti-enumeration: always {@code 200 OK} with empty body.
+ * Issuance is intentionally not IP-rate-limited; failed Basic OTP attempts
+ * are rate-limited by {@code OtpAttemptLimiter}.
  */
 @Path("/users/{id}/credentials")
 @Component

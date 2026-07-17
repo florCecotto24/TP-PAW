@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Avatar, BreadcrumbTrail, LoadingBlock, FieldView, ReceiptUploadPicker } from '../../components/ryden';
 import { profilePictureAssetUrl } from '../../api/uri';
 import { getClientConfig } from '../../api/clientConfig';
+import type { UserDto as SessionUserDto } from '../../api/types';
 import { useSessionStore } from '../../session/sessionStore';
 import { useMyUserUri } from './hooks';
 import {
@@ -278,7 +279,8 @@ function ProfileDataCard({
 
   const mutation = useMutation({
     mutationFn: (patch: UserPatchDto) => patchUser(userUri, patch),
-    onSuccess: () => {
+    onSuccess: (updated) => {
+      useSessionStore.setState({ currentUser: updated as unknown as SessionUserDto });
       setDone(true);
       setEditing(false);
       onSaved();
@@ -477,11 +479,13 @@ function DocumentRow({
   const [viewError, setViewError] = useState(false);
   const [banner, setBanner] = useState<'uploaded' | 'removed' | null>(null);
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
+  const [showReplacePicker, setShowReplacePicker] = useState(false);
 
   const upload = useMutation({
     mutationFn: (file: File) => uploadDocument(user, type, file),
     onSuccess: () => {
       setBanner('uploaded');
+      setShowReplacePicker(false);
       onChanged();
     },
   });
@@ -528,11 +532,17 @@ function DocumentRow({
       <p className="small mb-2">
         {validated ? (
           <i className="bi bi-check-circle-fill text-success" aria-hidden="true"></i>
+        ) : uploaded ? (
+          <i className="bi bi-clock-fill text-warning" aria-hidden="true"></i>
         ) : (
-          <i className="bi bi-x-circle-fill text-danger" aria-hidden="true"></i>
+          <i className="bi bi-x-circle-fill text-secondary" aria-hidden="true"></i>
         )}
         <span className="ms-1">
-          {validated ? t('profile.docs.validated') : t('profile.docs.pending')}
+          {validated
+            ? t('profile.docs.validated')
+            : uploaded
+              ? t('profile.docs.pending')
+              : t('profile.docs.none')}
         </span>
       </p>
       {uploaded && (
@@ -554,28 +564,52 @@ function DocumentRow({
               {t('profile.docs.viewFile')}
             </button>
           </p>
-          <Button
-            type="button"
-            variant="outline-danger"
-            size="sm"
-            className="d-block mb-3"
-            onClick={() => setShowRemoveConfirm(true)}
-            disabled={remove.isPending}
-          >
-            {t('profile.docs.remove')}
-          </Button>
-          <div>
-            <label className="form-label small mb-1" htmlFor={`docReplace-${type}`}>
-              {t('profile.docs.replace')}
-            </label>
-            <ReceiptUploadPicker
-              id={`docReplace-${type}`}
-              disabled={upload.isPending || remove.isPending}
-              busy={upload.isPending}
-              onConfirm={onConfirmUpload}
-              labels={docPickerLabels}
-            />
+          <div className="d-flex flex-wrap gap-2 mb-3">
+            <Button
+              type="button"
+              variant="outline-danger"
+              size="sm"
+              onClick={() => setShowRemoveConfirm(true)}
+              disabled={remove.isPending || upload.isPending}
+            >
+              {t('profile.docs.remove')}
+            </Button>
+            {!showReplacePicker && (
+              <Button
+                type="button"
+                variant="outline-primary"
+                size="sm"
+                onClick={() => setShowReplacePicker(true)}
+                disabled={remove.isPending || upload.isPending}
+              >
+                {t('profile.docs.replace')}
+              </Button>
+            )}
           </div>
+          {showReplacePicker && (
+            <div className="mb-2">
+              <label className="form-label small mb-1" htmlFor={`docReplace-${type}`}>
+                {t('profile.docs.replace')}
+              </label>
+              <ReceiptUploadPicker
+                id={`docReplace-${type}`}
+                disabled={upload.isPending || remove.isPending}
+                busy={upload.isPending}
+                onConfirm={onConfirmUpload}
+                labels={docPickerLabels}
+              />
+              <Button
+                type="button"
+                variant="outline-secondary"
+                size="sm"
+                className="mt-2"
+                onClick={() => setShowReplacePicker(false)}
+                disabled={upload.isPending}
+              >
+                {t('profile.common.cancel')}
+              </Button>
+            </div>
+          )}
         </>
       )}
       {!uploaded && (

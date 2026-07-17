@@ -62,4 +62,40 @@ class UserJpaDaoTest extends DaoIntegrationTestSupport {
         Assertions.assertEquals("New", forename);
         Assertions.assertEquals("Surname", surname);
     }
+
+    @Test
+    void testUpdatePasswordHashBumpsPasswordVersion() {
+        // 1.Arrange
+        final User created = dao.createUser(
+                "pwd@test.com", "Ada", "Lovelace", "OLD_HASH", UserRole.USER, true, null);
+        em.flush();
+        final Integer initial = jdbcTemplate.queryForObject(
+                "SELECT password_version FROM users WHERE id = ?", Integer.class, created.getId());
+        Assertions.assertEquals(0, initial);
+
+        // 2.Act
+        dao.updatePasswordHash(created.getId(), "NEW_HASH");
+        em.flush();
+
+        // 3.Assert
+        final String hash = jdbcTemplate.queryForObject(
+                "SELECT password_hash FROM users WHERE id = ?", String.class, created.getId());
+        final Integer version = jdbcTemplate.queryForObject(
+                "SELECT password_version FROM users WHERE id = ?", Integer.class, created.getId());
+        Assertions.assertEquals("NEW_HASH", hash);
+        Assertions.assertEquals(1, version);
+    }
+
+    @Test
+    void testCreateUserPersistsPasswordVersionZero() {
+        // 1.Arrange / 2.Act
+        final User created = dao.createUser(
+                "ver@test.com", "Ada", "Lovelace", "HASH", UserRole.USER, false, null);
+        em.flush();
+
+        // 3.Assert
+        final Integer version = jdbcTemplate.queryForObject(
+                "SELECT password_version FROM users WHERE id = ?", Integer.class, created.getId());
+        Assertions.assertEquals(0, version);
+    }
 }

@@ -18,9 +18,9 @@ import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
  * {@code *ById}
  * variants exist for {@code @PreAuthorize}, which runs before the resource method body loads the
  * {@link Car} entity: they resolve the car themselves and, if it does not exist, allow the request
- * through so the resource's own lookup raises the 404 — this keeps "not found" taking precedence
- * over "forbidden", identical to the pre-existing imperative checks (which always loaded the car
- * first and 404'd before ever reaching the ownership check).
+ * through so the resource's own lookup raises the 404. When the car exists but the viewer is not
+ * authorized, they raise {@link CarNotFoundException} so "not found" masks "forbidden" (same policy
+ * as {@link #requireViewableCar}).
  *
  * Public browse stays limited to {@link Car.Status#ACTIVE}. Reservation riders may also read a car
  * so hypermedia {@code links.car} on reservation DTOs remains followable after the listing is paused
@@ -75,6 +75,11 @@ public final class CarResourceAccess {
         return carService.getCarById(carId).map(car -> canViewCar(car, viewer)).orElse(true);
     }
 
+    /** Read predicate for already-resolved related-resource ids; missing cars are not viewable. */
+    public boolean canViewExistingCarById(final long carId, final RydenUserDetails viewer) {
+        return carService.getCarById(carId).map(car -> canViewCar(car, viewer)).orElse(false);
+    }
+
     /**
      * Loads a car for public read sub-resources ({@code GET /cars/{id}/…}). Missing cars and cars the
      * viewer cannot read both raise {@link CarNotFoundException} so "not found" masks "forbidden".
@@ -98,12 +103,35 @@ public final class CarResourceAccess {
         return viewer != null && car.getOwnerId() == viewer.getUserId();
     }
 
+    /**
+     * Owner gate for mutations. Missing cars return {@code true} so the resource body can 404.
+     * Existing cars the viewer does not own raise {@link CarNotFoundException} (same 404 mask as
+     * {@link #requireViewableCar}) instead of a 403 existence oracle.
+     */
     public boolean isOwnerById(final long carId, final RydenUserDetails viewer) {
-        return carService.getCarById(carId).map(car -> isOwner(car, viewer)).orElse(true);
+        final Car car = carService.getCarById(carId).orElse(null);
+        if (car == null) {
+            return true;
+        }
+        if (!isOwner(car, viewer)) {
+            throw new CarNotFoundException(carId);
+        }
+        return true;
     }
 
+    /**
+     * Owner-or-admin gate. Same 404-masking policy as {@link #isOwnerById} when the car exists
+     * but the viewer is neither owner nor admin.
+     */
     public boolean isOwnerOrAdminById(final long carId, final RydenUserDetails viewer) {
-        return carService.getCarById(carId).map(car -> isOwnerOrAdmin(car, viewer)).orElse(true);
+        final Car car = carService.getCarById(carId).orElse(null);
+        if (car == null) {
+            return true;
+        }
+        if (!isOwnerOrAdmin(car, viewer)) {
+            throw new CarNotFoundException(carId);
+        }
+        return true;
     }
 
     public void requireOwnerOrAdmin(final Car car, final RydenUserDetails viewer) {

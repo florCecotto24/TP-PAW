@@ -279,6 +279,27 @@ class OpenApiContractTest {
     }
 
     @Test
+    void testAdminUsersCollectionDocumentsUserPrivateMime() {
+        // 1.Arrange — GET /users is the admin roster; the wire format is the private representation.
+        final java.util.regex.Matcher get = java.util.regex.Pattern.compile(
+                "^  /users:\\R    get:\\R([\\s\\S]*?)^    post:", java.util.regex.Pattern.MULTILINE)
+                .matcher(openapiYaml);
+
+        // 2.Act
+        final boolean found = get.find();
+        final String block = found ? get.group(1) : "";
+
+        // 3.Assert
+        assertTrue(found, "GET /users must be documented in openapi.yaml");
+        assertTrue(block.contains(VndMediaType.USER_PRIVATE_V1_JSON),
+                "GET /users 200 must use " + VndMediaType.USER_PRIVATE_V1_JSON);
+        assertTrue(block.contains("items: { $ref: \"#/components/schemas/UserPrivateDto\" }"),
+                "GET /users must list UserPrivateDto items");
+        assertTrue(!block.contains("items: { $ref: \"#/components/schemas/UserDto\" }"),
+                "GET /users must not document the public UserDto list");
+    }
+
+    @Test
     void testVndMediaTypesAreDeclaredInOpenApi() {
         // 1.Arrange
         final Set<String> inSpec = OpenApiContractSupport.vendorJsonMediaTypes(openapiYaml);
@@ -505,7 +526,9 @@ class OpenApiContractTest {
         dto.setResources(java.util.Map.of(
                 "cars",
                 ApiIndexDto.ResourceDescriptor.of(
-                        "http://localhost/webapp/api/cars", java.util.List.of("page", "pageSize", "q"))));
+                        "http://localhost/webapp/api/cars",
+                        "http://localhost/webapp/api/cars/{id}",
+                        java.util.List.of("page", "pageSize", "q"))));
         return dto;
     }
 
@@ -623,6 +646,7 @@ class OpenApiContractTest {
                 .withRelated("car", "/cars/10")
                 .withRelated("rider", "/users/2")
                 .withRelated("owner", "/users/3")
+                .withRelated("counterparty", "/reservations/1/counterparty")
                 .withRelated("messages", "/reservations/1/messages")
                 .withRelated("reviews", "/reviews?reservationId=1")
                 .withRelated("payment-receipt", "/reservations/1/payment-receipt")

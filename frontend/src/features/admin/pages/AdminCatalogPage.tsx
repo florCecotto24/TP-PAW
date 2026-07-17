@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { collectionQueryPath } from '../../../api/apiDiscovery';
 import { MediaTypes } from '../../../api/mediaTypes';
 import { pageIndexFromParams, withPageIndex } from '../../../api/pageParam';
 import { EmptyState, LoadingBlock } from '../../../components/ryden';
-import { approveBrand, approveModel, fetchPendingModels, rejectBrand, rejectModel } from '../api';
+import { approveBrand, approveModel, rejectBrand, rejectModel } from '../api';
 import AdminPageHeader from '../components/AdminPageHeader';
 import AdminPagination from '../components/AdminPagination';
 import type { BrandDto, ModelDto } from '../types';
@@ -24,30 +24,24 @@ export default function AdminCatalogPage() {
     (next: number) => setSearchParams(withPageIndex(searchParams, next)),
     [searchParams, setSearchParams],
   );
+  const modelPageIndex = pageIndexFromParams(searchParams, 'modelsPage');
+  const goToModelPage = useCallback(
+    (next: number) => setSearchParams(withPageIndex(searchParams, next, 'modelsPage')),
+    [searchParams, setSearchParams],
+  );
 
   const brands = usePagedList<BrandDto>(
     collectionQueryPath('brands', { validated: 'false' }),
     MediaTypes.brand,
     pageIndex + 1,
   );
-  const [models, setModels] = useState<ModelDto[]>([]);
-  const [modelsLoading, setModelsLoading] = useState(true);
-  const [modelsError, setModelsError] = useState<string | null>(null);
+  const models = usePagedList<ModelDto>(
+    collectionQueryPath('models', { validated: 'false' }),
+    MediaTypes.model,
+    modelPageIndex + 1,
+  );
   const [busyLink, setBusyLink] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-
-  const reloadModels = useCallback(() => {
-    setModelsLoading(true);
-    setModelsError(null);
-    fetchPendingModels()
-      .then((res) => setModels(Array.isArray(res.data) ? res.data : []))
-      .catch((err) => setModelsError(errorMessage(err)))
-      .finally(() => setModelsLoading(false));
-  }, [errorMessage]);
-
-  useEffect(() => {
-    reloadModels();
-  }, [reloadModels]);
 
   const runBrandAction = async (link: string, action: () => Promise<unknown>) => {
     setActionError(null);
@@ -55,7 +49,7 @@ export default function AdminCatalogPage() {
     try {
       await action();
       brands.reload();
-      reloadModels();
+      models.reload();
     } catch (err) {
       setActionError(errorMessage(err));
     } finally {
@@ -68,7 +62,7 @@ export default function AdminCatalogPage() {
     setBusyLink(link);
     try {
       await action();
-      reloadModels();
+      models.reload();
       brands.reload();
     } catch (err) {
       setActionError(errorMessage(err));
@@ -80,7 +74,7 @@ export default function AdminCatalogPage() {
   const displayError =
     actionError
     ?? (brands.error ? errorMessage(brands.error) : null)
-    ?? modelsError;
+    ?? (models.error ? errorMessage(models.error) : null);
 
   return (
     <>
@@ -134,11 +128,11 @@ export default function AdminCatalogPage() {
 
       <section>
         <h2 className="h5 fw-semibold mb-3">{t('admin.catalog.pendingModelsTitle')}</h2>
-        {modelsLoading ? <LoadingBlock variant="inline" className="mb-3" /> : null}
-        {!modelsLoading && models.length === 0 ? (
+        {models.loading ? <LoadingBlock variant="inline" className="mb-3" /> : null}
+        {!models.loading && models.items.length === 0 ? (
           <EmptyState icon="list-ul" title={t('admin.catalog.emptyModels')} inCard />
         ) : null}
-        {!modelsLoading && models.length > 0 ? (
+        {!models.loading && models.items.length > 0 ? (
           <div className="card border-0 shadow-sm bg-white overflow-hidden">
             <div className="table-responsive">
               <table className="table table-hover align-middle mb-0 admin-table admin-table--catalog">
@@ -151,7 +145,7 @@ export default function AdminCatalogPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {models.map((model) => {
+                  {models.items.map((model) => {
                     const busy = busyLink === model.links.self;
                     const typeLabel = model.type ? t(`admin.cars.types.${model.type}`) : '—';
                     return (
@@ -191,6 +185,7 @@ export default function AdminCatalogPage() {
             </div>
           </div>
         ) : null}
+        <AdminPagination page={models.page} currentPage={modelPageIndex} onPageChange={goToModelPage} />
       </section>
     </>
   );

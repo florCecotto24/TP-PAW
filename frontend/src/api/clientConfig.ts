@@ -131,7 +131,8 @@ export const useClientConfigStore = create<ClientConfigState>((set, get) => ({
   ready: false,
   config: null,
   load: async (client, configLink) => {
-    if (get().ready) {
+    // ready means a successful config load; failures stay !ready so discovery can retry (N-57).
+    if (get().ready && get().config != null) {
       return;
     }
     const path = configLink ? hrefToRelativeApiPath(configLink) : '/config';
@@ -142,7 +143,7 @@ export const useClientConfigStore = create<ClientConfigState>((set, get) => ({
       });
       set({ config: res.data, ready: true });
     } catch {
-      set({ config: null, ready: true });
+      set({ config: null, ready: false });
     }
   },
 }));

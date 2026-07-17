@@ -3,11 +3,7 @@ package ar.edu.itba.paw.webapp.controller.car;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
-import java.net.URI;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
-import java.util.stream.Collectors;
 
 import javax.validation.Valid;
 import javax.ws.rs.Consumes;
@@ -21,7 +17,6 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
-import javax.ws.rs.core.GenericEntity;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Request;
@@ -36,61 +31,47 @@ import org.springframework.security.access.method.P;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Component;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import ar.edu.itba.paw.dto.GalleryMediaUpload;
-import ar.edu.itba.paw.dto.PublishCarOutcome;
-import ar.edu.itba.paw.dto.PublishCarRequest;
 import ar.edu.itba.paw.exception.car.CarNotFoundException;
 import ar.edu.itba.paw.models.domain.car.Car;
-import ar.edu.itba.paw.models.dto.car.CarCard;
-import ar.edu.itba.paw.services.car.CarPublishingService;
 import ar.edu.itba.paw.services.car.CarService;
 import ar.edu.itba.paw.webapp.api.common.VndMediaType;
 import ar.edu.itba.paw.webapp.dto.rest.CarDto;
 import ar.edu.itba.paw.webapp.dto.rest.CarSummaryDto;
-import ar.edu.itba.paw.webapp.dto.rest.LinksDto;
 import ar.edu.itba.paw.webapp.form.car.CarCreateForm;
 import ar.edu.itba.paw.webapp.form.car.CarPatchForm;
 import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
-import ar.edu.itba.paw.webapp.support.BinaryPayloadSupport;
-import ar.edu.itba.paw.webapp.support.CarCreateRequestSupport;
 import ar.edu.itba.paw.webapp.support.CarListSupport;
+import ar.edu.itba.paw.webapp.support.CarPatchSupport;
+import ar.edu.itba.paw.webapp.support.CarPublishSupport;
 import ar.edu.itba.paw.webapp.support.CarRepresentationSupport;
 import ar.edu.itba.paw.webapp.support.CarRepresentationVersions;
 import ar.edu.itba.paw.webapp.support.CarResourceAccess;
-import ar.edu.itba.paw.webapp.support.CarRestEnums;
 import ar.edu.itba.paw.webapp.support.ConditionalJsonResponses;
 import ar.edu.itba.paw.webapp.support.CurrentUserResolver;
-import ar.edu.itba.paw.webapp.support.FormValidationSupport;
 import ar.edu.itba.paw.webapp.support.PaginationParams;
 import ar.edu.itba.paw.webapp.support.PaginationSupport;
-import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 import ar.edu.itba.paw.webapp.validation.constraint.car.ValidCarPowertrainList;
 import ar.edu.itba.paw.webapp.validation.constraint.car.ValidCarStatusList;
 import ar.edu.itba.paw.webapp.validation.constraint.car.ValidCarTransmissionList;
 import ar.edu.itba.paw.webapp.validation.constraint.car.ValidCarTypeList;
 import ar.edu.itba.paw.webapp.validation.constraint.common.ValidYearMonth;
-import ar.edu.itba.paw.webapp.util.RestUriUtils;
 
 /**
  * Cars resource ({@code /cars}, {@code /cars/{id}}).
+ * HTTP routing only; list/publish/patch binding lives in {@code *Support} helpers.
  */
 @Path("/cars")
 @Component
 public class CarController {
 
     private final CarService carService;
-    private final CarPublishingService carPublishingService;
-    private final FormValidationSupport formValidationSupport;
     private final CurrentUserResolver currentUserResolver;
     private final CarResourceAccess carResourceAccess;
-    private final CarCreateRequestSupport carCreateRequestSupport;
     private final PaginationSupport paginationSupport;
     private final CarListSupport carListSupport;
+    private final CarPublishSupport carPublishSupport;
+    private final CarPatchSupport carPatchSupport;
     private final CarRepresentationSupport carRepresentationSupport;
-    private final ObjectMapper objectMapper;
-    private final BinaryPayloadSupport binaryPayloadSupport;
 
     @Context
     private UriInfo uriInfo;
@@ -101,27 +82,21 @@ public class CarController {
     @Autowired
     public CarController(
             final CarService carService,
-            final CarPublishingService carPublishingService,
-            final FormValidationSupport formValidationSupport,
             final CurrentUserResolver currentUserResolver,
             final CarResourceAccess carResourceAccess,
-            final CarCreateRequestSupport carCreateRequestSupport,
             final PaginationSupport paginationSupport,
             final CarListSupport carListSupport,
-            final CarRepresentationSupport carRepresentationSupport,
-            final ObjectMapper objectMapper,
-            final BinaryPayloadSupport binaryPayloadSupport) {
+            final CarPublishSupport carPublishSupport,
+            final CarPatchSupport carPatchSupport,
+            final CarRepresentationSupport carRepresentationSupport) {
         this.carService = carService;
-        this.carPublishingService = carPublishingService;
-        this.formValidationSupport = formValidationSupport;
         this.currentUserResolver = currentUserResolver;
         this.carResourceAccess = carResourceAccess;
-        this.carCreateRequestSupport = carCreateRequestSupport;
         this.paginationSupport = paginationSupport;
         this.carListSupport = carListSupport;
+        this.carPublishSupport = carPublishSupport;
+        this.carPatchSupport = carPatchSupport;
         this.carRepresentationSupport = carRepresentationSupport;
-        this.objectMapper = objectMapper;
-        this.binaryPayloadSupport = binaryPayloadSupport;
     }
 
     // A14 (audit): documented decision — a single collection whose visibility is a query-param
@@ -200,7 +175,11 @@ public class CarController {
     @Consumes(VndMediaType.CAR_V1_JSON)
     @Produces(VndMediaType.CAR_V1_JSON)
     public Response publishCarJson(final CarCreateForm form) throws IOException {
-        return publishCar(form, List.of(), null, null, null);
+        return carPublishSupport.publishJson(
+                currentUserResolver.requireUserId(),
+                form,
+                LocaleContextHolder.getLocale(),
+                uriInfo);
     }
 
     @POST
@@ -210,67 +189,13 @@ public class CarController {
             @FormDataParam("car") final InputStream carPart,
             @FormDataParam("pictures") final List<FormDataBodyPart> pictureParts,
             @FormDataParam("insurance") final FormDataBodyPart insurancePart) throws IOException {
-        final byte[] insuranceBytes;
-        final String insuranceName;
-        final String insuranceType;
-        if (insurancePart != null && insurancePart.getEntityAs(InputStream.class) != null) {
-            insuranceBytes = insurancePart.getEntityAs(byte[].class);
-            insuranceName = insurancePart.getContentDisposition() != null
-                    ? insurancePart.getContentDisposition().getFileName()
-                    : "insurance";
-            insuranceType = insurancePart.getMediaType() != null
-                    ? insurancePart.getMediaType().toString()
-                    : MediaType.APPLICATION_OCTET_STREAM;
-        } else {
-            insuranceBytes = null;
-            insuranceName = null;
-            insuranceType = null;
-        }
-        return publishCar(
-                readCarCreateForm(carPart),
-                readGalleryUploads(pictureParts),
-                insuranceName,
-                insuranceType,
-                insuranceBytes);
-    }
-
-    private Response publishCar(
-            final CarCreateForm form,
-            final List<GalleryMediaUpload> galleryUploads,
-            final String insuranceName,
-            final String insuranceType,
-            final byte[] insuranceBytes) throws IOException {
-        final long ownerId = currentUserResolver.requireUserId();
-
-        formValidationSupport.validate(form, ValidationGroups.OnPublishCar.class);
-
-        final PublishCarRequest request = carCreateRequestSupport.toPublishRequest(form);
-
-        final PublishCarRequest fullRequest = PublishCarRequest.builder()
-                .brand(request.getBrand())
-                .model(request.getModel())
-                .type(request.getType())
-                .plate(request.getPlate())
-                .year(request.getYear())
-                .powertrain(request.getPowertrain())
-                .transmission(request.getTransmission())
-                .description(request.getDescription())
-                .minimumRentalDays(request.getMinimumRentalDays())
-                .galleryUploads(galleryUploads)
-                .insurance(insuranceName, insuranceType, insuranceBytes)
-                .build();
-
-        final Locale locale = LocaleContextHolder.getLocale();
-        final PublishCarOutcome outcome = carPublishingService.publishCar(ownerId, fullRequest, locale);
-        final Car car = outcome.getCar();
-
-        final URI location = uriInfo.getBaseUriBuilder()
-                .path("cars")
-                .path(String.valueOf(car.getId()))
-                .build();
-        final Car refreshed = carService.getCarById(car.getId()).orElse(car);
-        // Owner just created this car: it is the owner's own detail view, so the plate is theirs to see.
-        return Response.created(location).entity(CarDto.from(refreshed, uriInfo, true)).build();
+        return carPublishSupport.publishMultipart(
+                currentUserResolver.requireUserId(),
+                carPart,
+                pictureParts,
+                insurancePart,
+                LocaleContextHolder.getLocale(),
+                uriInfo);
     }
 
     @GET
@@ -306,17 +231,7 @@ public class CarController {
             @PathParam("id") final long id,
             @QueryParam("limit") @DefaultValue("4") final int limit) {
         carResourceAccess.requireViewableCar(id, currentUserResolver.currentPrincipalOrNull());
-        final int safeLimit = Math.max(1, Math.min(limit, 20));
-        final List<CarCard> cards = carService.findSimilarCarCards(id, safeLimit, null);
-        if (cards.isEmpty()) {
-            return Response.noContent().build();
-        }
-        final List<LinksDto> links = cards.stream()
-                .map(card -> LinksDto.ofSelf(RestUriUtils.carUri(uriInfo, card.getCarId()).toString()))
-                .collect(Collectors.toList());
-        return Response.ok(new GenericEntity<List<LinksDto>>(links) {})
-                .header("X-Total-Count", links.size())
-                .build();
+        return carListSupport.similarCars(id, limit, uriInfo);
     }
 
     @PATCH
@@ -327,31 +242,12 @@ public class CarController {
     public Response patchCar(
             @P("id") @PathParam("id") final long id,
             @Valid final CarPatchForm patch) {
-        final Car car = carService.getCarById(id)
-                .orElseThrow(() -> new CarNotFoundException(id));
-        final RydenUserDetails viewer = currentUserResolver.requirePrincipal();
-
-        // Authorize description/min-days before status so a mixed body cannot partially commit.
-        // @PreAuthorize already gates owner/admin; keep the explicit require for clarity on field scope.
-        if (patch.getDescription() != null || patch.getMinimumRentalDays() != null) {
-            carResourceAccess.requireOwnerOrAdmin(car, viewer);
-        }
-        if (patch.getStatus() != null) {
-            final Car.Status target = CarRestEnums.parseStatus(patch.getStatus());
-            carService.applyStatusTransition(
-                    car.getId(), target, viewer.getUserId(), LocaleContextHolder.getLocale());
-        }
-        if (patch.getDescription() != null) {
-            carService.updateDescription(car.getOwnerId(), id, patch.getDescription());
-        }
-        if (patch.getMinimumRentalDays() != null) {
-            carService.updateMinimumRentalDays(id, patch.getMinimumRentalDays());
-        }
-
-        final Car updated = carService.getCarById(id)
-                .orElseThrow(() -> new CarNotFoundException(id));
-        // Owner/admin edit path: the caller is authorized on the car, so the plate is visible to them.
-        return Response.ok(CarDto.from(updated, uriInfo, true)).build();
+        return carPatchSupport.apply(
+                id,
+                patch,
+                currentUserResolver.requirePrincipal(),
+                LocaleContextHolder.getLocale(),
+                uriInfo);
     }
 
     @DELETE
@@ -364,34 +260,5 @@ public class CarController {
             throw new CarNotFoundException(id);
         }
         return Response.noContent().build();
-    }
-
-    private CarCreateForm readCarCreateForm(final InputStream carPart) throws IOException {
-        final byte[] carJson = binaryPayloadSupport.readValidatedBody(carPart);
-        return objectMapper.readValue(carJson, CarCreateForm.class);
-    }
-
-    private List<GalleryMediaUpload> readGalleryUploads(final List<FormDataBodyPart> pictureParts) {
-        if (pictureParts == null || pictureParts.isEmpty()) {
-            return List.of();
-        }
-        final List<GalleryMediaUpload> uploads = new ArrayList<>();
-        for (final FormDataBodyPart part : pictureParts) {
-            if (part == null) {
-                continue;
-            }
-            final byte[] bytes = part.getEntityAs(byte[].class);
-            if (bytes == null || bytes.length == 0) {
-                continue;
-            }
-            final String filename = part.getContentDisposition() != null
-                    ? part.getContentDisposition().getFileName()
-                    : "upload";
-            final String contentType = part.getMediaType() != null
-                    ? part.getMediaType().toString()
-                    : MediaType.APPLICATION_OCTET_STREAM;
-            uploads.add(new GalleryMediaUpload(filename, contentType, bytes));
-        }
-        return uploads;
     }
 }

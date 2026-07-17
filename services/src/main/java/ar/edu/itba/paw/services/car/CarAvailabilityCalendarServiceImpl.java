@@ -28,8 +28,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import ar.edu.itba.paw.models.domain.car.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.car.CarAvailability;
-import ar.edu.itba.paw.models.domain.reservation.Reservation;
 import ar.edu.itba.paw.models.dto.car.BookableSegmentProjection;
+import ar.edu.itba.paw.models.dto.reservation.BlockingReservationProjection;
 import ar.edu.itba.paw.models.util.time.AppTimezone;
 import ar.edu.itba.paw.models.util.time.BookableWallAvailabilityCalendar;
 import ar.edu.itba.paw.util.CarAvailabilityAddressFormatter;
@@ -88,7 +88,7 @@ public class CarAvailabilityCalendarServiceImpl implements CarAvailabilityCalend
                 carIds, null);
         final Map<Long, List<CarAvailability>> rowsByCarId = allRows.stream()
                 .collect(Collectors.groupingBy(CarAvailability::getCarId));
-        final Map<Long, List<Reservation>> blockingByCarId =
+        final Map<Long, List<BlockingReservationProjection>> blockingByCarId =
                 reservationService.findBlockingReservationsByCarIds(carIds);
         final Map<Long, List<AvailabilityPeriod>> result = new HashMap<>(carIds.size());
         for (final Long carId : carIds) {
@@ -307,7 +307,7 @@ public class CarAvailabilityCalendarServiceImpl implements CarAvailabilityCalend
     private List<BookableSegmentProjection> computeBookableSegmentsForRiderDatePicker(
             final long carId, final Instant now, final Long excludingReservationIdOrNull) {
         final List<CarAvailability> allRows = carAvailabilityService.findByCarId(carId);
-        final List<Reservation> blockingReservations = excludingReservationIdOrNull == null
+        final List<BlockingReservationProjection> blockingReservations = excludingReservationIdOrNull == null
                 ? reservationService.findBlockingReservationsByCarId(carId)
                 : reservationService.findBlockingReservationsByCarIdExcluding(carId, excludingReservationIdOrNull);
         return buildRiderBookableSegments(allRows, blockingReservations, now);
@@ -323,7 +323,7 @@ public class CarAvailabilityCalendarServiceImpl implements CarAvailabilityCalend
         final List<CarAvailability> allRows = carAvailabilityService.findByCarIdsEndingOnOrAfter(carIds, null);
         final Map<Long, List<CarAvailability>> rowsByCarId = allRows.stream()
                 .collect(Collectors.groupingBy(CarAvailability::getCarId));
-        final Map<Long, List<Reservation>> blockingByCarId =
+        final Map<Long, List<BlockingReservationProjection>> blockingByCarId =
                 reservationService.findBlockingReservationsByCarIds(carIds);
         final Map<Long, Boolean> result = new HashMap<>(carIds.size());
         for (final Long carId : carIds) {
@@ -341,7 +341,7 @@ public class CarAvailabilityCalendarServiceImpl implements CarAvailabilityCalend
 
     private List<BookableSegmentProjection> buildRiderBookableSegments(
             final List<CarAvailability> allRows,
-            final List<Reservation> blockingReservations,
+            final List<BlockingReservationProjection> blockingReservations,
             final Instant now) {
         final SortedSet<LocalDate> bookableDays = computeBookableWallDaysFromRows(allRows, blockingReservations);
         if (bookableDays.isEmpty()) {
@@ -420,7 +420,7 @@ public class CarAvailabilityCalendarServiceImpl implements CarAvailabilityCalend
     }
 
     private SortedSet<LocalDate> computeBookableWallDaysByCarInternal(
-            final long carId, final List<Reservation> blockingReservations) {
+            final long carId, final List<BlockingReservationProjection> blockingReservations) {
         return computeBookableWallDaysFromRows(
                 carAvailabilityService.findByCarId(carId), blockingReservations);
     }
@@ -429,9 +429,14 @@ public class CarAvailabilityCalendarServiceImpl implements CarAvailabilityCalend
      * Shared core of {@link #computeBookableWallDaysByCarInternal} and the batch path: builds the
      * bookable wall-day set from already-fetched OFFERED availability rows and blocking
      * reservations. Lives here so the per-car and per-batch paths cannot drift.
+     *
+     * <p>In-memory day expansion is intentional and bounded: each availability row is a single
+     * period (owner calendar is month-scoped at the HTTP layer; bookable checks operate on the
+     * car's offered rows + blocking projections, not the global catalogue). Global browse/search
+     * pagination remains in SQL.</p>
      */
     private static SortedSet<LocalDate> computeBookableWallDaysFromRows(
-            final List<CarAvailability> rows, final List<Reservation> blockingReservations) {
+            final List<CarAvailability> rows, final List<BlockingReservationProjection> blockingReservations) {
         final ZoneId wall = AppTimezone.WALL_ZONE;
         final SortedSet<LocalDate> days = new TreeSet<>();
         for (final CarAvailability la : rows) {
@@ -444,7 +449,7 @@ public class CarAvailabilityCalendarServiceImpl implements CarAvailabilityCalend
                 d = d.plusDays(1);
             }
         }
-        for (final Reservation r : blockingReservations) {
+        for (final BlockingReservationProjection r : blockingReservations) {
             LocalDate d = r.getStartDate().toInstant().atZone(wall).toLocalDate();
             final LocalDate until = r.getEndDate().toInstant().atZone(wall).toLocalDate();
             while (!d.isAfter(until)) {

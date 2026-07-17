@@ -1,8 +1,12 @@
 package ar.edu.itba.paw.persistence.car;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
@@ -13,7 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.models.domain.car.CarBrand;
 import ar.edu.itba.paw.models.domain.car.CarModel;
-import ar.edu.itba.paw.persistence.car.CarModelDao;
+import ar.edu.itba.paw.models.dto.Page;
 
 @Transactional(readOnly = true)
 @Repository
@@ -101,6 +105,53 @@ public class CarModelJpaDao implements CarModelDao {
                         + "ORDER BY m.brand.id ASC, LOWER(m.name) ASC",
                 CarModel.class)
                 .getResultList();
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public Page<CarModel> findPendingPage(final int page, final int pageSize) {
+        final int safePage = Math.max(0, page);
+        final int safePageSize = Math.max(1, pageSize);
+
+        final long total = ((Number) em.createNativeQuery(
+                        "SELECT COUNT(*) FROM car_models m WHERE m.validated = FALSE")
+                .getSingleResult()).longValue();
+        if (total == 0L) {
+            return new Page<>(List.of(), safePage, safePageSize, 0L);
+        }
+
+        final List<Number> idRows = em.createNativeQuery(
+                        "SELECT m.id FROM car_models m "
+                                + "WHERE m.validated = FALSE "
+                                + "ORDER BY m.brand_id ASC, LOWER(m.name) ASC, m.id ASC "
+                                + "LIMIT :limit OFFSET :offset")
+                .setParameter("limit", safePageSize)
+                .setParameter("offset", safePage * safePageSize)
+                .getResultList();
+        if (idRows.isEmpty()) {
+            return new Page<>(List.of(), safePage, safePageSize, total);
+        }
+
+        final List<Long> ids = idRows.stream().map(Number::longValue).collect(Collectors.toList());
+        final List<CarModel> hydrated = em.createQuery(
+                        "FROM CarModel m JOIN FETCH m.brand WHERE m.id IN :ids",
+                        CarModel.class)
+                .setParameter("ids", ids)
+                .getResultList();
+        return new Page<>(hydrateInOrder(ids, hydrated), safePage, safePageSize, total);
+    }
+
+    private static List<CarModel> hydrateInOrder(final List<Long> ids, final List<CarModel> hydrated) {
+        final Map<Long, CarModel> byId = hydrated.stream()
+                .collect(Collectors.toMap(CarModel::getId, Function.identity()));
+        final List<CarModel> ordered = new ArrayList<>(ids.size());
+        for (final Long id : ids) {
+            final CarModel model = byId.get(id);
+            if (model != null) {
+                ordered.add(model);
+            }
+        }
+        return ordered;
     }
 
     @Override

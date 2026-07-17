@@ -112,6 +112,27 @@ class CarPictureJpaDaoTest extends DaoIntegrationTestSupport {
     }
 
     @Test
+    void testFindCarIdsByImageIdReturnsGalleryOwners() {
+        // 1. Arrange
+        insertCarPicture(imageId, 1);
+
+        // 2. Act
+        final List<Long> carIds = dao.findCarIdsByImageId(imageId);
+
+        // 3. Assert
+        Assertions.assertEquals(List.of(carId), carIds);
+    }
+
+    @Test
+    void testFindCarIdsByImageIdReturnsEmptyForNonGalleryImage() {
+        // 1. Arrange / 2. Act
+        final List<Long> carIds = dao.findCarIdsByImageId(imageId);
+
+        // 3. Assert
+        Assertions.assertTrue(carIds.isEmpty());
+    }
+
+    @Test
     void testFindByCarIdOrderByDisplayOrderAscPaginatesInSql() {
         // 1. Arrange — seed three pictures
         insertCarPicture(imageId, 1);

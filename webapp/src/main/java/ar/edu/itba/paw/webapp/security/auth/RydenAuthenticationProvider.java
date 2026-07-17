@@ -2,6 +2,7 @@ package ar.edu.itba.paw.webapp.security.auth;
 
 import java.util.ArrayList;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.Set;
 
 import org.springframework.context.i18n.LocaleContextHolder;
@@ -17,11 +18,13 @@ import org.springframework.stereotype.Component;
 
 import ar.edu.itba.paw.exception.RydenException;
 import ar.edu.itba.paw.exception.user.OtpAttemptsExceededException;
+import ar.edu.itba.paw.exception.user.VerificationCodeInvalidException;
 import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.services.user.EmailVerificationService;
 import ar.edu.itba.paw.services.user.PasswordResetService;
 import ar.edu.itba.paw.services.user.UserService;
 import ar.edu.itba.paw.webapp.security.auth.exception.LegacyPasswordMailedException;
+import ar.edu.itba.paw.webapp.security.auth.exception.InvalidVerificationCodeAuthenticationException;
 import ar.edu.itba.paw.webapp.security.auth.exception.OtpRateLimitedAuthenticationException;
 import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
 import ar.edu.itba.paw.webapp.security.auth.userdetails.UserRoleAuthorities;
@@ -37,6 +40,13 @@ import ar.edu.itba.paw.webapp.security.auth.userdetails.UserRoleAuthorities;
  */
 @Component
 public final class RydenAuthenticationProvider implements AuthenticationProvider {
+
+    /**
+     * Precomputed BCrypt hash used only to equalize timing when the email is unknown.
+     * Must match the encoder strength used for real password hashes (Spring BCrypt defaults).
+     */
+    private static final String DUMMY_BCRYPT_HASH =
+            "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy";
 
     private final UserService userService;
     private final EmailVerificationService emailVerificationService;
@@ -61,8 +71,13 @@ public final class RydenAuthenticationProvider implements AuthenticationProvider
                 ? authentication.getCredentials().toString()
                 : "";
 
-        User user = userService.findByEmailForAuthentication(email)
-                .orElseThrow(() -> new BadCredentialsException("Invalid credentials"));
+        final Optional<User> userOpt = userService.findByEmailForAuthentication(email);
+        if (userOpt.isEmpty()) {
+            // Dummy matches so unknown emails pay roughly the same BCrypt cost as existing ones.
+            passwordEncoder.matches(rawSecret, DUMMY_BCRYPT_HASH);
+            throw new BadCredentialsException("Invalid credentials");
+        }
+        final User user = userOpt.get();
 
         final boolean emailVerified = Boolean.TRUE.equals(user.getEmailValidated().orElse(false));
 
@@ -103,6 +118,8 @@ public final class RydenAuthenticationProvider implements AuthenticationProvider
             emailVerificationService.verifyEmailAndConsumeCode(email, otp);
         } catch (final OtpAttemptsExceededException ex) {
             throw new OtpRateLimitedAuthenticationException(ex);
+        } catch (final VerificationCodeInvalidException ex) {
+            throw new InvalidVerificationCodeAuthenticationException(ex);
         } catch (final RydenException ex) {
             throw new BadCredentialsException("Invalid credentials");
         }
@@ -124,7 +141,8 @@ public final class RydenAuthenticationProvider implements AuthenticationProvider
                 user.getSurname(),
                 hash,
                 new ArrayList<>(authorities),
-                user.getRoleAssignedBy().orElse(null));
+                user.getRoleAssignedBy().orElse(null),
+                user.getPasswordVersion());
         return new UsernamePasswordAuthenticationToken(principal, rawSecret, principal.getAuthorities());
     }
 

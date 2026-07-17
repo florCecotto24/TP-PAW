@@ -22,6 +22,8 @@ export interface DocumentPromptModalProps {
   showCloseButton?: boolean;
   confirmButtonClass?: string;
   cancelButtonClass?: string;
+  /** When true, confirm (and optionally cancel/close) cannot fire again. */
+  confirmDisabled?: boolean;
   size?: ModalSize;
   variant?: ModalVariant;
   open?: boolean;
@@ -58,6 +60,7 @@ export default function DocumentPromptModal({
   showCloseButton = true,
   confirmButtonClass = 'btn btn-primary',
   cancelButtonClass = 'btn btn-secondary',
+  confirmDisabled = false,
   size = 'md',
   variant = 'default',
   open,
@@ -92,7 +95,7 @@ export default function DocumentPromptModal({
         size={size}
         variant={variant}
         showFooter={false}
-        closable={showCloseButton}
+        closable={showCloseButton && !confirmDisabled}
         open={open}
         onOpenChange={onOpenChange}
       >
@@ -165,10 +168,21 @@ export default function DocumentPromptModal({
           {error ?? ''}
         </p>
         <div className="d-flex justify-content-end gap-2 mt-4">
-          <button type="button" className={cancelButtonClass} onClick={() => onOpenChange?.(false)}>
+          <button
+            type="button"
+            className={cancelButtonClass}
+            disabled={confirmDisabled}
+            onClick={() => onOpenChange?.(false)}
+          >
             {cancelLabel}
           </button>
-          <button type="button" className={confirmButtonClass} id={confirmId} onClick={onConfirm}>
+          <button
+            type="button"
+            className={confirmButtonClass}
+            id={confirmId}
+            disabled={confirmDisabled}
+            onClick={onConfirm}
+          >
             {confirmLabel}
           </button>
         </div>

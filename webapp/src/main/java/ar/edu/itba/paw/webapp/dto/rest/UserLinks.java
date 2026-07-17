@@ -19,6 +19,8 @@ final class UserLinks {
                                 .orElse(null))
                 .withRelated("cars", RestUriUtils.userCarsUri(uriInfo, user.getId()).toString())
                 .withRelated("reservations", RestUriUtils.userReservationsUri(uriInfo, user.getId()).toString())
+                .withRelated("owned-reservations",
+                        RestUriUtils.userOwnedReservationsUri(uriInfo, user.getId()).toString())
                 .withRelated("favorites", RestUriUtils.userFavoritesUri(uriInfo, user.getId()).toString())
                 .withRelated("reviews", RestUriUtils.userReviewsUri(uriInfo, user.getId()).toString());
     }

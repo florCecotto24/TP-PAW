@@ -4,12 +4,14 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import ar.edu.itba.paw.exception.car.CarModelConflictException;
 import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.models.domain.car.CarModel;
+import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.persistence.car.CarModelDao;
 
 /** Catalog reads via {@link CarModelDao}; "Other" creation is normalized here before delegating. */
@@ -67,7 +69,12 @@ public class CarModelServiceImpl implements CarModelService {
         if (type == null) {
             return Optional.empty();
         }
-        return Optional.of(carModelDao.create(brandId, normalized, false, type));
+        try {
+            return Optional.of(carModelDao.create(brandId, normalized, false, type));
+        } catch (final DataIntegrityViolationException ex) {
+            // Concurrent publish created the same unvalidated model name under this brand (V45 unique).
+            return carModelDao.findByBrandIdAndNameIgnoreCase(brandId, normalized);
+        }
     }
 
     @Override
@@ -91,6 +98,12 @@ public class CarModelServiceImpl implements CarModelService {
     @Transactional(readOnly = true)
     public List<CarModel> findPendingOrdered() {
         return carModelDao.findPendingOrdered();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<CarModel> findPendingPage(final int page, final int pageSize) {
+        return carModelDao.findPendingPage(page, pageSize);
     }
 
     @Override

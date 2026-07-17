@@ -142,6 +142,8 @@ public class ReservationPaymentServiceImpl implements ReservationPaymentService 
         // PENDING / no-receipt eligibility is enforced atomically in attachPaymentReceiptAndAccept.
         final int updated = reservationService.attachPaymentReceiptAndAccept(reservationId, riderId, file.getId());
         if (updated == 0) {
+            // Compensate orphan blob if attach lost a race (or TX boundaries change later) — R18.
+            storedFileService.deleteById(file.getId());
             throw new RiderReservationException(MessageKeys.RESERVATION_PAYMENT_RECEIPT_INVALID);
         }
         final Reservation afterAttach = queryService.getRiderReservationById(riderId, reservationId).orElse(r);
@@ -209,6 +211,8 @@ public class ReservationPaymentServiceImpl implements ReservationPaymentService 
         final StoredFile file = storedFileService.create(ownerUserId, originalFilename, contentType, data);
         final int updated = reservationService.attachRefundReceipt(reservationId, ownerUserId, file.getId());
         if (updated == 0) {
+            // Compensate orphan blob if attach lost a race (or TX boundaries change later) — R18.
+            storedFileService.deleteById(file.getId());
             throw new RiderReservationException(MessageKeys.RESERVATION_REFUND_RECEIPT_INVALID);
         }
         final Reservation after = queryService.getOwnerReservationById(ownerUserId, reservationId).orElse(r);

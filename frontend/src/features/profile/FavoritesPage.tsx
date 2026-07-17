@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -56,7 +56,7 @@ export default function FavoritesPage() {
 function FavoritesList({ user }: { user: UserDto }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const pageIndex = useMemo(() => {
     const raw = Number(searchParams.get('page') ?? '0');
     return Number.isFinite(raw) && raw >= 0 ? Math.floor(raw) : 0;
@@ -79,6 +79,25 @@ function FavoritesList({ user }: { user: UserDto }) {
   const total = favQuery.data?.page.total;
   const totalPages = pageCount(total, FAVORITES_PAGE_SIZE);
 
+  // N-41/N-44: clamp out-of-range page (incl. after removing last item on page > 0).
+  useEffect(() => {
+    if (favQuery.isLoading || favQuery.isFetching || total == null) return;
+    const maxPage = Math.max(0, totalPages - 1);
+    if (pageIndex > maxPage) {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          if (maxPage <= 0) next.delete('page');
+          else next.set('page', String(maxPage));
+          return next;
+        },
+        { replace: true },
+      );
+    }
+  }, [favQuery.isLoading, favQuery.isFetching, total, totalPages, pageIndex, setSearchParams]);
+
+  const showEmpty = !favQuery.isLoading && cars.length === 0 && pageIndex === 0 && (total == null || total === 0);
+
   return (
     <div className="container my-4">
       <div className="mb-3">
@@ -98,7 +117,7 @@ function FavoritesList({ user }: { user: UserDto }) {
         <div className="alert alert-danger" role="alert">
           {t('profile.common.error')}
         </div>
-      ) : cars.length === 0 ? (
+      ) : showEmpty ? (
         <div className="search-empty-state text-center">
           <div className="search-empty-state__icon" aria-hidden="true">
             <i className="bi bi-heart"></i>
@@ -127,9 +146,13 @@ function FavoritesList({ user }: { user: UserDto }) {
                     <ConsumerCarCard
                       card={card}
                       href={href}
-                      onToggleFavorite={() => remove.mutate(car.links.self)}
+                      favoriteBusy={remove.isPending}
+                      onToggleFavorite={() => {
+                        if (remove.isPending) return;
+                        remove.mutate(car.links.self);
+                      }}
                       imageSlot={
-                        <CarCardImage coverUri={car.links.cover}>
+                        <CarCardImage coverUri={car.links.cover} authenticated>
                           {href ? (
                             <span className="carcard-view-chip" aria-hidden="true">
                               {t('carCard.viewChip')}

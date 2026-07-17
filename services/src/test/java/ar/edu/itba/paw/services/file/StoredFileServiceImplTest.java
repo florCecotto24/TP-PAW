@@ -61,4 +61,18 @@ public class StoredFileServiceImplTest {
 
         Assertions.assertTrue(result.isEmpty());
     }
+
+    @Test
+    public void testDeleteByIdRemovesExistingRow() {
+        Mockito.when(storedFileDao.deleteById(40L)).thenReturn(true);
+
+        Assertions.assertTrue(storedFileService.deleteById(40L));
+    }
+
+    @Test
+    public void testDeleteByIdWhenMissing() {
+        Mockito.when(storedFileDao.deleteById(7L)).thenReturn(false);
+
+        Assertions.assertFalse(storedFileService.deleteById(7L));
+    }
 }

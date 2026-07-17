@@ -46,6 +46,7 @@ public final class RydenUserDetailsService implements UserDetailsService {
                 user.getSurname(),
                 hash,
                 authorities,
-                user.getRoleAssignedBy().orElse(null));
+                user.getRoleAssignedBy().orElse(null),
+                user.getPasswordVersion());
     }
 }

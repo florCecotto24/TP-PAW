@@ -5,6 +5,7 @@ import java.util.Optional;
 
 import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.models.domain.car.CarModel;
+import ar.edu.itba.paw.models.dto.Page;
 
 /**
  * Catalog operations for vehicle models. A model belongs to a {@link ar.edu.itba.paw.models.domain.car.CarBrand}
@@ -50,6 +51,9 @@ public interface CarModelService {
 
     /** Models awaiting admin validation. */
     List<CarModel> findPendingOrdered();
+
+    /** Paginated models awaiting admin validation. */
+    Page<CarModel> findPendingPage(int page, int pageSize);
 
     /** Number of models attached to a brand. Used by admin reject-catalog flow to decide whether the brand
      *  should also be removed. */

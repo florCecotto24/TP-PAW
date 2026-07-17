@@ -22,6 +22,7 @@ import ar.edu.itba.paw.models.domain.reservation.ReservationParticipantRole;
 import ar.edu.itba.paw.models.domain.file.StoredFile;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.file.BinaryContent;
+import ar.edu.itba.paw.models.dto.reservation.BlockingReservationProjection;
 import ar.edu.itba.paw.models.dto.reservation.ReservationCard;
 import ar.edu.itba.paw.models.util.search.ReservationSearchCriteria;
 import ar.edu.itba.paw.persistence.reservation.ReservationDao;
@@ -122,6 +123,12 @@ public class ReservationServiceImpl implements ReservationService {
 
     @Override
     @Transactional(readOnly = true)
+    public Optional<Reservation> getReservationByIdForMail(final long id) {
+        return reservationDao.getReservationByIdForMail(id);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Optional<Reservation> getRiderReservationById(final long riderId, final long reservationId) {
         // Rider-scope filter applied here (DAO has no rider-scoped variant); see queryService docs.
         return reservationDao.getReservationById(reservationId)
@@ -175,31 +182,31 @@ public class ReservationServiceImpl implements ReservationService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<Reservation> findBlockingReservationsByCarId(final long carId) {
+    public List<BlockingReservationProjection> findBlockingReservationsByCarId(final long carId) {
         return reservationDao.findBlockingByCarId(carId);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Map<Long, List<Reservation>> findBlockingReservationsByCarIds(
+    public Map<Long, List<BlockingReservationProjection>> findBlockingReservationsByCarIds(
             final Collection<Long> carIds) {
         if (carIds == null || carIds.isEmpty()) {
             return Map.of();
         }
-        final List<Reservation> rows = reservationDao.findBlockingByCarIds(carIds);
-        return rows.stream().collect(Collectors.groupingBy(Reservation::getCarId));
+        final List<BlockingReservationProjection> rows = reservationDao.findBlockingByCarIds(carIds);
+        return rows.stream().collect(Collectors.groupingBy(BlockingReservationProjection::getCarId));
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<Reservation> findBlockingReservationsByCarIdExcluding(
+    public List<BlockingReservationProjection> findBlockingReservationsByCarIdExcluding(
             final long carId, final long excludingReservationId) {
         return reservationDao.findBlockingByCarIdExcluding(carId, excludingReservationId);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<Reservation> findBlockingReservationsByCarIdInRange(
+    public List<BlockingReservationProjection> findBlockingReservationsByCarIdInRange(
             final long carId, final OffsetDateTime from, final OffsetDateTime to) {
         return reservationDao.findBlockingByCarIdInRange(carId, from, to);
     }
@@ -212,8 +219,8 @@ public class ReservationServiceImpl implements ReservationService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ReservationCard> findAllReservationCards(final int page, final int pageSize) {
-        return reservationDao.findAllReservationCards(page, pageSize);
+    public Page<ReservationCard> findAllReservationCards(final ReservationSearchCriteria criteria) {
+        return reservationDao.findAllReservationCards(criteria);
     }
 
     @Override
@@ -734,12 +741,6 @@ public class ReservationServiceImpl implements ReservationService {
     public Optional<OffsetDateTime> findCarNextActiveReservationDate(
             final long ownerId, final long carId, final OffsetDateTime after) {
         return reservationDao.findCarNextActiveReservationDate(ownerId, carId, after);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<Reservation> findCarFinishedReservations(final long ownerId, final long carId) {
-        return reservationDao.findCarFinishedReservations(ownerId, carId);
     }
 
     @Override

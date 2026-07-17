@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import flatpickr from 'flatpickr';
 import type { Instance } from 'flatpickr/dist/types/instance';
 import { compactPrice } from '../../../components/FlatpickrCalendar';
-import { flatpickrLocale } from '../../../i18n/dateFormat';
+import { flatpickrLocale, wallTodayYmd } from '../../../i18n/dateFormat';
 import {
   dayEndFromYmd,
   dayStartFromYmd,
@@ -47,7 +47,7 @@ export default function DetailReservationInlineCalendar({
       inline: true,
       showMonths: 1,
       dateFormat: 'Y-m-d',
-      minDate: 'today',
+      minDate: wallTodayYmd(),
       defaultDate: defaultDates.length > 0 ? defaultDates : undefined,
       locale: flatpickrLocale(locale),
       disableMobile: true,

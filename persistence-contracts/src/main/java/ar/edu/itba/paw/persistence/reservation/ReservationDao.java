@@ -9,6 +9,7 @@ import java.util.Optional;
 
 import ar.edu.itba.paw.models.domain.reservation.Reservation;
 import ar.edu.itba.paw.models.dto.Page;
+import ar.edu.itba.paw.models.dto.reservation.BlockingReservationProjection;
 import ar.edu.itba.paw.models.dto.reservation.ReservationCard;
 import ar.edu.itba.paw.models.util.search.ReservationSearchCriteria;
 
@@ -27,15 +28,15 @@ public interface ReservationDao {
             long carId, OffsetDateTime startDate, OffsetDateTime endDate, long excludingReservationId);
 
     /** Blocking reservations ({@code pending}, {@code accepted}, {@code started}) for a car. */
-    List<Reservation> findBlockingByCarId(long carId);
+    List<BlockingReservationProjection> findBlockingByCarId(long carId);
 
     /**
      * Batch variant of {@link #findBlockingByCarId} for many cars at once: same {@code pending},
      * {@code accepted}, {@code started} status filter, scoped to {@code carIds}. The caller is
-     * responsible for grouping the rows by {@link Reservation#getCarId()} as needed. Returns an
+     * responsible for grouping the rows by {@link BlockingReservationProjection#getCarId()} as needed. Returns an
      * empty list when {@code carIds} is null or empty.
      */
-    List<Reservation> findBlockingByCarIds(Collection<Long> carIds);
+    List<BlockingReservationProjection> findBlockingByCarIds(Collection<Long> carIds);
 
     /**
      * Same as {@link #findBlockingByCarId}, but excludes the reservation whose id matches
@@ -43,14 +44,14 @@ public interface ReservationDao {
      * is editing its own pending reservation (the reservation under edit must not subtract days
      * from its own bookable window).
      */
-    List<Reservation> findBlockingByCarIdExcluding(long carId, long excludingReservationId);
+    List<BlockingReservationProjection> findBlockingByCarIdExcluding(long carId, long excludingReservationId);
 
     /**
      * Blocking reservations for {@code carId} whose date range intersects {@code [from, to]} (UTC,
      * exclusive end is normalised by the implementation). Used by the owner availability-edit flow to
      * decide whether withdrawing a set of days would conflict with already-active reservations.
      */
-    List<Reservation> findBlockingByCarIdInRange(long carId, OffsetDateTime from, OffsetDateTime to);
+    List<BlockingReservationProjection> findBlockingByCarIdInRange(long carId, OffsetDateTime from, OffsetDateTime to);
 
     /**
      * Creates a reservation for a car. Sets {@code car_id} only.
@@ -76,6 +77,13 @@ public interface ReservationDao {
     int attachPaymentReceiptAndAccept(long reservationId, long riderId, long storedFileId);
 
     Optional<Reservation> getReservationById(long id);
+
+    /**
+     * Same as {@link #getReservationById}, but {@code JOIN FETCH}es car, owner and catalog brand/model
+     * so mail composers can resolve owner and vehicle label after the persistence session closes
+     * (e.g. payment-proof sweep: cancel in {@code REQUIRES_NEW}, then enqueue email outside that TX).
+     */
+    Optional<Reservation> getReservationByIdForMail(long id);
 
     Optional<Reservation> getOwnerReservationById(long ownerId, long reservationId);
 
@@ -137,9 +145,6 @@ public interface ReservationDao {
 
     /** Earliest start_date of an accepted/started reservation on the car strictly after {@code after}. */
     Optional<OffsetDateTime> findCarNextActiveReservationDate(long ownerId, long carId, OffsetDateTime after);
-
-    /** Finished reservations for the car (owner analytics). */
-    List<Reservation> findCarFinishedReservations(long ownerId, long carId);
 
     /**
      * Start/end bounds of finished reservations for analytics (no entity graph).
@@ -260,7 +265,11 @@ public interface ReservationDao {
     List<Reservation> findReservationsRequiringRefundProofForOwner(long ownerUserId);
 
     /** All reservations paginated for admin view; ordered by creation date descending. */
-    Page<ReservationCard> findAllReservationCards(int page, int pageSize);
+    /**
+     * Admin-only: paginated reservation cards across the whole system, with the same filters/sort
+     * as rider/owner hubs ({@link ReservationSearchCriteria}).
+     */
+    Page<ReservationCard> findAllReservationCards(ReservationSearchCriteria criteria);
 
     /** Single card projection for teaser reads ({@code GET /reservations/{id}} with summary MIME). */
     Optional<ReservationCard> findReservationCardById(long reservationId);

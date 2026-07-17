@@ -184,15 +184,15 @@ paths:
             nombre completo. Solo admin.
       responses:
         "200":
-          description: Lista de usuarios.
+          description: Lista de usuarios (vista privada admin).
           headers:
             Link: { $ref: "#/components/headers/Link-Pagination" }
             X-Total-Count: { $ref: "#/components/headers/X-Total-Count" }
           content:
-            application/vnd.paw.user.v1+json:
+            application/vnd.paw.user.private.v1+json:
               schema:
                 type: array
-                items: { $ref: "#/components/schemas/UserDto" }
+                items: { $ref: "#/components/schemas/UserPrivateDto" }
         "204": { description: Colección vacía. }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
@@ -463,6 +463,12 @@ paths:
         password, se consume al autenticar y devuelve JWT en headers (D3).
         Anti-enumeración: la respuesta es indistinguible si el usuario no existe,
         ya está verificado o ya tiene un código activo.
+
+        **Rate limit (S7):** la *emisión* (este POST) no aplica cupo por IP ni por
+        email — la respuesta uniforme y el coste de entrega del mail son la
+        mitigación anti-spam/abuso. El *intento de verificación* (Basic OTP)
+        sí está rate-limited (`OtpAttemptLimiter`: fallos por email, ventana
+        configurable, tipicamente 8/15 min) y responde 429 `otp_rate_limited`.
       security:
         - {}
       responses:
@@ -478,6 +484,12 @@ paths:
         envía por email y actúa como password en Basic auth para completar
         el reset vía PATCH /users/{id} con password + passwordConfirm (D4).
         No hay URLs con verbos (/forgot-password, /reset, /verify, etc.).
+
+        **Rate limit (S7):** la *solicitud* de OTP (este POST) no tiene rate limit
+        por IP/email a propósito (anti-enumeración + uniformidad 200). El abuso de
+        reenvío se mitiga con el coste de entrega del mail. Los *intentos fallidos*
+        de usar el OTP en Basic auth sí están limitados (`OtpAttemptLimiter`) y
+        responden 429 `otp_rate_limited`.
       security:
         - {}
       requestBody:
@@ -718,6 +730,9 @@ paths:
         - name: sort
           in: query
           schema: { type: string, enum: [price_asc, price_desc, rating_desc, recent, name] }
+          description: >
+            `name` ordena por marca+modelo (asc). `recent` es createdAt desc.
+            Tokens desconocidos caen al default `recent`.
       security: []
       responses:
         "403":
@@ -1729,30 +1744,37 @@ paths:
       summary: Listar modelos pendientes (admin)
       description: >
         Listado admin de modelos pendientes de aprobación. Sólo soporta la proyección
-        pendiente (validated=false): devuelve TODOS los modelos pendientes, incluidos
+        pendiente (validated=false u omitido): devuelve TODOS los modelos pendientes, incluidos
         los de marcas ya validadas (que de otro modo quedarían invisibles para el admin).
+        Sin paginación (cola de moderación acotada). `validated=true` → 400.
 
         **Representación embebida (patrón B):** catálogo admin; cada `ModelDto`
         incluye `links.self`.
       parameters:
         - name: validated
           in: query
-          required: true
+          required: false
           schema: { type: boolean, enum: [false] }
-          description: Sólo se admite validated=false. Cualquier otro valor → 400.
-      security: []
+          description: Omitido o false = cola pendiente. true → 400.
+      security:
+        - bearerAuth: []
       responses:
         "200":
           description: Modelos pendientes.
-          headers:
-            Link: { $ref: "#/components/headers/Link-Pagination" }
           content:
             application/vnd.paw.model.v1+json:
               schema:
                 type: array
                 items: { $ref: "#/components/schemas/ModelDto" }
         "204": { description: No hay modelos pendientes. }
-        "400": { $ref: "#/components/responses/ValidationError" }
+        "400":
+          description: >
+            validated=true no soportado (los modelos validados se navegan vía su
+            marca, no hay colección plana de validados).
+          content:
+            application/vnd.paw.error.v1+json:
+              schema: { $ref: "#/components/schemas/ErrorDto" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
   #############################################################################
@@ -1978,6 +2000,10 @@ components:
       type: object
       properties:
         href: { type: string, format: uri }
+        itemTemplate:
+          type: string
+          format: uri-template
+          description: Canonical item URI template published for bookmark/deep-link recovery (for example `/cars/{id}`).
         queryParams:
           type: array
           items: { type: string }
@@ -2090,7 +2116,7 @@ components:
         links:
           allOf:
             - $ref: "#/components/schemas/Links"
-          description: self, profilePicture, cars, reservations, favorites, reviews.
+          description: self, profilePicture, cars, reservations (riderId), owned-reservations (ownerId), favorites, reviews.
 
     UserPrivateDto:
       type: object
@@ -2119,7 +2145,7 @@ components:
         links:
           allOf:
             - $ref: "#/components/schemas/Links"
-          description: self, profilePicture, cars, reservations, favorites, reviews, identityDocument, licenseDocument, blocked-overdue-reservation (when blocked and exactly one overdue refund proof).
+          description: self, profilePicture, cars, reservations (riderId), owned-reservations (ownerId), favorites, reviews, identityDocument, licenseDocument, blocked-overdue-reservation (when blocked and exactly one overdue refund proof).
 
     UserCreateDto:
       type: object
@@ -2209,7 +2235,10 @@ components:
         links:
           allOf:
             - $ref: "#/components/schemas/Links"
-          description: self, owner, cover (browse), pictures, availabilities, bookable-segments, reviews, similar.
+          description: >
+            self, owner, cover (browse), pictures, availabilities, bookable-segments,
+            insurance, reviews, similar; model, brand y price-insight solo cuando el
+            teaser se sirve desde el recurso completo (GET /cars/{id} con Accept summary).
 
     CarDto:
       type: object
@@ -2249,7 +2278,7 @@ components:
         links:
           allOf:
             - $ref: "#/components/schemas/Links"
-          description: self, owner, model, brand, pictures, availabilities, bookable-segments, insurance, reviews, similar.
+          description: self, owner, model, brand, cover, pictures, availabilities, bookable-segments, insurance, reviews, similar, price-insight.
 
     CarCreateDto:
       type: object
@@ -2292,9 +2321,15 @@ components:
         checkOutTime: { type: string, example: "20:00" }
         kind: { type: string, enum: [offered, withdrawn] }
         links:
-          allOf:
-            - $ref: "#/components/schemas/Links"
-          description: self, car, neighborhood.
+          type: object
+          additionalProperties: { type: string, format: uri }
+          properties:
+            self: { type: string, format: uri }
+            car: { type: string, format: uri }
+            neighborhood: { type: string, format: uri }
+          description: >
+            car and neighborhood links; self is omitted for computed month
+            projections because they are not individually dereferenceable.
 
     AvailabilityCreateDto:
       type: object
@@ -2399,7 +2434,7 @@ components:
         links:
           allOf:
             - $ref: "#/components/schemas/Links"
-          description: self, car, rider, owner, messages, reviews, payment-receipt, refund-receipt.
+          description: self, car, rider, owner, counterparty, messages, reviews, payment-receipt, refund-receipt.
 
     CounterpartyContactDto:
       type: object
@@ -2507,7 +2542,7 @@ components:
         links:
           allOf:
             - $ref: "#/components/schemas/Links"
-          description: self, brand.
+          description: self, brand, price-insight.
 
     PriceMarketInsightDto:
       type: object

@@ -43,6 +43,8 @@ public class ExpiredPaymentProofRowCanceller {
         if (reservationService.cancelPendingMissingPaymentProofIfEligible(reservationId, now) <= 0) {
             return Optional.empty();
         }
-        return reservationService.getReservationById(reservationId);
+        // JOIN FETCH car/owner/catalog before this REQUIRES_NEW TX ends — the caller sends mail
+        // after commit, outside any persistence session.
+        return reservationService.getReservationByIdForMail(reservationId);
     }
 }

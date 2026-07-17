@@ -39,6 +39,7 @@ public class PasswordResetServiceImpl implements PasswordResetService {
     private final UserValidationPolicy validationPolicy;
     private final VerificationCodePolicy verificationCodePolicy;
     private final UserService userService;
+    private final UserLocaleService userLocaleService;
     private final OtpAttemptLimiter otpAttemptLimiter;
 
     @Autowired
@@ -49,6 +50,7 @@ public class PasswordResetServiceImpl implements PasswordResetService {
             final UserValidationPolicy validationPolicy,
             final VerificationCodePolicy verificationCodePolicy,
             final UserService userService,
+            final UserLocaleService userLocaleService,
             final OtpAttemptLimiter otpAttemptLimiter) {
         this.passwordResetCodeDao = passwordResetCodeDao;
         this.emailService = emailService;
@@ -56,6 +58,7 @@ public class PasswordResetServiceImpl implements PasswordResetService {
         this.validationPolicy = validationPolicy;
         this.verificationCodePolicy = verificationCodePolicy;
         this.userService = userService;
+        this.userLocaleService = userLocaleService;
         this.otpAttemptLimiter = otpAttemptLimiter;
     }
 
@@ -84,7 +87,7 @@ public class PasswordResetServiceImpl implements PasswordResetService {
                 now.plus(verificationCodePolicy.getCodeTtl()),
                 now);
         final Locale fallback = locale != null ? locale : Locale.ENGLISH;
-        final Locale mailLocale = userService.resolveMailLocaleOrElse(user.getId(), fallback);
+        final Locale mailLocale = userLocaleService.resolveMailLocaleOrElse(user.getId(), fallback);
         emailService.sendPasswordResetCode(PasswordResetCodeEmailPayload.builder()
                 .messageLocale(mailLocale)
                 .recipientEmail(user.getEmail())

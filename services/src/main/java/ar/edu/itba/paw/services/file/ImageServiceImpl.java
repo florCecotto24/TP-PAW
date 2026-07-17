@@ -11,6 +11,7 @@ import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.image.ImageValidationException;
 import ar.edu.itba.paw.models.domain.file.Image;
 import ar.edu.itba.paw.models.dto.file.BinaryContent;
+import ar.edu.itba.paw.models.util.media.BinaryMagicBytes;
 import ar.edu.itba.paw.persistence.file.ImageDao;
 import ar.edu.itba.paw.util.UploadBinaryMegabyte;
 
@@ -52,6 +53,9 @@ public class ImageServiceImpl implements ImageService {
     @Transactional
     public Image createImage(final String name, final String contentType, final byte[] data) {
         if (!Image.isImageContentType(contentType)) {
+            throw new ImageValidationException(MessageKeys.IMAGE_CONTENT_TYPE_NOT_IMAGE);
+        }
+        if (!BinaryMagicBytes.matchesDeclared(contentType, data)) {
             throw new ImageValidationException(MessageKeys.IMAGE_CONTENT_TYPE_NOT_IMAGE);
         }
         final int len = (data == null) ? 0 : data.length;

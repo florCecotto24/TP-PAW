@@ -14,6 +14,8 @@ export function apiSortToJspSort(sort?: CarSort): string {
       return 'price,desc';
     case 'rating_desc':
       return 'rating,desc';
+    case 'name':
+      return 'name,asc';
     case 'recent':
     default:
       return 'date,desc';
@@ -28,6 +30,9 @@ export function jspSortToApiSort(jsp: string): CarSort {
       return 'price_desc';
     case 'rating,desc':
       return 'rating_desc';
+    case 'name,asc':
+    case 'name,desc':
+      return 'name';
     case 'date,asc':
     case 'rating,asc':
     case 'date,desc':

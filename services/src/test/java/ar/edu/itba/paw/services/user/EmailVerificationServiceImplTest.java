@@ -37,6 +37,9 @@ class EmailVerificationServiceImplTest {
     @Mock
     private UserService userService;
 
+    @Mock
+    private UserLocaleService userLocaleService;
+
     private RecordingEmailService emailService;
     private EmailVerificationServiceImpl service;
 
@@ -46,14 +49,15 @@ class EmailVerificationServiceImplTest {
         // payload capture, so the test reads the recorded payload directly from the fake.
         emailService = new RecordingEmailService();
         service = new EmailVerificationServiceImpl(
-                dao, emailService, userService, VerificationCodePolicy.fromValidatedConfiguration(6, 5),
+                dao, emailService, userService, userLocaleService,
+                VerificationCodePolicy.fromValidatedConfiguration(6, 5),
                 OtpAttemptLimiter.forTests(8, Duration.ofMinutes(15)));
     }
 
     @Test
     void testIssueFreshVerificationCodeProducesSixDigitCodeWithResolvedLocale() {
         // 1.Arrange
-        Mockito.when(userService.resolveMailLocaleOrElse(USER_ID, Locale.ENGLISH)).thenReturn(new Locale("es"));
+        Mockito.when(userLocaleService.resolveMailLocaleOrElse(USER_ID, Locale.ENGLISH)).thenReturn(new Locale("es"));
 
         // 2.Act
         service.issueFreshVerificationCode(USER_ID, EMAIL, null);
@@ -72,7 +76,7 @@ class EmailVerificationServiceImplTest {
     @Test
     void testIssueFreshVerificationCodeUsesProvidedLocaleAsFallback() {
         // 1.Arrange
-        Mockito.when(userService.resolveMailLocaleOrElse(Mockito.eq(USER_ID), Mockito.any(Locale.class)))
+        Mockito.when(userLocaleService.resolveMailLocaleOrElse(Mockito.eq(USER_ID), Mockito.any(Locale.class)))
                 .thenAnswer(invocation -> invocation.getArgument(1));
 
         // 2.Act
@@ -100,7 +104,7 @@ class EmailVerificationServiceImplTest {
     void testEnsurePendingVerificationCodeIssuesNewCodeWhenNoneActive() {
         // 1.Arrange
         Mockito.when(dao.hasActiveCode(Mockito.eq(USER_ID), Mockito.any(Instant.class))).thenReturn(false);
-        Mockito.when(userService.resolveMailLocaleOrElse(USER_ID, Locale.ENGLISH)).thenReturn(Locale.ENGLISH);
+        Mockito.when(userLocaleService.resolveMailLocaleOrElse(USER_ID, Locale.ENGLISH)).thenReturn(Locale.ENGLISH);
 
         // 2.Act
         service.ensurePendingVerificationCode(USER_ID, EMAIL, Locale.ENGLISH);
@@ -127,7 +131,7 @@ class EmailVerificationServiceImplTest {
     void testResendVerificationCodeProducesNewCodeWhenNoneActive() {
         // 1.Arrange
         Mockito.when(dao.hasActiveCode(Mockito.eq(USER_ID), Mockito.any(Instant.class))).thenReturn(false);
-        Mockito.when(userService.resolveMailLocaleOrElse(USER_ID, Locale.ENGLISH)).thenReturn(Locale.ENGLISH);
+        Mockito.when(userLocaleService.resolveMailLocaleOrElse(USER_ID, Locale.ENGLISH)).thenReturn(Locale.ENGLISH);
 
         // 2.Act
         service.resendVerificationCode(USER_ID, EMAIL, Locale.ENGLISH);

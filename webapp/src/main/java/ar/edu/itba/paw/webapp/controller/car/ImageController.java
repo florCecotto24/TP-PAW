@@ -13,30 +13,40 @@ import org.springframework.stereotype.Component;
 
 import ar.edu.itba.paw.services.file.ImageService;
 import ar.edu.itba.paw.webapp.support.CacheableBinaryResponses;
+import ar.edu.itba.paw.webapp.support.CurrentUserResolver;
+import ar.edu.itba.paw.webapp.support.ImageResourceAccess;
 
 /**
- * Serves public image bytes at {@code GET /image/{id}} (profile pictures, review photos, etc.).
+ * Serves image bytes at {@code GET /image/{id}}.
  *
- * <p>Anonymous read is intentional: these bytes back publicly browsable UI. KYC documents,
- * payment proofs and insurance PDFs are <strong>not</strong> served here.</p>
+ * Profile and review images are public. Gallery images inherit their car's visibility.
+ * KYC documents, payment proofs and insurance PDFs are <strong>not</strong> served here.
  */
 @Path("/image")
 @Component
 public final class ImageController {
 
     private final ImageService imageService;
+    private final ImageResourceAccess imageResourceAccess;
+    private final CurrentUserResolver currentUserResolver;
 
     @Context
     private Request request;
 
     @Autowired
-    public ImageController(final ImageService imageService) {
+    public ImageController(
+            final ImageService imageService,
+            final ImageResourceAccess imageResourceAccess,
+            final CurrentUserResolver currentUserResolver) {
         this.imageService = imageService;
+        this.imageResourceAccess = imageResourceAccess;
+        this.currentUserResolver = currentUserResolver;
     }
 
     @GET
     @Path("/{id}")
     public Response getImage(@PathParam("id") final long id) {
+        imageResourceAccess.requireViewableImage(id, currentUserResolver.currentPrincipalOrNull());
         return imageService.getImageContent(id)
                 .map(content -> CacheableBinaryResponses.of(request, content))
                 .orElseThrow(NotFoundException::new);

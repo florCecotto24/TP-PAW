@@ -39,6 +39,7 @@ public final class JwtTokenService implements TokenService {
 
     private static final String CLAIM_TOKEN_TYPE = "tokenType";
     private static final String CLAIM_USER_ID = "userId";
+    private static final String CLAIM_PASSWORD_VERSION = "passwordVersion";
 
     /** Password-reset OTP grant: short access window; never renewed via refresh. */
     private static final int PWD_RESET_ACCESS_MAX_MINUTES = 5;
@@ -72,6 +73,14 @@ public final class JwtTokenService implements TokenService {
                     generateToken(principal, JwtTokenType.REFRESH, properties.refreshTokenDays() * 24 * 60,
                             principal.getAuthorities()));
         }
+        final String userUri = buildUserUri(request, principal.getUserId());
+        response.addHeader("Link", String.format("<%s>; rel=\"%s\"", userUri, AUTHENTICATED_USER_REL));
+    }
+
+    @Override
+    public void attachAuthenticatedUserLink(final HttpServletResponse response,
+                                            final RydenUserDetails principal,
+                                            final HttpServletRequest request) {
         final String userUri = buildUserUri(request, principal.getUserId());
         response.addHeader("Link", String.format("<%s>; rel=\"%s\"", userUri, AUTHENTICATED_USER_REL));
     }
@@ -114,6 +123,7 @@ public final class JwtTokenService implements TokenService {
                 .expiration(Date.from(expiry))
                 .claim(CLAIM_TOKEN_TYPE, type.getClaimValue())
                 .claim(CLAIM_USER_ID, principal.getUserId())
+                .claim(CLAIM_PASSWORD_VERSION, principal.getPasswordVersion())
                 .claim("authorities", encodeAuthorities(authorities))
                 // SHA-256-derived key is 256 bits → HS256 (HS512 would throw WeakKeyException).
                 .signWith(signingKey, Jwts.SIG.HS256)
@@ -124,6 +134,9 @@ public final class JwtTokenService implements TokenService {
         final Collection<? extends GrantedAuthority> authorities =
                 JwtAuthorityCodec.decode(claims.getSubject(), claims.get("authorities", String.class));
         // Display names and roleAssignedBy stay out of the JWT (PII / stale metadata); load via API.
+        // Missing passwordVersion (pre-migration tokens) → 0, matching the DB default.
+        final Integer passwordVersionClaim = claims.get(CLAIM_PASSWORD_VERSION, Integer.class);
+        final int passwordVersion = passwordVersionClaim != null ? passwordVersionClaim : 0;
         return new RydenUserDetails(
                 claims.get(CLAIM_USER_ID, Long.class),
                 claims.getSubject(),
@@ -131,7 +144,8 @@ public final class JwtTokenService implements TokenService {
                 null,
                 null,
                 authorities,
-                null);
+                null,
+                passwordVersion);
     }
 
     private static boolean hasPasswordResetOtp(final RydenUserDetails principal) {

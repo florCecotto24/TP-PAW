@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { BreadcrumbTrail, ConfirmModal, LoadingBlock, ReceiptUploadPicker, ReviewImageInput, StarRatingInput, Avatar } from '../../../components/ryden';
-import { carCoverAssetUrl, profilePictureAssetUrl } from '../../../api/uri';
+import { BreadcrumbTrail, ConfirmModal, LoadingBlock, ReceiptUploadPicker, ReviewImageInput, StarRatingInput, Avatar, AuthenticatedImg } from '../../../components/ryden';
+import { profilePictureAssetUrl } from '../../../api/uri';
 import {
   getCar,
   getCounterparty,
@@ -134,19 +134,11 @@ export default function ReservationDetailPage() {
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [returnModalOpen, setReturnModalOpen] = useState(false);
   const [chatExpanded, setChatExpanded] = useState(false);
-  const [carImageFailed, setCarImageFailed] = useState(false);
 
   const carId = reservation ? idFromUri(reservation.links?.car) : null;
   const carSelf = reservation?.links?.car ?? null;
   const carDetailLink = carId ? carDetailTo(carId, carSelf) : null;
-  const carCoverUrl = useMemo(
-    () => carCoverAssetUrl(reservation?.links?.car, carQuery.data?.links?.cover),
-    [reservation?.links?.car, carQuery.data?.links?.cover],
-  );
-
-  useEffect(() => {
-    setCarImageFailed(false);
-  }, [carCoverUrl]);
+  const carCoverUri = carQuery.data?.links?.cover ?? null;
   const counterpartyAvatarUrl = profilePictureAssetUrl(counterpartyQuery.data?.links);
   const counterpartyId = counterpartyQuery.data?.links?.self
     ? idFromUri(counterpartyQuery.data.links.self)
@@ -165,10 +157,7 @@ export default function ReservationDetailPage() {
       : null;
 
   const invalidate = async () => {
-    await queryClient.invalidateQueries({ queryKey: ['reservations', 'detail', reservationUri] });
-    if (reviewsUri) {
-      await queryClient.invalidateQueries({ queryKey: ['reservations', 'detail', 'reviews', reviewsUri] });
-    }
+    await queryClient.invalidateQueries({ queryKey: ['reservations'] });
   };
 
   const runAction = async (fn: () => Promise<void>, successMsg?: string) => {
@@ -458,13 +447,17 @@ export default function ReservationDetailPage() {
             <h2 className="h5 fw-semibold mb-3">{t('res.detail.carSummaryTitle')}</h2>
             <div className="d-flex flex-column flex-md-row gap-3 align-items-start">
               <div className="reservation-detail-car-media rounded-3 overflow-hidden border">
-                {carCoverUrl && !carImageFailed ? (
-                  <img
-                    src={carCoverUrl}
+                {carCoverUri ? (
+                  <AuthenticatedImg
+                    src={carCoverUri}
                     alt={carLabel || t('res.detail.carSummaryTitle')}
                     className="w-100 h-100"
                     style={{ objectFit: 'cover' }}
-                    onError={() => setCarImageFailed(true)}
+                    fallback={
+                      <div className="w-100 h-100 d-flex align-items-center justify-content-center text-secondary bg-body-tertiary">
+                        <i className="bi bi-car-front fs-1" aria-hidden="true"></i>
+                      </div>
+                    }
                   />
                 ) : (
                   <div className="w-100 h-100 d-flex align-items-center justify-content-center text-secondary bg-body-tertiary">

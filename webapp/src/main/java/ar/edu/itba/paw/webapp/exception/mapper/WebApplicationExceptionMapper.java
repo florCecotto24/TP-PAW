@@ -23,11 +23,8 @@ import ar.edu.itba.paw.webapp.util.LocaleMessages;
  * specific mapper. Without this, Jersey lets the container render its default HTML error page
  * for them instead of {@code application/vnd.paw.error.v1+json}.
  *
- * <p>Messages are author-controlled strings passed at the throw site in this codebase (never a
- * raw {@code Throwable#getMessage()} from an unexpected underlying cause), so it's safe to surface
- * them. When the message looks like a {@code MessageKeys} dotted code (no spaces), it's resolved
- * through {@link LocaleMessages} the same way {@link RydenExceptionMapper} does; otherwise it's
- * used as-is, and if absent the HTTP reason phrase is used.</p>
+ * Only known message keys are exposed. Exception text from Jersey, parsers, or libraries remains
+ * in the diagnostic log; responses use the generic localized HTTP-status message instead.
  */
 @Provider
 @Component
@@ -53,6 +50,7 @@ public final class WebApplicationExceptionMapper implements ExceptionMapper<WebA
         // ("HTTP 400 Bad Request"); log the cause so local debugging can see why.
         if (exception.getCause() != null) {
             LOGGER.atDebug()
+                    .setCause(exception.getCause())
                     .setMessage("{} status={} message={} cause={}")
                     .addArgument(exception.getClass().getSimpleName())
                     .addArgument(status.getStatusCode())
@@ -69,12 +67,14 @@ public final class WebApplicationExceptionMapper implements ExceptionMapper<WebA
         }
 
         String code = statusSlug(status);
-        String message = exception.getMessage();
-        if (message == null || message.isBlank()) {
-            message = status.getReasonPhrase();
-        } else if (looksLikeMessageCode(message)) {
-            code = message;
-            message = localeMessages.msg(message);
+        String message = status.getReasonPhrase();
+        final String exceptionMessage = exception.getMessage();
+        if (looksLikeMessageCode(exceptionMessage)) {
+            final String localized = localeMessages.msg(exceptionMessage);
+            if (!localized.equals(exceptionMessage)) {
+                code = exceptionMessage;
+                message = localized;
+            }
         }
 
         final Response.ResponseBuilder builder = Response.status(status)
@@ -92,7 +92,7 @@ public final class WebApplicationExceptionMapper implements ExceptionMapper<WebA
     }
 
     private static boolean looksLikeMessageCode(final String message) {
-        return message.indexOf(' ') < 0 && message.indexOf('.') > 0;
+        return message != null && message.indexOf(' ') < 0 && message.indexOf('.') > 0;
     }
 
     private static String statusSlug(final Response.Status status) {

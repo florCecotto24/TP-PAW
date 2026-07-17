@@ -55,6 +55,7 @@ public interface UserDao {
 
     void updateEmailValidated(long userId, boolean validated);
 
+    /** Replaces the password hash and bumps {@code password_version} (credentials epoch). */
     void updatePasswordHash(long userId, String passwordHash);
 
     void updateLatestLocale(long userId, String localeTag);

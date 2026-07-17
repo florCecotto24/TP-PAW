@@ -135,6 +135,7 @@
       "reservation.rider.cannotReserveOwnListing": "You can't reserve your own car.",
       "reservation.rider.documentationRequired": "You need to validate your documents to reserve.",
       "reservation.rider.ownerBlocked": "The owner can't receive reservations right now.",
+      "reservation.rider.riderBlocked": "Your account is blocked, so you can't create new reservations.",
       "review.alreadySubmitted": "You already reviewed this reservation.",
       "review.notAllowed": "This reservation can't be reviewed.",
       "admin.block.cannotBlockSelf": "You can't block yourself.",

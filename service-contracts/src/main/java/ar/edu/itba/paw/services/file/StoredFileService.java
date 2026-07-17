@@ -18,4 +18,12 @@ public interface StoredFileService {
     Optional<StoredFile> findById(long id);
 
     Optional<BinaryContent> findContentById(long id);
+
+    /**
+     * Deletes a stored file when present. Callers use this to compensate an orphan upload
+     * if attaching the file to a reservation (or similar) fails after {@link #create}.
+     *
+     * @return {@code true} when a row was removed
+     */
+    boolean deleteById(long id);
 }

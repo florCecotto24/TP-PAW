@@ -8,7 +8,8 @@ import javax.ws.rs.core.UriInfo;
 
 /**
  * HATEOAS API entry point ({@code GET /api/}). Exposes a plain {@code links} map for navigation
- * and a richer {@code resources} map ({@code href} + supported collection {@code queryParams}).
+ * and a richer {@code resources} map ({@code href}, supported collection {@code queryParams},
+ * and published item URI templates where a resource has a canonical item URI).
  */
 public final class ApiIndexDto {
 
@@ -34,13 +35,14 @@ public final class ApiIndexDto {
         dto.links.put("credentials", href(uriInfo, "credentials"));
         dto.links.put("image", href(uriInfo, "image"));
 
-        dto.resources.put("users", ResourceDescriptor.of(href(uriInfo, "users"),
+        dto.resources.put("users", ResourceDescriptor.of(href(uriInfo, "users"), itemTemplate(uriInfo, "users"),
                 List.of("page", "pageSize", "blocked", "role", "q")));
-        dto.resources.put("cars", ResourceDescriptor.of(href(uriInfo, "cars"),
+        dto.resources.put("cars", ResourceDescriptor.of(href(uriInfo, "cars"), itemTemplate(uriInfo, "cars"),
                 List.of("page", "pageSize", "q", "ownerId", "category", "transmission", "powertrain",
                         "priceMin", "priceMax", "priceMarket", "rating", "neighborhoodId", "from", "until",
                         "flexible", "flexMonth", "flexDays", "status", "sort")));
-        dto.resources.put("reservations", ResourceDescriptor.of(href(uriInfo, "reservations"),
+        dto.resources.put("reservations", ResourceDescriptor.of(
+                href(uriInfo, "reservations"), itemTemplate(uriInfo, "reservations"),
                 List.of("page", "pageSize", "riderId", "ownerId", "carId", "status", "riderStatus", "q",
                         "category", "transmission", "powertrain", "priceMin", "priceMax", "rating", "sort")));
         dto.resources.put("reviews", ResourceDescriptor.of(href(uriInfo, "reviews"),
@@ -58,6 +60,10 @@ public final class ApiIndexDto {
 
     private static String href(final UriInfo uriInfo, final String collection) {
         return uriInfo.getBaseUriBuilder().path(collection).build().toString();
+    }
+
+    private static String itemTemplate(final UriInfo uriInfo, final String collection) {
+        return uriInfo.getBaseUriBuilder().path(collection).path("{id}").toTemplate();
     }
 
     public Map<String, String> getLinks() {
@@ -80,17 +86,24 @@ public final class ApiIndexDto {
     public static final class ResourceDescriptor {
 
         private String href;
+        private String itemTemplate;
         private List<String> queryParams;
 
         /** Jackson / Bean Validation no-arg constructor. */
         public ResourceDescriptor() {
         }
 
-        public static ResourceDescriptor of(final String href, final List<String> queryParams) {
+        public static ResourceDescriptor of(
+                final String href, final String itemTemplate, final List<String> queryParams) {
             final ResourceDescriptor descriptor = new ResourceDescriptor();
             descriptor.href = href;
+            descriptor.itemTemplate = itemTemplate;
             descriptor.queryParams = queryParams;
             return descriptor;
+        }
+
+        public static ResourceDescriptor of(final String href, final List<String> queryParams) {
+            return of(href, null, queryParams);
         }
 
         public String getHref() {
@@ -99,6 +112,14 @@ public final class ApiIndexDto {
 
         public void setHref(final String href) {
             this.href = href;
+        }
+
+        public String getItemTemplate() {
+            return itemTemplate;
+        }
+
+        public void setItemTemplate(final String itemTemplate) {
+            this.itemTemplate = itemTemplate;
         }
 
         public List<String> getQueryParams() {

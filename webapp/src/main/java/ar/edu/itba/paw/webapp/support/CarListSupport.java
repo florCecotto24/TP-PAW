@@ -21,13 +21,17 @@ import ar.edu.itba.paw.models.dto.car.CarCard;
 import ar.edu.itba.paw.models.dto.car.ConsumerCarCardMarketContext;
 import ar.edu.itba.paw.models.dto.car.PriceMarketPosition;
 import ar.edu.itba.paw.models.util.search.CarSearchRequest;
+import ar.edu.itba.paw.services.car.CarListingPolicyService;
+import ar.edu.itba.paw.services.car.CarMarketInsightService;
 import ar.edu.itba.paw.services.car.CarService;
 import ar.edu.itba.paw.services.user.AdminService;
 import ar.edu.itba.paw.webapp.api.common.PaginationLinks;
 import ar.edu.itba.paw.webapp.api.common.VndMediaType;
 import ar.edu.itba.paw.webapp.dto.rest.CarDto;
 import ar.edu.itba.paw.webapp.dto.rest.CarSummaryDto;
+import ar.edu.itba.paw.webapp.dto.rest.LinksDto;
 import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
+import ar.edu.itba.paw.webapp.util.RestUriUtils;
 
 /**
  * HTTP orchestration for {@code GET /cars} list branches (admin catalog, owner fleet, public browse)
@@ -37,14 +41,20 @@ import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
 public final class CarListSupport {
 
     private final CarService carService;
+    private final CarListingPolicyService carListingPolicyService;
+    private final CarMarketInsightService carMarketInsightService;
     private final AdminService adminService;
     private final CarResourceAccess carResourceAccess;
 
     public CarListSupport(
             final CarService carService,
+            final CarListingPolicyService carListingPolicyService,
+            final CarMarketInsightService carMarketInsightService,
             final AdminService adminService,
             final CarResourceAccess carResourceAccess) {
         this.carService = carService;
+        this.carListingPolicyService = carListingPolicyService;
+        this.carMarketInsightService = carMarketInsightService;
         this.adminService = adminService;
         this.carResourceAccess = carResourceAccess;
     }
@@ -85,7 +95,7 @@ public final class CarListSupport {
         final List<Car.Powertrain> powertrains = toPowertrains(powertrain);
         final List<String> ratingBands = rating == null ? List.of() : rating;
         final List<Car.Status> statuses =
-                carService.resolveOwnerListingStatuses(toCarStatuses(status), selfOrAdmin);
+                carListingPolicyService.resolveOwnerListingStatuses(toCarStatuses(status), selfOrAdmin);
         final String internalSort = RestCarSortMapper.toInternalSort(sort);
         final var criteria = carService.buildOwnerCarSearchCriteria(
                 ownerId,
@@ -179,7 +189,7 @@ public final class CarListSupport {
 
     private List<CarSummaryDto> toConsumerBrowseCarSummaries(final List<CarCard> cards, final UriInfo uriInfo) {
         final Map<Long, ConsumerCarCardMarketContext> marketContexts =
-                carService.resolveConsumerPriceMarketContexts(cards);
+                carMarketInsightService.resolveConsumerPriceMarketContexts(cards);
         return CarSummaryDto.fromConsumerBrowseCarCards(cards, uriInfo, marketContexts);
     }
 
@@ -245,6 +255,20 @@ public final class CarListSupport {
                 && (until == null || until.isBlank())
                 && (status == null || status.isEmpty())
                 && !flexible;
+    }
+
+    public Response similarCars(final long carId, final int limit, final UriInfo uriInfo) {
+        final int safeLimit = Math.max(1, Math.min(limit, 20));
+        final List<CarCard> cards = carService.findSimilarCarCards(carId, safeLimit, null);
+        if (cards.isEmpty()) {
+            return Response.noContent().build();
+        }
+        final List<LinksDto> links = cards.stream()
+                .map(card -> LinksDto.ofSelf(RestUriUtils.carUri(uriInfo, card.getCarId()).toString()))
+                .collect(Collectors.toList());
+        return Response.ok(new GenericEntity<List<LinksDto>>(links) {})
+                .header("X-Total-Count", links.size())
+                .build();
     }
 
     static PriceMarketPosition parsePriceMarketPosition(final String priceMarket) {

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import flatpickr from 'flatpickr';
 import type { Instance } from 'flatpickr/dist/types/instance';
-import { flatpickrLocalizedInputOptions } from '../../../i18n/dateFormat';
+import { flatpickrLocalizedInputOptions, wallTodayYmd } from '../../../i18n/dateFormat';
 import { dayStartFromYmd } from '../../../components/FlatpickrCalendar';
 
 function formatYmd(d: Date): string {
@@ -35,7 +35,7 @@ export function useSearchDatePickers(
     fromFp.current?.clear();
     untilFp.current?.clear();
     if (untilFp.current) {
-      untilFp.current.set('minDate', 'today');
+      untilFp.current.set('minDate', wallTodayYmd());
     }
     onFromChangeRef.current('');
     onUntilChangeRef.current('');
@@ -53,7 +53,7 @@ export function useSearchDatePickers(
     fromFp.current = flatpickr(fromPicker, {
       ...fpLocale,
       disableMobile: true,
-      minDate: 'today',
+      minDate: wallTodayYmd(),
       onChange: (dates) => {
         onFromChangeRef.current(dates[0] ? formatYmd(dates[0]) : '');
         if (dates[0] && untilFp.current) {
@@ -65,7 +65,7 @@ export function useSearchDatePickers(
     untilFp.current = flatpickr(untilPicker, {
       ...fpLocale,
       disableMobile: true,
-      minDate: 'today',
+      minDate: wallTodayYmd(),
       onChange: (dates) => onUntilChangeRef.current(dates[0] ? formatYmd(dates[0]) : ''),
     });
 
@@ -85,7 +85,7 @@ export function useSearchDatePickers(
     if (date && untilFp.current) {
       untilFp.current.set('minDate', date);
     } else if (!from && untilFp.current) {
-      untilFp.current.set('minDate', 'today');
+      untilFp.current.set('minDate', wallTodayYmd());
     }
   }, [from]);
 

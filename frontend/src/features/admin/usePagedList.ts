@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { sessionClient } from '../../session/sessionStore';
 import { ApiError, getLinkCollectionPage } from '../../api/client';
 import type { PageLinks } from '../../api/types';
@@ -52,14 +52,17 @@ export function usePagedList<T>(
     loading: true,
     error: null,
   });
+  const requestSeq = useRef(0);
 
   const fetchPath = useCallback(
     async (path: string) => {
+      const seq = ++requestSeq.current;
       setState((s) => ({ ...s, loading: true, error: null }));
       try {
         const res = itemAccept
           ? await getLinkCollectionPage<T>(sessionClient, path, { collectionAccept: accept, itemAccept })
           : await sessionClient.get<T[] | undefined>(path, { accept });
+        if (seq !== requestSeq.current) return;
         setState({
           items: Array.isArray(res.data) ? res.data : [],
           page: res.page,
@@ -67,6 +70,7 @@ export function usePagedList<T>(
           error: null,
         });
       } catch (err) {
+        if (seq !== requestSeq.current) return;
         setState((s) => ({
           ...s,
           loading: false,
@@ -79,6 +83,7 @@ export function usePagedList<T>(
 
   useEffect(() => {
     if (!basePath) {
+      requestSeq.current += 1;
       setState({ items: [], page: {}, loading: false, error: null });
       return;
     }

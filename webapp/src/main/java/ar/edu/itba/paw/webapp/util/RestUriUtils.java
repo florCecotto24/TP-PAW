@@ -43,6 +43,14 @@ public final class RestUriUtils {
                 .build();
     }
 
+    /** Reservations where {@code userId} is the car owner. */
+    public static URI userOwnedReservationsUri(final UriInfo uriInfo, final long userId) {
+        return uriInfo.getBaseUriBuilder()
+                .path("reservations")
+                .queryParam("ownerId", userId)
+                .build();
+    }
+
     public static URI userFavoritesUri(final UriInfo uriInfo, final long userId) {
         return uriInfo.getBaseUriBuilder()
                 .path("users").path(String.valueOf(userId))

@@ -37,6 +37,7 @@ import ar.edu.itba.paw.util.UploadBinaryMegabyte;
 import ar.edu.itba.paw.services.car.CarService;
 import ar.edu.itba.paw.services.support.RecordingEmailService;
 import ar.edu.itba.paw.services.file.StoredFileService;
+import ar.edu.itba.paw.services.user.UserLocaleService;
 import ar.edu.itba.paw.services.user.UserService;
 @ExtendWith(MockitoExtension.class)
 class ReservationMessageServiceImplTest {
@@ -55,6 +56,9 @@ class ReservationMessageServiceImplTest {
 
     @Mock
     private UserService userService;
+
+    @Mock
+    private UserLocaleService userLocaleService;
 
     @Mock
     private CarService carService;
@@ -87,6 +91,7 @@ class ReservationMessageServiceImplTest {
                 reservationMessageDao,
                 reservationService,
                 userService,
+                userLocaleService,
                 carService,
                 emailService,
                 mailPublicUrls,
@@ -178,7 +183,7 @@ class ReservationMessageServiceImplTest {
         // 1.Arrange
         stubParticipantAndSender();
         Mockito.when(reservationMessageDao.countByReservationId(RESERVATION_ID)).thenReturn(120L);
-        Mockito.when(reservationMessageDao.findByReservationIdOrderByCreatedAtAsc(RESERVATION_ID, 0, 50))
+        Mockito.when(reservationMessageDao.findProjectedByReservationIdOrderByCreatedAtAsc(RESERVATION_ID, 0, 50))
                 .thenReturn(List.of());
 
         // 2.Act
@@ -198,7 +203,7 @@ class ReservationMessageServiceImplTest {
         // 1.Arrange
         stubParticipantAndSender();
         Mockito.when(reservationMessageDao.countByReservationId(RESERVATION_ID)).thenReturn(120L);
-        Mockito.when(reservationMessageDao.findByReservationIdOrderByCreatedAtAsc(RESERVATION_ID, 100, 50))
+        Mockito.when(reservationMessageDao.findProjectedByReservationIdOrderByCreatedAtAsc(RESERVATION_ID, 100, 50))
                 .thenReturn(List.of());
 
         // 2.Act
@@ -266,7 +271,7 @@ class ReservationMessageServiceImplTest {
     void testPostMessageWithAttachmentPersistsMessageWithFile() {
         // 1.Arrange
         stubParticipantAndSender();
-        final byte[] pdfBytes = new byte[] {1, 2, 3};
+        final byte[] pdfBytes = new byte[] {0x25, 0x50, 0x44, 0x46, 0x2d}; // %PDF-
         final StoredFile storedFile = StoredFile.identified(
                 STORED_FILE_ID,
                 User.identities(RIDER_ID, "r@test.com", "R", "Rider"),
@@ -294,7 +299,7 @@ class ReservationMessageServiceImplTest {
         Assertions.assertEquals(7L, dto.getId());
         Assertions.assertNotNull(dto.getAttachment());
         Assertions.assertEquals("receipt.pdf", dto.getAttachment().getFileName());
-        Assertions.assertEquals(3L, dto.getAttachment().getSizeBytes());
+        Assertions.assertEquals(5L, dto.getAttachment().getSizeBytes());
         Assertions.assertEquals("PDF", dto.getAttachment().getKind().name());
     }
 
@@ -302,7 +307,7 @@ class ReservationMessageServiceImplTest {
     void testPostMessageWithAttachmentAllowsEmptyBodyWhenFilePresent() {
         // 1.Arrange
         stubParticipantAndSender();
-        final byte[] pngBytes = new byte[] {9};
+        final byte[] pngBytes = new byte[] {(byte) 0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a};
         final StoredFile storedFile = StoredFile.identified(
                 STORED_FILE_ID,
                 User.identities(RIDER_ID, "r@test.com", "R", "Rider"),
@@ -355,7 +360,7 @@ class ReservationMessageServiceImplTest {
     @Test
     void testDispatchChatDigestEmailsWhenNoPendingMessagesDoesNothing() {
         // 1.Arrange
-        Mockito.when(reservationMessageDao.findPendingEmailNotification()).thenReturn(List.of());
+        Mockito.when(reservationMessageDao.findPendingEmailNotification(200)).thenReturn(List.of());
 
         // 2.Act
         service.dispatchChatDigestEmails();
@@ -371,7 +376,7 @@ class ReservationMessageServiceImplTest {
         final ReservationMessage message = Mockito.mock(ReservationMessage.class);
         Mockito.when(message.isSeen()).thenReturn(true);
 
-        Mockito.when(reservationMessageDao.findPendingEmailNotification()).thenReturn(List.of(message));
+        Mockito.when(reservationMessageDao.findPendingEmailNotification(200)).thenReturn(List.of(message));
 
         // 2.Act
         service.dispatchChatDigestEmails();
@@ -401,12 +406,13 @@ class ReservationMessageServiceImplTest {
         Mockito.when(message.getBody()).thenReturn("When can I pick up?");
         Mockito.when(message.getCreatedAt()).thenReturn(OffsetDateTime.now(ZoneOffset.UTC));
         Mockito.when(message.getAttachment()).thenReturn(null);
+        Mockito.when(message.getAttachmentFileId()).thenReturn(null);
         Mockito.when(message.isSeen()).thenReturn(false);
 
-        Mockito.when(reservationMessageDao.findPendingEmailNotification()).thenReturn(List.of(message));
+        Mockito.when(reservationMessageDao.findPendingEmailNotification(200)).thenReturn(List.of(message));
         Mockito.when(lifecycleRowProcessor.markChatDigestNotified(List.of(55L))).thenReturn(true);
         Mockito.when(userService.getUserById(OWNER_ID)).thenReturn(Optional.of(owner));
-        Mockito.when(userService.resolveMailLocaleFor(owner)).thenReturn(Locale.ENGLISH);
+        Mockito.when(userLocaleService.resolveMailLocaleFor(owner)).thenReturn(Locale.ENGLISH);
         Mockito.when(mailPublicUrls.absolutePath("/my-reservations/30/chat?role=owner"))
                 .thenReturn("https://example.com/my-reservations/30/chat?role=owner");
 

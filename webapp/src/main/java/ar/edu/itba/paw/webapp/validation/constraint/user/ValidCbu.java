@@ -13,7 +13,8 @@ import ar.edu.itba.paw.webapp.validation.user.ValidCbuValidator;
 
 /**
  * Strict CBU constraint: the value MUST be a valid Argentine CBU (non-null, non-blank, exact digit length).
- * Use {@link OptionalCbu} when blank means "leave unchanged".
+ * For PATCH profile forms use {@link OptionalCbu}: blank/empty clears the stored CBU (and may pause
+ * listings that require one); omit the field entirely to leave it unchanged.
  */
 @Documented
 @Constraint(validatedBy = ValidCbuValidator.class)

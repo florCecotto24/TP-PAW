@@ -7,11 +7,11 @@ import ar.edu.itba.paw.exception.car.CarValidationException;
 import ar.edu.itba.paw.exception.reservation.ReservationConflictException;
 import ar.edu.itba.paw.models.domain.car.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.car.CarAvailability;
-import ar.edu.itba.paw.models.domain.reservation.Reservation;
 import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.car.AvailabilityCreateInput;
 import ar.edu.itba.paw.models.dto.car.BookableSegmentProjection;
+import ar.edu.itba.paw.models.dto.reservation.BlockingReservationProjection;
 import ar.edu.itba.paw.models.util.time.AppTimezone;
 import ar.edu.itba.paw.models.util.time.RiderPickupLeadTime;
 import ar.edu.itba.paw.persistence.car.CarAvailabilityDao;
@@ -43,6 +43,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import ar.edu.itba.paw.services.reservation.ReservationService;
+import ar.edu.itba.paw.services.user.UserReadinessService;
 import ar.edu.itba.paw.services.user.UserService;
 /**
  * Owns car_availability persistence + owner-driven mutations (create/edit/withdraw/listing) +
@@ -59,6 +60,7 @@ public class CarAvailabilityServiceImpl implements CarAvailabilityService {
     private final ReservationService reservationService;
     private final CarService carService;
     private final UserService userService;
+    private final UserReadinessService userReadinessService;
     private final ReservationTimingPolicy reservationTimingPolicy;
     private final CarAvailabilityPolicy carAvailabilityPolicy;
     private final CarAvailabilityCalendarService carAvailabilityCalendarService;
@@ -69,6 +71,7 @@ public class CarAvailabilityServiceImpl implements CarAvailabilityService {
             @Lazy final ReservationService reservationService,
             @Lazy final CarService carService,
             final UserService userService,
+            final UserReadinessService userReadinessService,
             final ReservationTimingPolicy reservationTimingPolicy,
             final CarAvailabilityPolicy carAvailabilityPolicy,
             @Lazy final CarAvailabilityCalendarService carAvailabilityCalendarService) {
@@ -76,6 +79,7 @@ public class CarAvailabilityServiceImpl implements CarAvailabilityService {
         this.reservationService = reservationService;
         this.carService = carService;
         this.userService = userService;
+        this.userReadinessService = userReadinessService;
         this.reservationTimingPolicy = reservationTimingPolicy;
         this.carAvailabilityPolicy = carAvailabilityPolicy;
         this.carAvailabilityCalendarService = carAvailabilityCalendarService;
@@ -257,12 +261,12 @@ public class CarAvailabilityServiceImpl implements CarAvailabilityService {
     public List<AvailabilityPeriod> findReservationBlockedWallRangesByCar(final long carId) {
         final ZoneId wall = AppTimezone.WALL_ZONE;
         final LocalDate today = LocalDate.now(wall);
-        final List<Reservation> blocking = reservationService.findBlockingReservationsByCarId(carId);
+        final List<BlockingReservationProjection> blocking = reservationService.findBlockingReservationsByCarId(carId);
         if (blocking.isEmpty()) {
             return List.of();
         }
         final List<AvailabilityPeriod> out = new ArrayList<>(blocking.size());
-        for (final Reservation r : blocking) {
+        for (final BlockingReservationProjection r : blocking) {
             final LocalDate startDay = r.getStartDate().atZoneSameInstant(wall).toLocalDate();
             final LocalDate endDay = r.getEndDate().atZoneSameInstant(wall).toLocalDate();
             // Reservations whose wall-window already ended cannot block a new publication: those
@@ -302,6 +306,9 @@ public class CarAvailabilityServiceImpl implements CarAvailabilityService {
         final List<DateRange> removed = CarAvailabilityCalendarMath.subtractDayRange(
                 oldStartInclusive, oldEndInclusive, newStartInclusive, newEndInclusive);
 
+        // Serialize against concurrent booking: acquire the per-car reservation-write lock before the
+        // overlap check so a booking cannot slip in between the check and the OFFERED/WITHDRAWN writes.
+        carService.lockForReservationWrite(carId);
         rejectIfReservationsOverlapAnyChunkByCar(carId, removed, MessageKeys.CAR_AVAILABILITY_EDIT_CONFLICT);
 
         final CarAvailability offered = carAvailabilityDao.createFullForCar(
@@ -331,6 +338,8 @@ public class CarAvailabilityServiceImpl implements CarAvailabilityService {
             throw new CarValidationException(MessageKeys.CAR_AVAILABILITY_NOT_OFFERED);
         }
 
+        // Serialize against concurrent booking before the overlap check + WITHDRAWN write.
+        carService.lockForReservationWrite(carId);
         final List<DateRange> withdrawnChunks = List.of(
                 new DateRange(target.getStartInclusive(), target.getEndInclusive()));
         rejectIfReservationsOverlapAnyChunkByCar(carId, withdrawnChunks,
@@ -362,6 +371,8 @@ public class CarAvailabilityServiceImpl implements CarAvailabilityService {
         }
         requireOwnerOfCarNotBlocked(carId);
 
+        // Serialize against concurrent booking before the overlap check + WITHDRAWN write.
+        carService.lockForReservationWrite(carId);
         final List<DateRange> withdrawnChunks = List.of(new DateRange(startInclusive, endInclusive));
         rejectIfReservationsOverlapAnyChunkByCar(carId, withdrawnChunks,
                 MessageKeys.CAR_AVAILABILITY_WITHDRAW_CONFLICT);
@@ -485,9 +496,9 @@ public class CarAvailabilityServiceImpl implements CarAvailabilityService {
         }
         final OffsetDateTime fromUtc = envStart.atStartOfDay(wall).toOffsetDateTime();
         final OffsetDateTime toUtc = envEnd.plusDays(1).atStartOfDay(wall).toOffsetDateTime();
-        final List<Reservation> blocking =
+        final List<BlockingReservationProjection> blocking =
                 reservationService.findBlockingReservationsByCarIdInRange(carId, fromUtc, toUtc);
-        for (final Reservation r : blocking) {
+        for (final BlockingReservationProjection r : blocking) {
             final LocalDate rStart = r.getStartDate().atZoneSameInstant(wall).toLocalDate();
             final LocalDate rEnd = r.getEndDate().atZoneSameInstant(wall).toLocalDate();
             for (final DateRange chunk : chunks) {
@@ -588,7 +599,7 @@ public class CarAvailabilityServiceImpl implements CarAvailabilityService {
         }
         final User owner = userService.getUserById(ownerUserId)
                 .orElseThrow(() -> new CarValidationException(MessageKeys.CAR_NOT_FOUND));
-        if (!userService.hasValidCbu(owner)) {
+        if (!userReadinessService.hasValidCbu(owner)) {
             throw new CarValidationException(MessageKeys.CAR_PUBLISH_CBU_REQUIRED);
         }
         validatePublicationAvailabilityRiderLead(input.periods(), input.checkInTime(), now);
@@ -597,6 +608,8 @@ public class CarAvailabilityServiceImpl implements CarAvailabilityService {
         // would be invisible to those reservations (bridge-anchored) and to any new booking
         // (hasActiveOverlapByCar blocks them), so the publication is product-meaningless. Rejecting
         // here keeps the picker's disabled-days contract honest server-side.
+        // Serialize against concurrent booking before the overlap check + OFFERED writes.
+        carService.lockForReservationWrite(carId);
         rejectIfReservationsOverlapAnyChunkByCar(
                 carId,
                 periodsToDateRanges(input.periods()),

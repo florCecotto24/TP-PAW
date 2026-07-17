@@ -22,7 +22,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import ar.edu.itba.paw.models.util.rules.SupportedLocales;
-import ar.edu.itba.paw.services.user.UserService;
+import ar.edu.itba.paw.services.user.UserLocaleService;
 import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
 
 @ExtendWith(MockitoExtension.class)
@@ -30,13 +30,13 @@ class RydenLocaleResolverTest {
 
     private static final long USER_ID = 42L;
 
-    @Mock private UserService userService;
+    @Mock private UserLocaleService userLocaleService;
 
     private RydenLocaleResolver resolver;
 
     @BeforeEach
     void setUp() {
-        resolver = new RydenLocaleResolver(userService);
+        resolver = new RydenLocaleResolver(userLocaleService);
     }
 
     @AfterEach
@@ -108,7 +108,7 @@ class RydenLocaleResolverTest {
     void testResolveLocaleHonoursAuthenticatedUserPreferenceOverCookie() {
         // 1.Arrange
         authenticateAs(USER_ID);
-        when(userService.findUserPreferredLocale(USER_ID)).thenReturn(Optional.of(SupportedLocales.ENGLISH));
+        when(userLocaleService.findUserPreferredLocale(USER_ID)).thenReturn(Optional.of(SupportedLocales.ENGLISH));
         final MockHttpServletRequest request = new MockHttpServletRequest();
         request.setCookies(new Cookie(RydenLocaleResolver.COOKIE_NAME, "es"));
 
@@ -124,7 +124,7 @@ class RydenLocaleResolverTest {
     void testResolveLocaleFallsThroughToCookieWhenAuthenticatedUserHasNoStoredPreference() {
         // 1.Arrange
         authenticateAs(USER_ID);
-        when(userService.findUserPreferredLocale(USER_ID)).thenReturn(Optional.empty());
+        when(userLocaleService.findUserPreferredLocale(USER_ID)).thenReturn(Optional.empty());
         final MockHttpServletRequest request = new MockHttpServletRequest();
         request.setCookies(new Cookie(RydenLocaleResolver.COOKIE_NAME, "en"));
 
@@ -137,6 +137,7 @@ class RydenLocaleResolverTest {
 
     private static void authenticateAs(final long userId) {
         final RydenUserDetails principal = RydenUserDetails.builder()
+                .passwordVersion(0)
                 .userId(userId)
                 .email("test@example.com")
                 .forename("Test")

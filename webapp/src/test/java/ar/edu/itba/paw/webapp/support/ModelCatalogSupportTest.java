@@ -16,6 +16,7 @@ import ar.edu.itba.paw.exception.car.CarNotFoundException;
 import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.models.domain.car.CarModel;
 import ar.edu.itba.paw.services.car.CarBrandService;
+import ar.edu.itba.paw.services.car.CarMarketInsightService;
 import ar.edu.itba.paw.services.car.CarModelService;
 import ar.edu.itba.paw.services.car.CarService;
 import ar.edu.itba.paw.services.user.AdminService;
@@ -30,13 +31,16 @@ class ModelCatalogSupportTest {
     @Mock
     private CarService carService;
     @Mock
+    private CarMarketInsightService carMarketInsightService;
+    @Mock
     private AdminService adminService;
 
     private ModelCatalogSupport support;
 
     @BeforeEach
     void setUp() {
-        support = new ModelCatalogSupport(carBrandService, carModelService, carService, adminService);
+        support = new ModelCatalogSupport(
+                carBrandService, carModelService, carService, carMarketInsightService, adminService);
     }
 
     @Test

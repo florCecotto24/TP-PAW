@@ -54,6 +54,15 @@ public class UserServiceImplTest {
     @Mock
     private AdminService adminService;
 
+    @Mock
+    private UserReadinessService userReadinessService;
+
+    @Mock
+    private UserLocaleService userLocaleService;
+
+    @Mock
+    private UserOwnerCbuService userOwnerCbuService;
+
     private UserServiceImpl userService;
 
     @BeforeEach
@@ -66,7 +75,10 @@ public class UserServiceImplTest {
                 emailVerificationService,
                 carService,
                 userProfileMediaService,
-                adminService);
+                adminService,
+                userReadinessService,
+                userLocaleService,
+                userOwnerCbuService);
     }
 
     @Test
@@ -277,6 +289,7 @@ public class UserServiceImplTest {
                 .licenseFile(Mockito.mock(StoredFile.class))
                 .identityFile(Mockito.mock(StoredFile.class))
                 .build();
+        Mockito.when(userReadinessService.hasUploadedLicenseAndIdentity(user)).thenReturn(true);
 
         Assertions.assertTrue(userService.hasUploadedLicenseAndIdentity(user));
     }
@@ -290,6 +303,7 @@ public class UserServiceImplTest {
                 .surname("B")
                 .licenseFile(Mockito.mock(StoredFile.class))
                 .build();
+        Mockito.when(userReadinessService.hasUploadedLicenseAndIdentity(user)).thenReturn(false);
 
         Assertions.assertFalse(userService.hasUploadedLicenseAndIdentity(user));
     }

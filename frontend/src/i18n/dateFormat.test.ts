@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatDateTime, formatMonthYear } from './dateFormat';
+import { formatDateTime, formatMonthYear, wallTodayYmd } from './dateFormat';
 
 describe('dateFormat', () => {
   describe('formatDateTime', () => {
@@ -63,6 +63,19 @@ describe('dateFormat', () => {
       // 1.Arrange / 2.Act / 3.Assert
       expect(formatMonthYear('2026-04', 'en')).toContain('April');
       expect(formatMonthYear('2026-04', 'en')).toContain('2026');
+    });
+  });
+
+  describe('wallTodayYmd', () => {
+    it('testWallTodayYmdReturnsYmdInAppTimezone', () => {
+      // 1.Arrange — UTC instant that is still the same calendar day in AR (UTC-3)
+      const instant = new Date('2026-07-17T03:30:00.000Z');
+
+      // 2.Act
+      const ymd = wallTodayYmd(instant);
+
+      // 3.Assert
+      expect(ymd).toBe('2026-07-17');
     });
   });
 });

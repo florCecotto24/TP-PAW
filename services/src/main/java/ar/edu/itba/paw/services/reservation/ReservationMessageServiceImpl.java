@@ -29,11 +29,13 @@ import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.file.BinaryContent;
 import ar.edu.itba.paw.models.dto.reservation.ReservationMessageAttachmentDto;
 import ar.edu.itba.paw.models.dto.reservation.ReservationMessageDto;
+import ar.edu.itba.paw.models.dto.reservation.ReservationMessageProjection;
 import ar.edu.itba.paw.models.util.format.TextTruncationLimits;
 import ar.edu.itba.paw.models.pagination.UiPaging;
 import ar.edu.itba.paw.models.email.reservation.chat.ReservationChatDigestConversationEntry;
 import ar.edu.itba.paw.models.email.reservation.chat.ReservationChatDigestEmailPayload;
 import ar.edu.itba.paw.models.email.reservation.chat.ReservationChatDigestMessageEntry;
+import ar.edu.itba.paw.models.util.media.BinaryMagicBytes;
 import ar.edu.itba.paw.models.util.media.ChatAttachmentContentTypes;
 import ar.edu.itba.paw.models.util.media.ChatAttachmentKindResolver;
 import ar.edu.itba.paw.models.util.time.WallDateTimeDisplayFormat;
@@ -46,6 +48,7 @@ import ar.edu.itba.paw.policy.ReservationMessageValidationPolicy;
 import ar.edu.itba.paw.services.car.CarService;
 import ar.edu.itba.paw.services.email.EmailService;
 import ar.edu.itba.paw.services.file.StoredFileService;
+import ar.edu.itba.paw.services.user.UserLocaleService;
 import ar.edu.itba.paw.services.user.UserService;
 @Service
 public class ReservationMessageServiceImpl implements ReservationMessageService {
@@ -56,6 +59,7 @@ public class ReservationMessageServiceImpl implements ReservationMessageService 
     private final ReservationMessageDao reservationMessageDao;
     private final ReservationService reservationService;
     private final UserService userService;
+    private final UserLocaleService userLocaleService;
     private final CarService carService;
     private final EmailService emailService;
     private final MailPublicUrls mailPublicUrls;
@@ -70,6 +74,7 @@ public class ReservationMessageServiceImpl implements ReservationMessageService 
             final ReservationMessageDao reservationMessageDao,
             final ReservationService reservationService,
             final UserService userService,
+            final UserLocaleService userLocaleService,
             final CarService carService,
             final EmailService emailService,
             final MailPublicUrls mailPublicUrls,
@@ -81,6 +86,7 @@ public class ReservationMessageServiceImpl implements ReservationMessageService 
         this.reservationMessageDao = reservationMessageDao;
         this.reservationService = reservationService;
         this.userService = userService;
+        this.userLocaleService = userLocaleService;
         this.carService = carService;
         this.emailService = emailService;
         this.mailPublicUrls = mailPublicUrls;
@@ -140,7 +146,7 @@ public class ReservationMessageServiceImpl implements ReservationMessageService 
         final int safePage = UiPaging.clampZeroBasedPage(requestedPage, totalItems, safeSize);
         final int offset = safePage * safeSize;
         final List<ReservationMessageDto> content = reservationMessageDao
-                .findByReservationIdOrderByCreatedAtAsc(reservationId, offset, safeSize)
+                .findProjectedByReservationIdOrderByCreatedAtAsc(reservationId, offset, safeSize)
                 .stream()
                 .map(this::toDto)
                 .collect(Collectors.toList());
@@ -167,7 +173,7 @@ public class ReservationMessageServiceImpl implements ReservationMessageService 
         final long safeAfterId = Math.max(0L, afterMessageId);
         final int limit = chatPolicy.getHistoryPageSize();
         return reservationMessageDao
-                .findByReservationIdAfterIdOrderByCreatedAtAsc(reservationId, safeAfterId, limit)
+                .findProjectedByReservationIdAfterIdOrderByCreatedAtAsc(reservationId, safeAfterId, limit)
                 .stream()
                 .map(this::toDto)
                 .collect(Collectors.toList());
@@ -217,17 +223,25 @@ public class ReservationMessageServiceImpl implements ReservationMessageService 
 
     @Override
     @Transactional(readOnly = true)
-    public List<ReservationMessage> getAdminChatMessages(final long reservationId, final int offset, final int limit) {
-        return reservationMessageDao.findByReservationIdOrderByCreatedAtAsc(reservationId, offset, limit);
+    public List<ReservationMessageDto> getAdminChatMessages(
+            final long reservationId, final int offset, final int limit) {
+        return reservationMessageDao.findProjectedByReservationIdOrderByCreatedAtAsc(reservationId, offset, limit)
+                .stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<ReservationMessage> findMessagesAfter(
+    public List<ReservationMessageDto> findMessagesAfter(
             final long reservationId, final long afterMessageId, final int limit) {
         final int safeLimit = limit > 0 ? limit : chatPolicy.getHistoryPageSize();
-        return reservationMessageDao.findByReservationIdAfterIdOrderByCreatedAtAsc(
-                reservationId, Math.max(0L, afterMessageId), safeLimit);
+        return reservationMessageDao
+                .findProjectedByReservationIdAfterIdOrderByCreatedAtAsc(
+                        reservationId, Math.max(0L, afterMessageId), safeLimit)
+                .stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -245,7 +259,7 @@ public class ReservationMessageServiceImpl implements ReservationMessageService 
         if (!isChatAvailable(reservation)) {
             throw new ReservationMessageException(MessageKeys.RESERVATION_CHAT_NOT_AVAILABLE);
         }
-        return reservationMessageDao.findByIdAndReservationId(messageId, reservationId).map(this::toDto);
+        return reservationMessageDao.findProjectedByIdAndReservationId(messageId, reservationId).map(this::toDto);
     }
 
     @Override
@@ -255,13 +269,22 @@ public class ReservationMessageServiceImpl implements ReservationMessageService 
         return reservationMessageDao.findByIdAndReservationId(messageId, reservationId);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<ReservationMessageDto> findMessageDtoForAdmin(
+            final long reservationId, final long messageId) {
+        return reservationMessageDao.findProjectedByIdAndReservationId(messageId, reservationId).map(this::toDto);
+    }
+
     /**
      * Deliberately NOT {@code @Transactional}: each recipient claim commits in {@code REQUIRES_NEW}
      * before mail is queued, so a failed send cannot roll back the claim (or leave TX rollback-only).
      */
     @Override
     public void dispatchChatDigestEmails() {
-        final List<ReservationMessage> pending = reservationMessageDao.findPendingEmailNotification();
+        final int digestBatchSize = 200;
+        final List<ReservationMessage> pending =
+                reservationMessageDao.findPendingEmailNotification(digestBatchSize);
         if (pending.isEmpty()) {
             return;
         }
@@ -349,7 +372,7 @@ public class ReservationMessageServiceImpl implements ReservationMessageService 
             final User recipient = recipientOpt.get();
             // resolveMailLocaleFor reuses the already-loaded user instead of re-querying users
             // by id, which previously cost one extra SELECT per recipient in the digest loop.
-            final Locale mailLocale = userService.resolveMailLocaleFor(recipient);
+            final Locale mailLocale = userLocaleService.resolveMailLocaleFor(recipient);
             final Optional<ReservationChatDigestEmailPayload> payloadOpt =
                     buildDigestPayload(recipient, mailLocale, unseenMessages, carCache);
             if (payloadOpt.isEmpty()) {
@@ -411,11 +434,16 @@ public class ReservationMessageServiceImpl implements ReservationMessageService 
     private ReservationChatDigestMessageEntry toDigestMessageEntry(
             final ReservationMessage message, final Locale mailLocale) {
         final User sender = message.getSender();
+        // Avoid navigating m.attachment (would load StoredFile LOB). For body-less messages, a
+        // generic placeholder is enough for the digest preview.
+        final String body = message.getBody();
         final String attachmentFileName =
-                message.getAttachment() == null ? null : message.getAttachment().getFileName();
+                (body == null || body.isBlank()) && message.getAttachmentFileId() != null
+                        ? "attachment"
+                        : null;
         return new ReservationChatDigestMessageEntry(
                 formatDisplayName(sender),
-                truncateForEmailPreview(message.getBody(), attachmentFileName),
+                truncateForEmailPreview(body, attachmentFileName),
                 WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(message.getCreatedAt(), mailLocale));
     }
 
@@ -435,6 +463,21 @@ public class ReservationMessageServiceImpl implements ReservationMessageService 
                     MessageKeys.RESERVATION_CHAT_ATTACHMENT_TOO_LARGE,
                     chatAttachmentUploadPolicy.getMaxMegabytesRoundedUp());
         }
+        // Raster images + PDF: require magic-bytes match (same policy as KYC / receipts).
+        // Office/zip/video remain MIME+extension only (no sniffer in BinaryMagicBytes).
+        if (requiresMagicBytes(contentType) && !BinaryMagicBytes.matchesDeclared(contentType, data)) {
+            throw new ReservationMessageException(MessageKeys.RESERVATION_CHAT_ATTACHMENT_INVALID);
+        }
+    }
+
+    private static boolean requiresMagicBytes(final String contentType) {
+        if (contentType == null || contentType.isBlank()) {
+            return false;
+        }
+        final String t = contentType.trim().toLowerCase(java.util.Locale.ROOT);
+        final int semi = t.indexOf(';');
+        final String normalized = semi < 0 ? t : t.substring(0, semi).trim();
+        return normalized.startsWith("image/") || "application/pdf".equals(normalized);
     }
 
     private Reservation requireChatOpenForParticipant(final long senderUserId, final long reservationId) {
@@ -471,6 +514,19 @@ public class ReservationMessageServiceImpl implements ReservationMessageService 
                 message.isSeen());
     }
 
+    private ReservationMessageDto toDto(final ReservationMessageProjection message) {
+        final ReservationMessageAttachmentDto attachmentDto = toAttachmentDto(message);
+        return new ReservationMessageDto(
+                message.getId(),
+                message.getReservationId(),
+                message.getSenderUserId(),
+                formatDisplayName(message.getSenderForename(), message.getSenderSurname()),
+                message.getBody(),
+                message.getCreatedAt(),
+                attachmentDto,
+                message.isSeen());
+    }
+
     private ReservationMessageAttachmentDto toAttachmentDto(final ReservationMessage message) {
         final StoredFile attachment = message.getAttachment();
         if (attachment == null) {
@@ -489,8 +545,30 @@ public class ReservationMessageServiceImpl implements ReservationMessageService 
                 url);
     }
 
+    private ReservationMessageAttachmentDto toAttachmentDto(final ReservationMessageProjection message) {
+        if (message.getAttachmentFileId() == null) {
+            return null;
+        }
+        final long reservationId = message.getReservationId();
+        final long messageId = message.getId();
+        final String url =
+                "/my-reservations/" + reservationId + "/messages/" + messageId + "/attachment/download";
+        return new ReservationMessageAttachmentDto(
+                message.getAttachmentFileId(),
+                message.getAttachmentFileName(),
+                message.getAttachmentContentType(),
+                message.getAttachmentSizeBytes(),
+                ChatAttachmentKindResolver.resolve(
+                        message.getAttachmentContentType(), message.getAttachmentFileName()),
+                url);
+    }
+
     private static String formatDisplayName(final User user) {
-        return user.getForename() + " " + user.getSurname();
+        return formatDisplayName(user.getForename(), user.getSurname());
+    }
+
+    private static String formatDisplayName(final String forename, final String surname) {
+        return forename + " " + surname;
     }
 
     private long resolveCounterpartyUserId(

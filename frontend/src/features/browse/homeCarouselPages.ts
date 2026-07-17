@@ -16,8 +16,10 @@ export function parseHomeCarouselPage(
   searchParams: URLSearchParams,
   key: HomeCarouselPageKey,
 ): number {
-  const raw = Number(searchParams.get(key) ?? '0');
-  return Number.isFinite(raw) && raw >= 0 ? Math.floor(raw) : 0;
+  const raw = searchParams.get(key);
+  if (raw == null || raw.trim() === '') return 0;
+  const n = Number(raw);
+  return Number.isInteger(n) && n >= 0 ? n : 0;
 }
 
 /** Writes a carousel API page index into the current URL (0 removes the param). */

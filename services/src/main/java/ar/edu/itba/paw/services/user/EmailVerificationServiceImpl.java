@@ -32,6 +32,7 @@ public class EmailVerificationServiceImpl implements EmailVerificationService {
     private final EmailVerificationCodeDao emailVerificationCodeDao;
     private final EmailService emailService;
     private final UserService userService;
+    private final UserLocaleService userLocaleService;
     private final VerificationCodePolicy verificationCodePolicy;
     private final OtpAttemptLimiter otpAttemptLimiter;
 
@@ -40,11 +41,13 @@ public class EmailVerificationServiceImpl implements EmailVerificationService {
             final EmailVerificationCodeDao emailVerificationCodeDao,
             final EmailService emailService,
             final UserService userService,
+            final UserLocaleService userLocaleService,
             final VerificationCodePolicy verificationCodePolicy,
             final OtpAttemptLimiter otpAttemptLimiter) {
         this.emailVerificationCodeDao = emailVerificationCodeDao;
         this.emailService = emailService;
         this.userService = userService;
+        this.userLocaleService = userLocaleService;
         this.verificationCodePolicy = verificationCodePolicy;
         this.otpAttemptLimiter = otpAttemptLimiter;
     }
@@ -115,7 +118,7 @@ public class EmailVerificationServiceImpl implements EmailVerificationService {
         emailVerificationCodeDao.insert(
                 userId, code, now.plus(verificationCodePolicy.getCodeTtl()), now);
         final Locale fallback = locale != null ? locale : Locale.ENGLISH;
-        final Locale mailLocale = userService.resolveMailLocaleOrElse(userId, fallback);
+        final Locale mailLocale = userLocaleService.resolveMailLocaleOrElse(userId, fallback);
         emailService.sendEmailVerificationCode(EmailVerificationCodeEmailPayload.builder()
                 .messageLocale(mailLocale)
                 .recipientEmail(email)

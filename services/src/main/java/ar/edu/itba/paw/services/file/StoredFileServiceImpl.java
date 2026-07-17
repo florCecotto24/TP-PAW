@@ -44,4 +44,10 @@ public class StoredFileServiceImpl implements StoredFileService {
         return storedFileDao.findById(id)
                 .map(sf -> new BinaryContent(sf.getData(), sf.getContentType(), sf.getFileName()));
     }
+
+    @Override
+    @Transactional
+    public boolean deleteById(final long id) {
+        return storedFileDao.deleteById(id);
+    }
 }

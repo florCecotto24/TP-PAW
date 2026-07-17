@@ -37,7 +37,7 @@ public class UserProfileMediaServiceImpl implements UserProfileMediaService {
 
     /**
      * {@code @Lazy} on {@link UserService} breaks the bidirectional cycle with {@link UserServiceImpl}
-     * (which already injects this media façade for {@code updateProfilePicture} / {@code uploadValidatedProfileDocument}).
+     * (which already injects this media façade for {@code updateProfilePicture} / {@code uploadProfileDocument}).
      * Architectural rule: this service no longer touches {@code UserDao}; user-row FK mutations are funneled
      * through {@code UserService}'s profile-media setters.
      */
@@ -86,14 +86,12 @@ public class UserProfileMediaServiceImpl implements UserProfileMediaService {
 
     @Override
     @Transactional
-    public void uploadValidatedProfileDocument(
+    public void uploadProfileDocument(
             final long userId,
             final UserDocumentType documentType,
             final String originalFilename,
             final String contentType,
             final byte[] data) {
-        userService.getUserById(userId)
-                .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
         if (documentType == null
                 || originalFilename == null || originalFilename.isBlank()
                 || !StoredFile.isAllowedPaymentReceiptContentType(contentType)) {
@@ -111,38 +109,49 @@ public class UserProfileMediaServiceImpl implements UserProfileMediaService {
                     MessageKeys.USER_PROFILE_DOCUMENT_TOO_LARGE,
                     profileDocumentUploadPolicy.getMaxMegabytesRoundedUp());
         }
-        // PUT is create-or-replace (OpenAPI: "Subir/reemplazar"). Overwrite the slot FK;
-        // previous StoredFile rows are orphaned the same way clearProfileDocument does.
+        // Non-admin self-upload stays pending review (validated=false). Admins self-validate
+        // on upload so they are not blocked waiting for another admin to moderate their KYC.
+        final User user = userService.getUserById(userId)
+                .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
+        final boolean autoValidated = user.isAdmin();
+        final Long previousFileId = switch (documentType) {
+            case LICENSE -> user.getLicenseFileId().orElse(null);
+            case IDENTITY -> user.getIdentityFileId().orElse(null);
+        };
         final StoredFile stored = storedFileService.create(userId, originalFilename, contentType, data);
         switch (documentType) {
-            case LICENSE:
-                userService.updateLicenseDocumentFk(userId, stored.getId(), true);
-                return;
-            case IDENTITY:
-                userService.updateIdentityDocumentFk(userId, stored.getId(), true);
-                return;
-            default:
-                throw new InvalidProfileDocumentException(MessageKeys.USER_PROFILE_DOCUMENT_INVALID);
+            case LICENSE -> userService.updateLicenseDocumentFk(userId, stored.getId(), autoValidated);
+            case IDENTITY -> userService.updateIdentityDocumentFk(userId, stored.getId(), autoValidated);
+        }
+        if (previousFileId != null && previousFileId > 0 && !previousFileId.equals(stored.getId())) {
+            storedFileService.deleteById(previousFileId);
         }
     }
 
     @Override
     @Transactional
     public void clearProfileDocument(final long userId, final UserDocumentType documentType) {
-        userService.getUserById(userId)
+        final User user = userService.getUserById(userId)
                 .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
         if (documentType == null) {
             throw new InvalidProfileDocumentException(MessageKeys.USER_PROFILE_DOCUMENT_INVALID);
         }
+        final Long previousFileId = switch (documentType) {
+            case LICENSE -> user.getLicenseFileId().orElse(null);
+            case IDENTITY -> user.getIdentityFileId().orElse(null);
+        };
         switch (documentType) {
             case LICENSE:
                 userService.clearLicenseDocumentFk(userId);
-                return;
+                break;
             case IDENTITY:
                 userService.clearIdentityDocumentFk(userId);
-                return;
+                break;
             default:
                 throw new InvalidProfileDocumentException(MessageKeys.USER_PROFILE_DOCUMENT_INVALID);
+        }
+        if (previousFileId != null && previousFileId > 0) {
+            storedFileService.deleteById(previousFileId);
         }
     }
 

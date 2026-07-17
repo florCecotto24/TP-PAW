@@ -12,6 +12,7 @@ import java.util.Set;
 import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.models.domain.reservation.Reservation;
 import ar.edu.itba.paw.models.dto.Page;
+import ar.edu.itba.paw.models.dto.reservation.BlockingReservationProjection;
 import ar.edu.itba.paw.models.dto.reservation.ReservationCard;
 import ar.edu.itba.paw.models.util.search.ReservationSearchCriteria;
 
@@ -61,26 +62,28 @@ public interface ReservationQueryService {
     Page<ReservationCard> getCarReservationCards(long ownerId, long carId, int page, int pageSize, String statusFilter);
 
     /** Reservations in {@code pending}, {@code accepted}, or {@code started} for one car. */
-    List<Reservation> findBlockingReservationsByCarId(long carId);
+    List<BlockingReservationProjection> findBlockingReservationsByCarId(long carId);
 
     /**
      * Batch variant of {@link #findBlockingReservationsByCarId(long)} for many cars at once.
      * Returns the same {@code pending}/{@code accepted}/{@code started} status filter, indexed
      * by car id; cars without any blocking reservation are absent from the returned map.
      */
-    Map<Long, List<Reservation>> findBlockingReservationsByCarIds(Collection<Long> carIds);
+    Map<Long, List<BlockingReservationProjection>> findBlockingReservationsByCarIds(Collection<Long> carIds);
 
     /** Same as {@link #findBlockingReservationsByCarId(long)} but excludes one reservation id. */
-    List<Reservation> findBlockingReservationsByCarIdExcluding(long carId, long excludingReservationId);
+    List<BlockingReservationProjection> findBlockingReservationsByCarIdExcluding(
+            long carId, long excludingReservationId);
 
     /** Blocking reservations for {@code carId} whose date range intersects {@code [from, to)} (UTC). */
-    List<Reservation> findBlockingReservationsByCarIdInRange(long carId, OffsetDateTime from, OffsetDateTime to);
+    List<BlockingReservationProjection> findBlockingReservationsByCarIdInRange(
+            long carId, OffsetDateTime from, OffsetDateTime to);
 
     /** Reservations whose pickup {@code start_date} lies in {@code [from, to)} (UTC). */
     List<Reservation> findReminderReservations(OffsetDateTime from, OffsetDateTime to);
 
-    /** Admin-only: paginated list of every reservation in the system as display cards. */
-    Page<ReservationCard> findAllReservationCards(int page, int pageSize);
+    /** Admin-only: paginated list of every reservation in the system as display cards (filters/sort applied). */
+    Page<ReservationCard> findAllReservationCards(ReservationSearchCriteria criteria);
 
     /**
      * Identifiers of reservations whose refund-proof deadline has lapsed for {@code ownerUserId}.

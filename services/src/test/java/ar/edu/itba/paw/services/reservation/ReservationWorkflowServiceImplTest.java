@@ -30,6 +30,7 @@ import ar.edu.itba.paw.services.reservation.ReservationPricingService.Reservatio
 import ar.edu.itba.paw.util.ReservationMailComposer;
 
 import ar.edu.itba.paw.services.car.CarService;
+import ar.edu.itba.paw.services.user.UserReadinessService;
 import ar.edu.itba.paw.services.user.UserService;
 /**
  * Behavioural coverage for {@link ReservationWorkflowServiceImpl}. The end-to-end car-based
@@ -67,6 +68,9 @@ class ReservationWorkflowServiceImplTest {
     private UserService userService;
 
     @Mock
+    private UserReadinessService userReadinessService;
+
+    @Mock
     private CarService carService;
 
     @Mock
@@ -101,6 +105,62 @@ class ReservationWorkflowServiceImplTest {
                 () -> workflowService.submitRiderReservationByCar(
                         riderId, carId, 99L, "2030-06-01T10:00", "2030-06-02T18:00"));
         Assertions.assertEquals(MessageKeys.RESERVATION_OWNER_BLOCKED, thrown.getMessageCode());
+    }
+
+    @Test
+    void testSubmitRiderReservationByCarThrowsWhenRiderIsBlocked() {
+        // 1. Arrange
+        final long carId = 1L;
+        final long riderId = 20L;
+        final long ownerId = 10L;
+        final User owner = User.identities(ownerId, "owner@test.com", "Owner", "Test");
+        final User blockedRider = User.builder()
+                .id(riderId).email("rider@test.com").forename("Rider").surname("Test")
+                .blocked(true)
+                .build();
+        final Car car = Car.builder()
+                .id(carId)
+                .owner(owner)
+                .plate("ABC123")
+                .powertrain(Car.Powertrain.GASOLINE)
+                .transmission(Car.Transmission.MANUAL)
+                .minimumRentalDays(1)
+                .status(Car.Status.ACTIVE)
+                .build();
+        Mockito.when(carService.getCarById(carId)).thenReturn(Optional.of(car));
+        Mockito.when(userService.getUserById(riderId)).thenReturn(Optional.of(blockedRider));
+
+        // 2. Act
+        final RiderReservationException thrown = Assertions.assertThrows(
+                RiderReservationException.class,
+                () -> workflowService.submitRiderReservationByCar(
+                        riderId, carId, 99L, "2030-06-01T10:00", "2030-06-02T18:00"));
+
+        // 3. Assert — blocked riders cannot create new reservations (in-progress ones stay).
+        Assertions.assertEquals(MessageKeys.RESERVATION_RIDER_BLOCKED, thrown.getMessageCode());
+    }
+
+    @Test
+    void testSubmitRiderReservationByCarThrowsWhenCarIsNotActive() {
+        final long carId = 1L;
+        final long riderId = 20L;
+        final long ownerId = 10L;
+        final User owner = User.identities(ownerId, "owner@test.com", "Owner", "Test");
+        final Car pausedCar = Car.builder()
+                .id(carId)
+                .owner(owner)
+                .plate("ABC123")
+                .powertrain(Car.Powertrain.GASOLINE)
+                .transmission(Car.Transmission.MANUAL)
+                .status(Car.Status.PAUSED)
+                .build();
+        Mockito.when(carService.getCarById(carId)).thenReturn(Optional.of(pausedCar));
+
+        final RiderReservationException thrown = Assertions.assertThrows(
+                RiderReservationException.class,
+                () -> workflowService.submitRiderReservationByCar(
+                        riderId, carId, 99L, "2030-06-01T10:00", "2030-06-02T18:00"));
+        Assertions.assertEquals(MessageKeys.RESERVATION_CAR_NOT_ACTIVE, thrown.getMessageCode());
     }
 
     @Test
@@ -219,7 +279,7 @@ class ReservationWorkflowServiceImplTest {
         Mockito.when(userService.getUserById(riderId)).thenReturn(Optional.of(rider));
         Mockito.doNothing().when(pricingService).validateRiderReservationPricingInterval(
                 Mockito.eq(carId), Mockito.eq(availabilityId), Mockito.any(), Mockito.any(), Mockito.eq(1));
-        Mockito.when(userService.hasUploadedLicenseAndIdentity(rider)).thenReturn(true);
+        Mockito.when(userReadinessService.hasUploadedLicenseAndIdentity(rider)).thenReturn(true);
         Mockito.when(userService.getUserCbu(ownerId)).thenReturn("12345678901234567890123");
         Mockito.when(pricingService.getConfiguredPaymentProofDeadlineHours()).thenReturn(24);
         Mockito.when(reservationService.hasActiveOverlapByCar(

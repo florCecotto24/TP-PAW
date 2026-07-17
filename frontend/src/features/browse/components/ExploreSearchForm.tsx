@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { SearchWithFilters } from '../../../components/ryden';
@@ -30,6 +30,8 @@ export interface ExploreSearchFormProps {
 }
 
 type MultiFilters = Record<string, string[]>;
+
+const EMPTY_INITIAL: SearchFilters = {};
 
 function toMulti(filters: SearchFilters): MultiFilters {
   const out: MultiFilters = {};
@@ -70,7 +72,7 @@ export default function ExploreSearchForm({
   actionPath = paths.search,
   allowFlexibleSearch = true,
   clearFiltersHref = paths.search,
-  initial = {},
+  initial = EMPTY_INITIAL,
   onApply,
 }: ExploreSearchFormProps) {
   const { t } = useTranslation();
@@ -91,6 +93,22 @@ export default function ExploreSearchForm({
   const [flexDays, setFlexDays] = useState(
     initial.flexDays != null ? String(initial.flexDays) : '',
   );
+
+  // Keep draft fields aligned with URL/applied filters (back/forward, parent updates).
+  const initialKey = JSON.stringify(initial);
+  useEffect(() => {
+    setQuery(initial.q ?? '');
+    setFrom(initial.from ?? '');
+    setUntil(initial.until ?? '');
+    setPriceMin(initial.priceMin != null ? String(initial.priceMin) : '');
+    setPriceMax(initial.priceMax != null ? String(initial.priceMax) : '');
+    setSelectedFilters(toMulti(initial));
+    setNeighborhoodIds(initial.neighborhoodId != null ? [initial.neighborhoodId] : []);
+    setFlexible(Boolean(initial.flexible));
+    setFlexMonth(initial.flexMonth ?? '');
+    setFlexDays(initial.flexDays != null ? String(initial.flexDays) : '');
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sync when URL/applied filters change
+  }, [initialKey]);
 
   const onFromChange = useCallback((v: string) => setFrom(v), []);
   const onUntilChange = useCallback((v: string) => setUntil(v), []);

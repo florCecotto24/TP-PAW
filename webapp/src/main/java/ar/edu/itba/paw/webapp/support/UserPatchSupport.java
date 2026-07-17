@@ -2,11 +2,17 @@ package ar.edu.itba.paw.webapp.support;
 
 import java.time.LocalDate;
 
+import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.core.UriInfo;
+
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
+import ar.edu.itba.paw.exception.MessageKeys;
+import ar.edu.itba.paw.exception.user.UserNotFoundException;
 import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.models.dto.profile.UserPatchCommand;
 import ar.edu.itba.paw.services.user.PasswordResetService;
@@ -18,8 +24,8 @@ import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 
 /**
- * Maps {@link UserPatchForm} to {@link UserPatchCommand} and applies password OTP / self-change
- * branches so {@code UserController} stays load → authorize → service → response.
+ * Maps {@link UserPatchForm} to {@link UserPatchCommand} and applies password OTP / profile / admin
+ * branches so {@code UserController} only routes the PATCH.
  */
 @Component
 public final class UserPatchSupport {
@@ -28,16 +34,58 @@ public final class UserPatchSupport {
     private final PasswordResetService passwordResetService;
     private final FormValidationSupport formValidationSupport;
     private final UserResourceAccess userResourceAccess;
+    private final UserRepresentationSupport userRepresentationSupport;
+    private final CurrentUserResolver currentUserResolver;
 
     public UserPatchSupport(
             final UserService userService,
             final PasswordResetService passwordResetService,
             final FormValidationSupport formValidationSupport,
-            final UserResourceAccess userResourceAccess) {
+            final UserResourceAccess userResourceAccess,
+            final UserRepresentationSupport userRepresentationSupport,
+            final CurrentUserResolver currentUserResolver) {
         this.userService = userService;
         this.passwordResetService = passwordResetService;
         this.formValidationSupport = formValidationSupport;
         this.userResourceAccess = userResourceAccess;
+        this.userRepresentationSupport = userRepresentationSupport;
+        this.currentUserResolver = currentUserResolver;
+    }
+
+    public Response apply(
+            final long userId,
+            final UserPatchForm patch,
+            final RydenUserDetails viewer,
+            final UriInfo uriInfo,
+            final HttpHeaders httpHeaders) {
+        final User user = userService.getUserById(userId)
+                .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
+        final UserPatchCommand command = toPatchCommand(patch);
+        final boolean passwordResetOtpPatch = isPasswordResetOtpPatch();
+        assertPasswordResetOtpPatchAllowed(patch, command);
+
+        // Authorize profile/admin fields before any mutation so a password+admin body cannot
+        // commit the password and then 403 on the admin facet.
+        if (!passwordResetOtpPatch && (command.hasProfileFields() || command.hasAdminFields())) {
+            final long actingUserId = viewer != null
+                    ? viewer.getUserId()
+                    : currentUserResolver.requireUserId();
+            userService.assertCanPatchUser(userId, command, actingUserId);
+        }
+
+        if (passwordResetOtpPatch || patch.getPassword() != null) {
+            applyPasswordPatch(user, patch, viewer);
+        }
+        if (!passwordResetOtpPatch && (command.hasProfileFields() || command.hasAdminFields())) {
+            final long actingUserId = viewer != null
+                    ? viewer.getUserId()
+                    : currentUserResolver.requireUserId();
+            userService.patchUser(userId, command, actingUserId);
+        }
+
+        final User updated = userService.getUserById(userId)
+                .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
+        return userRepresentationSupport.buildUserResponse(updated, uriInfo, viewer, httpHeaders);
     }
 
     public UserPatchCommand toPatchCommand(final UserPatchForm patch) {
@@ -76,6 +124,21 @@ public final class UserPatchSupport {
             builder.licenseValidated(patch.getLicenseValidated());
         }
         return builder.build();
+    }
+
+    public boolean isPasswordResetOtpPatch() {
+        return AuthenticationAuthorities.hasPasswordResetOtp(SecurityContextHolder.getContext().getAuthentication());
+    }
+
+    public void assertPasswordResetOtpPatchAllowed(
+            final UserPatchForm patch,
+            final UserPatchCommand command) {
+        if (!isPasswordResetOtpPatch()) {
+            return;
+        }
+        if (command.hasProfileFields() || command.hasAdminFields() || patch.getCurrentPassword() != null) {
+            throw new AccessDeniedException("Password reset credentials can only change the password.");
+        }
     }
 
     public void applyPasswordPatch(

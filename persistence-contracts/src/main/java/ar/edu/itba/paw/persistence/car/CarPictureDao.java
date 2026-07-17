@@ -35,6 +35,12 @@ public interface CarPictureDao {
     boolean isStoredFileInCarGallery(final long storedFileId);
 
     /**
+     * Car ids whose gallery rows reference {@code imageId}.
+     * Scalar id projection only — does not load {@code CarPicture} rows or image/video blobs.
+     */
+    List<Long> findCarIdsByImageId(final long imageId);
+
+    /**
      * Cover image id (lowest {@code displayOrder} with a non-null {@code imageId}) for each given
      * car. Cars without any picture are absent from the returned map.
      */

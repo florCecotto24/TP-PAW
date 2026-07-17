@@ -42,6 +42,9 @@ class PasswordResetServiceImplTest {
     @Mock
     private UserService userService;
 
+    @Mock
+    private UserLocaleService userLocaleService;
+
     private RecordingEmailService emailService;
     private PasswordResetServiceImpl service;
     private UserValidationPolicy validationPolicy;
@@ -57,6 +60,7 @@ class PasswordResetServiceImplTest {
         service = new PasswordResetServiceImpl(
                 dao, emailService, passwordEncoder, validationPolicy,
                 VerificationCodePolicy.fromValidatedConfiguration(6, 5), userService,
+                userLocaleService,
                 OtpAttemptLimiter.forTests(8, java.time.Duration.ofMinutes(15)));
     }
 
@@ -93,7 +97,7 @@ class PasswordResetServiceImplTest {
         final User user = User.identities(USER_ID, EMAIL, "Ada", "Lovelace");
         Mockito.when(userService.findByEmail(EMAIL)).thenReturn(Optional.of(user));
         Mockito.when(dao.hasActiveCode(Mockito.eq(USER_ID), Mockito.any(Instant.class))).thenReturn(false);
-        Mockito.when(userService.resolveMailLocaleOrElse(USER_ID, Locale.ENGLISH)).thenReturn(new Locale("es"));
+        Mockito.when(userLocaleService.resolveMailLocaleOrElse(USER_ID, Locale.ENGLISH)).thenReturn(new Locale("es"));
 
         // 2.Act
         final boolean result = service.initiatePasswordReset(EMAIL, Locale.ENGLISH);
@@ -114,7 +118,7 @@ class PasswordResetServiceImplTest {
         final User user = User.identities(USER_ID, EMAIL, "Ada", "Lovelace");
         Mockito.when(userService.findByEmail(EMAIL)).thenReturn(Optional.of(user));
         Mockito.when(dao.hasActiveCode(Mockito.eq(USER_ID), Mockito.any(Instant.class))).thenReturn(false);
-        Mockito.when(userService.resolveMailLocaleOrElse(Mockito.eq(USER_ID), Mockito.any(Locale.class)))
+        Mockito.when(userLocaleService.resolveMailLocaleOrElse(Mockito.eq(USER_ID), Mockito.any(Locale.class)))
                 .thenAnswer(invocation -> invocation.getArgument(1));
 
         // 2.Act

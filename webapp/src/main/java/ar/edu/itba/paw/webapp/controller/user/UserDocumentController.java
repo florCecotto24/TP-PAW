@@ -82,7 +82,7 @@ public class UserDocumentController {
         final String contentType = httpHeaders.getMediaType() != null
                 ? httpHeaders.getMediaType().toString()
                 : MediaType.APPLICATION_OCTET_STREAM;
-        userService.uploadValidatedProfileDocument(
+        userService.uploadProfileDocument(
                 id, type, type.name().toLowerCase(Locale.ROOT), contentType, bytes);
         return Response.noContent().build();
     }

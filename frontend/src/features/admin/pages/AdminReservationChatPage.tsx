@@ -11,6 +11,7 @@ import AdminPageHeader from '../components/AdminPageHeader';
 import { paths } from '../../../routes/paths';
 import type { AdminReservationChatLocationState } from '../../../routes/navigationState';
 import { resolveResourceUri } from '../../../api/resourceUri';
+import { profilePictureAssetUrl } from '../../../api/uri';
 import { getReservation } from '../../reservations/api';
 import AdminPagination from '../components/AdminPagination';
 import type { MessageDto } from '../types';
@@ -20,6 +21,7 @@ import { usePagedList } from '../usePagedList';
 type SenderProfile = {
   forename: string;
   surname: string;
+  avatarUrl: string | null;
 };
 
 function messageBody(msg: MessageDto): string {
@@ -91,6 +93,7 @@ export default function AdminReservationChatPage() {
             [uri]: {
               forename: res.data!.forename ?? '',
               surname: res.data!.surname ?? '',
+              avatarUrl: profilePictureAssetUrl(res.data!.links),
             },
           }));
         })
@@ -98,7 +101,7 @@ export default function AdminReservationChatPage() {
           if (!active) return;
           setSenderProfiles((prev) => ({
             ...prev,
-            [uri]: { forename: t('admin.reservationChat.unknownSender'), surname: '' },
+            [uri]: { forename: t('admin.reservationChat.unknownSender'), surname: '', avatarUrl: null },
           }));
         });
     }
@@ -165,14 +168,13 @@ export default function AdminReservationChatPage() {
                 <li key={message.links.self} className="list-group-item">
                   <div className="d-flex gap-3">
                     <Avatar
+                      src={profile?.avatarUrl}
                       forename={profile?.forename}
                       surname={profile?.surname}
-                      className="reservation-chat-widget__avatar rounded-circle flex-shrink-0"
-                      imgClassName="reservation-chat-widget__avatar rounded-circle flex-shrink-0"
-                      placeholderClassName="reservation-chat-widget__avatar reservation-chat-header__avatar--placeholder rounded-circle flex-shrink-0 d-flex align-items-center justify-content-center"
+                      className="reviewer-avatar flex-shrink-0"
+                      imgClassName="reviewer-avatar flex-shrink-0"
                       colored
                       barePhoto
-                      iconFallback
                     />
                     <div className="flex-grow-1 min-w-0">
                       <div className="d-flex flex-wrap justify-content-between gap-2 mb-1">

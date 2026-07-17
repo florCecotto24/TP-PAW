@@ -9,18 +9,9 @@ import type { ReviewDto } from '../browse/types';
 // =============================================================================
 // Capa de acceso a la API para el área PROFILE.
 // -----------------------------------------------------------------------------
-// Se navega por hipervínculos cuando el DTO los trae (user.links.favorites,
-// user.links.identityDocument, etc.) y se cae a paths derivados de la URN del usuario
-// (currentUserUri = "/users/{id}") cuando todavía no tenemos el DTO. Ningún
-// path se "adivina"; se construye a partir de la URN canónica que da el server.
+// Todas las operaciones sobre sub-recursos siguen links tipados del DTO usuario.
+// La URN `self` no autoriza a que el cliente infiera rutas ni ACLs derivadas.
 // =============================================================================
-
-/** Deriva el path de un sub-recurso del usuario a partir de su URN. */
-export function subResource(userUri: string, suffix: string): string {
-  // userUri suele venir como "/users/5" (sin barra final).
-  const base = userUri.endsWith('/') ? userUri.slice(0, -1) : userUri;
-  return `${base}/${suffix}`;
-}
 
 /**
  * GET /users/{id} → UserDto. Por defecto pide la vista PÚBLICA (sirve para perfiles ajenos). Para el
@@ -44,8 +35,7 @@ export async function patchUser(userUri: string, patch: UserPatchDto): Promise<U
 
 /** PUT /users/{id}/profile-picture (raw image/* body). */
 export async function uploadProfilePicture(user: UserDto, file: File): Promise<void> {
-  const self = user.links?.self;
-  const path = user.links?.profilePicture ?? (self ? subResource(self, 'profile-picture') : null);
+  const path = user.links?.profilePicture;
   if (!path) throw new Error('profile.picture.missingLink');
   await sessionClient.request(path, {
     method: 'PUT',
@@ -56,8 +46,7 @@ export async function uploadProfilePicture(user: UserDto, file: File): Promise<v
 
 /** DELETE /users/{id}/profile-picture. */
 export async function deleteProfilePicture(user: UserDto): Promise<void> {
-  const self = user.links?.self;
-  const path = user.links?.profilePicture ?? (self ? subResource(self, 'profile-picture') : null);
+  const path = user.links?.profilePicture;
   if (!path) throw new Error('profile.picture.missingLink');
   await sessionClient.del(path);
 }
@@ -106,8 +95,7 @@ export async function openDocument(user: UserDto, type: DocumentType): Promise<b
 
 /** Path de la colección de favoritos del usuario. */
 export function favoritesPath(user: UserDto): string {
-  const self = user.links?.self;
-  const path = user.links?.favorites ?? (self ? subResource(self, 'favorites') : null);
+  const path = user.links?.favorites;
   if (!path) throw new Error('profile.favorites.missingLink');
   return path;
 }

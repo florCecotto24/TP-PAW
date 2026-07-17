@@ -21,7 +21,7 @@ public final class RestCarSortMapper {
             case "price_desc" -> "price,desc";
             case "rating_desc" -> "rating,desc";
             case "recent" -> "date,desc";
-            case "name" -> "date,desc";
+            case "name" -> "name,asc";
             default -> MyHubSortSanitizer.sanitize(restSort, DEFAULT_SORT);
         };
     }

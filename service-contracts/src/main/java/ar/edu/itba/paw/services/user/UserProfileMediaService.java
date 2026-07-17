@@ -22,8 +22,8 @@ public interface UserProfileMediaService {
     /** See {@link UserService#clearProfilePicture(long)}. */
     void clearProfilePicture(long userId);
 
-    /** See {@link UserService#uploadValidatedProfileDocument(long, UserDocumentType, String, String, byte[])}. */
-    void uploadValidatedProfileDocument(
+    /** See {@link UserService#uploadProfileDocument(long, UserDocumentType, String, String, byte[])}. */
+    void uploadProfileDocument(
             long userId, UserDocumentType documentType, String originalFilename, String contentType, byte[] data);
 
     /** See {@link UserService#clearProfileDocument(long, UserDocumentType)}. */

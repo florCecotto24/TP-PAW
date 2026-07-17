@@ -22,10 +22,12 @@ import { queryClient } from '../queryClient';
 // =============================================================================
 
 const STORAGE_KEY = 'ryden.session';
+const SESSION_SCHEMA_VERSION = 1;
 
 export type SessionStatus = 'anonymous' | 'authenticating' | 'authenticated' | 'error';
 
 interface PersistedSession {
+  schemaVersion?: number;
   accessToken: string | null;
   refreshToken: string | null;
   currentUserUri: string | null;
@@ -46,8 +48,11 @@ export interface SessionState extends PersistedSession {
 
 function writeStorage(s: PersistedSession): void {
   try {
-    if (s.accessToken && s.refreshToken) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+    if (s.accessToken && s.refreshToken && s.currentUserUri) {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ ...s, schemaVersion: SESSION_SCHEMA_VERSION }),
+      );
     } else {
       localStorage.removeItem(STORAGE_KEY);
     }
@@ -59,7 +64,17 @@ function writeStorage(s: PersistedSession): void {
 function readStorage(): PersistedSession | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as PersistedSession) : null;
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as PersistedSession;
+    if (parsed.schemaVersion !== SESSION_SCHEMA_VERSION) {
+      localStorage.removeItem(STORAGE_KEY);
+      return null;
+    }
+    if (!parsed.accessToken || !parsed.refreshToken || !parsed.currentUserUri) {
+      localStorage.removeItem(STORAGE_KEY);
+      return null;
+    }
+    return parsed;
   } catch {
     return null;
   }
@@ -122,17 +137,17 @@ export const useSessionStore = create<SessionState>((set, get) => {
   // a /ingresar antes de que loadFromStorage (que rehidrata el UserDto) corra en
   // el useEffect de App (race de hidratación).
   const persisted = readStorage();
-  const hasTokens = !!persisted?.accessToken && !!persisted?.refreshToken;
-  const persistedUserUri = hasTokens && persisted?.currentUserUri
-    ? canonicalApiUserPath(persisted.currentUserUri)
+  const hasSession = !!persisted?.accessToken && !!persisted?.refreshToken && !!persisted?.currentUserUri;
+  const persistedUserUri = hasSession
+    ? canonicalApiUserPath(persisted!.currentUserUri!)
     : null;
 
   return {
-  accessToken: hasTokens ? persisted!.accessToken : null,
-  refreshToken: hasTokens ? persisted!.refreshToken : null,
+  accessToken: hasSession ? persisted!.accessToken : null,
+  refreshToken: hasSession ? persisted!.refreshToken : null,
   currentUserUri: persistedUserUri,
   currentUser: null,
-  status: hasTokens ? 'authenticated' : 'anonymous',
+  status: hasSession ? 'authenticated' : 'anonymous',
   error: null,
 
   applyTokens: (access, refresh) => {
@@ -188,12 +203,10 @@ export const useSessionStore = create<SessionState>((set, get) => {
 
   loadFromStorage: () => {
     const persisted = readStorage();
-    if (!persisted?.accessToken || !persisted.refreshToken) {
+    if (!persisted?.accessToken || !persisted.refreshToken || !persisted.currentUserUri) {
       return;
     }
-    const persistedUserUri = persisted.currentUserUri
-      ? canonicalApiUserPath(persisted.currentUserUri)
-      : null;
+    const persistedUserUri = canonicalApiUserPath(persisted.currentUserUri);
     set({
       accessToken: persisted.accessToken,
       refreshToken: persisted.refreshToken,

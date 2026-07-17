@@ -13,12 +13,17 @@ interface AdminPaginationProps {
  * Controles de paginación URL-driven. La disponibilidad de prev/next se decide
  * por los rels del header `Link` (RFC 5988) que vinieron en la respuesta; al
  * clickear se navega por número de página (la pantalla lo persiste en `?page=N`).
+ * Como en el carousel: solo se renderiza el botón del lado hacia el que se puede avanzar.
  */
 export default function AdminPagination({ page, currentPage, onPageChange }: AdminPaginationProps) {
   const { t } = useTranslation();
-  if (!page.prev && !page.next && page.total == null) {
+  const showPrev = Boolean(page.prev);
+  const showNext = Boolean(page.next);
+
+  if (!showPrev && !showNext && page.total == null) {
     return null;
   }
+
   return (
     <nav
       className="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-3"
@@ -29,24 +34,28 @@ export default function AdminPagination({ page, currentPage, onPageChange }: Adm
       ) : (
         <span />
       )}
-      <div className="btn-group">
-        <button
-          type="button"
-          className="btn btn-outline-secondary btn-sm"
-          disabled={!page.prev}
-          onClick={() => onPageChange(Math.max(0, currentPage - 1))}
-        >
-          {t('admin.common.prev')}
-        </button>
-        <button
-          type="button"
-          className="btn btn-outline-secondary btn-sm"
-          disabled={!page.next}
-          onClick={() => onPageChange(currentPage + 1)}
-        >
-          {t('admin.common.next')}
-        </button>
-      </div>
+      {(showPrev || showNext) && (
+        <div className="d-flex align-items-center gap-2">
+          {showPrev && (
+            <button
+              type="button"
+              className="btn btn-outline-secondary btn-sm"
+              onClick={() => onPageChange(Math.max(0, currentPage - 1))}
+            >
+              {t('admin.common.prev')}
+            </button>
+          )}
+          {showNext && (
+            <button
+              type="button"
+              className="btn btn-outline-secondary btn-sm"
+              onClick={() => onPageChange(currentPage + 1)}
+            >
+              {t('admin.common.next')}
+            </button>
+          )}
+        </div>
+      )}
     </nav>
   );
 }

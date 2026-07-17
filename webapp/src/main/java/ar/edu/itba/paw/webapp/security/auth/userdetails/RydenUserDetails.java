@@ -17,6 +17,7 @@ public final class RydenUserDetails implements UserDetails {
     private final String encodedPassword;
     private final Collection<? extends GrantedAuthority> authorities;
     private final Long roleAssignedBy;
+    private final int passwordVersion;
 
     public RydenUserDetails(
             final long userId,
@@ -25,7 +26,8 @@ public final class RydenUserDetails implements UserDetails {
             final String surname,
             final String encodedPassword,
             final Collection<? extends GrantedAuthority> authorities,
-            final Long roleAssignedBy) {
+            final Long roleAssignedBy,
+            final int passwordVersion) {
         this.userId = userId;
         this.email = email;
         this.forename = forename;
@@ -33,6 +35,7 @@ public final class RydenUserDetails implements UserDetails {
         this.encodedPassword = encodedPassword;
         this.authorities = authorities;
         this.roleAssignedBy = roleAssignedBy;
+        this.passwordVersion = passwordVersion;
     }
 
     /**
@@ -51,6 +54,7 @@ public final class RydenUserDetails implements UserDetails {
         private String encodedPassword;
         private Collection<? extends GrantedAuthority> authorities;
         private Long roleAssignedBy;
+        private int passwordVersion;
 
         public Builder userId(final long userId) {
             this.userId = userId;
@@ -87,10 +91,16 @@ public final class RydenUserDetails implements UserDetails {
             return this;
         }
 
+        public Builder passwordVersion(final int passwordVersion) {
+            this.passwordVersion = passwordVersion;
+            return this;
+        }
+
         public RydenUserDetails build() {
             Objects.requireNonNull(email, "email");
             Objects.requireNonNull(authorities, "authorities");
-            return new RydenUserDetails(userId, email, forename, surname, encodedPassword, authorities, roleAssignedBy);
+            return new RydenUserDetails(
+                    userId, email, forename, surname, encodedPassword, authorities, roleAssignedBy, passwordVersion);
         }
     }
 
@@ -104,6 +114,10 @@ public final class RydenUserDetails implements UserDetails {
 
     public String getSurname() {
         return surname;
+    }
+
+    public int getPasswordVersion() {
+        return passwordVersion;
     }
 
     @Override

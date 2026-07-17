@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.models.domain.reservation.Reservation;
 import ar.edu.itba.paw.models.dto.Page;
+import ar.edu.itba.paw.models.dto.reservation.BlockingReservationProjection;
 import ar.edu.itba.paw.models.dto.reservation.ReservationCard;
 import ar.edu.itba.paw.models.util.search.ReservationSearchCriteria;
 
@@ -159,27 +160,27 @@ public class ReservationQueryServiceImpl implements ReservationQueryService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<Reservation> findBlockingReservationsByCarId(final long carId) {
+    public List<BlockingReservationProjection> findBlockingReservationsByCarId(final long carId) {
         return reservationService.findBlockingReservationsByCarId(carId);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Map<Long, List<Reservation>> findBlockingReservationsByCarIds(
+    public Map<Long, List<BlockingReservationProjection>> findBlockingReservationsByCarIds(
             final Collection<Long> carIds) {
         return reservationService.findBlockingReservationsByCarIds(carIds);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<Reservation> findBlockingReservationsByCarIdExcluding(
+    public List<BlockingReservationProjection> findBlockingReservationsByCarIdExcluding(
             final long carId, final long excludingReservationId) {
         return reservationService.findBlockingReservationsByCarIdExcluding(carId, excludingReservationId);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<Reservation> findBlockingReservationsByCarIdInRange(
+    public List<BlockingReservationProjection> findBlockingReservationsByCarIdInRange(
             final long carId, final OffsetDateTime from, final OffsetDateTime to) {
         return reservationService.findBlockingReservationsByCarIdInRange(carId, from, to);
     }
@@ -192,8 +193,8 @@ public class ReservationQueryServiceImpl implements ReservationQueryService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ReservationCard> findAllReservationCards(final int page, final int pageSize) {
-        return reservationService.findAllReservationCards(page, pageSize);
+    public Page<ReservationCard> findAllReservationCards(final ReservationSearchCriteria criteria) {
+        return reservationService.findAllReservationCards(criteria);
     }
 
     @Override

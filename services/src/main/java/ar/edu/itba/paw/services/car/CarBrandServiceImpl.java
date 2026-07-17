@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -61,7 +62,12 @@ public class CarBrandServiceImpl implements CarBrandService {
         if (existing.isPresent()) {
             return existing;
         }
-        return Optional.of(carBrandDao.create(normalized, false));
+        try {
+            return Optional.of(carBrandDao.create(normalized, false));
+        } catch (final DataIntegrityViolationException ex) {
+            // Concurrent publish created the same unvalidated brand name (V45 unique).
+            return carBrandDao.findByNameIgnoreCase(normalized);
+        }
     }
 
     @Override

@@ -12,7 +12,7 @@ public final class CarLinks {
     private CarLinks() {
     }
 
-    public static CarBuilder car(final long carId, final long ownerId, final UriInfo uriInfo) {
+    public static CarBuilder car(final long carId, final Long ownerId, final UriInfo uriInfo) {
         return new CarBuilder(carId, ownerId, uriInfo);
     }
 
@@ -28,9 +28,10 @@ public final class CarLinks {
 
     /** Browse/favorites card projection: always exposes {@code links.cover} (primary gallery bytes). */
     public static LinksDto forCarCard(final CarCard card, final UriInfo uriInfo) {
+        final Long ownerId = card.getOwnerId();
         return car(
                 card.getCarId(),
-                card.getOwnerId() != null ? card.getOwnerId() : 0L,
+                ownerId != null && ownerId > 0 ? ownerId : null,
                 uriInfo)
                 .includeCoverLink()
                 .build();
@@ -39,14 +40,14 @@ public final class CarLinks {
     public static final class CarBuilder {
 
         private final long carId;
-        private final long ownerId;
+        private final Long ownerId;
         private final UriInfo uriInfo;
         private Long modelId;
         private Long brandId;
         private Long coverImageId;
         private boolean includeCoverLink;
 
-        private CarBuilder(final long carId, final long ownerId, final UriInfo uriInfo) {
+        private CarBuilder(final long carId, final Long ownerId, final UriInfo uriInfo) {
             this.carId = carId;
             this.ownerId = ownerId;
             this.uriInfo = uriInfo;
@@ -74,14 +75,22 @@ public final class CarLinks {
         }
 
         public LinksDto build() {
-            LinksDto links = LinksDto.ofSelf(RestUriUtils.carUri(uriInfo, carId).toString())
-                    .withRelated("owner", RestUriUtils.userUri(uriInfo, ownerId).toString())
+            LinksDto links = LinksDto.ofSelf(RestUriUtils.carUri(uriInfo, carId).toString());
+            if (ownerId != null && ownerId > 0) {
+                links = links.withRelated("owner", RestUriUtils.userUri(uriInfo, ownerId).toString());
+            }
+            links = links
                     .withRelated(
                             "model",
                             modelId != null && brandId != null
                                     ? RestUriUtils.modelUri(uriInfo, brandId, modelId).toString()
                                     : null)
                     .withRelated("brand", brandId != null ? RestUriUtils.brandUri(uriInfo, brandId).toString() : null)
+                    .withRelated(
+                            "price-insight",
+                            modelId != null && brandId != null
+                                    ? RestUriUtils.modelPriceInsightUri(uriInfo, brandId, modelId).toString()
+                                    : null)
                     .withRelated("pictures", RestUriUtils.carPicturesUri(uriInfo, carId).toString())
                     .withRelated("availabilities", RestUriUtils.carAvailabilitiesUri(uriInfo, carId).toString())
                     .withRelated("bookable-segments", RestUriUtils.carBookableSegmentsUri(uriInfo, carId).toString())

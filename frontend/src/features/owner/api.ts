@@ -134,13 +134,12 @@ export interface OwnerCarsQuery {
 }
 
 export function fetchOwnerCars(
-  ownerId: string,
+  carsLink: string,
   opts: OwnerCarsQuery = {},
 ): Promise<ApiResponse<CarSummaryDto[]>> {
-  return sessionClient.get<CarSummaryDto[]>(getCollectionPath('cars'), {
+  return sessionClient.get<CarSummaryDto[]>(carsLink, {
     accept: MediaTypes.carSummary,
     query: {
-      ownerId,
       page: opts.page ?? 1,
       pageSize: opts.pageSize ?? 12,
       q: opts.q || undefined,
@@ -201,11 +200,10 @@ export async function publishCar(
 }
 
 export function fetchPriceMarketInsight(
-  modelUri: string,
+  priceInsightLink: string,
   excludeCarId: string,
 ): Promise<ApiResponse<{ minPrice: number; maxPrice: number; averagePrice: number; sampleCount: number } | undefined>> {
-  const base = modelUri.endsWith('/') ? modelUri.slice(0, -1) : modelUri;
-  return sessionClient.get(`${base}/price-insight`, {
+  return sessionClient.follow(priceInsightLink, {
     accept: MediaTypes.priceMarketInsight,
     query: { excludeCarId },
   });
@@ -245,30 +243,54 @@ export function createAvailability(
   });
 }
 
+/** Stable UI key for monthly projections (no `self`) vs persisted rows. */
+export function availabilityIdentity(
+  a: Pick<AvailabilityDto, 'startDate' | 'endDate' | 'kind' | 'links'>,
+): string {
+  if (a.links.self) return a.links.self;
+  return `${a.kind}:${a.startDate}:${a.endDate}`;
+}
+
 export async function updateAvailability(
   availability: AvailabilityDto,
   car: CarDto,
   body: AvailabilityCreateDto,
 ): Promise<ApiResponse<AvailabilityDto>> {
   const self = availability.links.self;
-  // Bookable segments use collection DELETE with from/until query params (no {availabilityId}).
-  if (self.includes('from=') && self.includes('until=')) {
-    await deleteAvailability(availability);
-    return createAvailability(car, body);
+  // Persisted resource: PATCH by self. Monthly projection (no self): replace via collection DELETE+POST.
+  if (self && !self.includes('from=') && !self.includes('until=')) {
+    return sessionClient.patch<AvailabilityDto>(self, body, {
+      accept: MediaTypes.availability,
+      contentType: MediaTypes.availability,
+    });
   }
-  return sessionClient.patch<AvailabilityDto>(self, body, {
-    accept: MediaTypes.availability,
-    contentType: MediaTypes.availability,
-  });
+  await deleteAvailability(car, availability);
+  return createAvailability(car, body);
 }
 
-export function deleteAvailability(availability: AvailabilityDto): Promise<ApiResponse<unknown>> {
-  return sessionClient.del(availability.links.self, { accept: MediaTypes.availability });
+export function deleteAvailability(
+  car: CarDto,
+  availability: AvailabilityDto,
+): Promise<ApiResponse<unknown>> {
+  const self = availability.links.self;
+  if (self && !self.includes('from=') && !self.includes('until=')) {
+    return sessionClient.del(self, { accept: MediaTypes.availability });
+  }
+  const collection = car.links.availabilities;
+  if (!collection) {
+    throw new Error('owner.availability.missingCollectionLink');
+  }
+  return sessionClient.del(collection, {
+    accept: MediaTypes.availability,
+    query: { from: availability.startDate, until: availability.endDate },
+  });
 }
 
 // ---- Gallery (sub-recurso débil) ----
 export async function fetchPictures(car: CarDto): Promise<ApiResponse<PictureDto[]>> {
-  const res = await followAllPages<PictureDto>(sessionClient, car.links.pictures, {
+  const pictures = car.links.pictures;
+  if (!pictures) throw new Error('owner.pictures.missingLink');
+  const res = await followAllPages<PictureDto>(sessionClient, pictures, {
     accept: MediaTypes.picture,
   });
   return {
@@ -281,6 +303,8 @@ export async function addPicture(
   car: CarDto,
   file: File,
 ): Promise<ApiResponse<unknown>> {
+  const pictures = car.links.pictures;
+  if (!pictures) throw new Error('owner.pictures.missingLink');
   const parts = [
     {
       name: 'file',
@@ -290,7 +314,7 @@ export async function addPicture(
     },
   ];
   const { body, contentType } = await encodeMultipart(parts);
-  return sessionClient.request(car.links.pictures, {
+  return sessionClient.request(pictures, {
     method: 'POST',
     accept: MediaTypes.picture,
     body,
@@ -299,23 +323,31 @@ export async function addPicture(
 }
 
 export function deletePicture(picture: PictureDto): Promise<ApiResponse<unknown>> {
-  return sessionClient.del(picture.links.self, { accept: MediaTypes.picture });
+  const self = picture.links.self;
+  if (!self) throw new Error('owner.pictures.missingSelfLink');
+  return sessionClient.del(self, { accept: MediaTypes.picture });
 }
 
 // ---- Insurance (binario, octet-stream, PUT) ----
 export function uploadInsurance(car: CarDto, file: File): Promise<ApiResponse<unknown>> {
-  return sessionClient.put(car.links.insurance, file, {
+  const insurance = car.links.insurance;
+  if (!insurance) throw new Error('owner.insurance.missingLink');
+  return sessionClient.put(insurance, file, {
     contentType: file.type || 'application/octet-stream',
     extraHeaders: file.name ? { 'X-Ryden-Filename': file.name } : undefined,
   });
 }
 
 export async function openInsurance(car: CarDto): Promise<boolean> {
-  return openAuthenticatedBinary(car.links.insurance);
+  const insurance = car.links.insurance;
+  if (!insurance) throw new Error('owner.insurance.missingLink');
+  return openAuthenticatedBinary(insurance);
 }
 
 export function deleteInsurance(car: CarDto): Promise<ApiResponse<unknown>> {
-  return sessionClient.del(car.links.insurance);
+  const insurance = car.links.insurance;
+  if (!insurance) throw new Error('owner.insurance.missingLink');
+  return sessionClient.del(insurance);
 }
 
 // ---- Neighborhoods (catálogo para el select de disponibilidad) ----

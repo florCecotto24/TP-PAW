@@ -1,7 +1,10 @@
 package ar.edu.itba.paw.webapp.support;
 
+import java.util.List;
+
 import org.springframework.stereotype.Component;
 
+import ar.edu.itba.paw.dto.GalleryMediaUpload;
 import ar.edu.itba.paw.dto.PublishCarRequest;
 import ar.edu.itba.paw.exception.car.CarModelNotFoundException;
 import ar.edu.itba.paw.models.domain.car.Car;
@@ -32,6 +35,28 @@ public final class CarCreateRequestSupport {
                 .transmission(CarRestEnums.parseTransmission(form.getTransmission()))
                 .description(form.getDescription())
                 .minimumRentalDays(form.getMinimumRentalDays())
+                .build();
+    }
+
+    public PublishCarRequest toPublishRequest(
+            final CarCreateForm form,
+            final List<GalleryMediaUpload> galleryUploads,
+            final String insuranceFilename,
+            final String insuranceContentType,
+            final byte[] insuranceBytes) {
+        final PublishCarRequest base = toPublishRequest(form);
+        return PublishCarRequest.builder()
+                .brand(base.getBrand())
+                .model(base.getModel())
+                .type(base.getType())
+                .plate(base.getPlate())
+                .year(base.getYear())
+                .powertrain(base.getPowertrain())
+                .transmission(base.getTransmission())
+                .description(base.getDescription())
+                .minimumRentalDays(base.getMinimumRentalDays())
+                .galleryUploads(galleryUploads)
+                .insurance(insuranceFilename, insuranceContentType, insuranceBytes)
                 .build();
     }
 

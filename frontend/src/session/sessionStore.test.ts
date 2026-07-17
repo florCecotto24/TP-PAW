@@ -104,6 +104,7 @@ describe('sessionStore', () => {
     expect(String(fetchMock.mock.calls[1][0])).toContain('/users/42');
 
     const persisted = JSON.parse(localStorage.getItem('ryden.session') ?? '{}');
+    expect(persisted.schemaVersion).toBe(1);
     expect(persisted.accessToken).toBe('access-1');
     expect(String(persisted.currentUserUri)).toContain('/users/42');
   });
@@ -173,7 +174,7 @@ describe('sessionStore', () => {
     // 1.Arrange
     localStorage.setItem(
       'ryden.session',
-      JSON.stringify({ accessToken: 'a', refreshToken: 'r', currentUserUri: '/users/7' }),
+      JSON.stringify({ schemaVersion: 1, accessToken: 'a', refreshToken: 'r', currentUserUri: '/users/7' }),
     );
 
     // 2.Act
@@ -252,4 +253,21 @@ describe('sessionStore', () => {
     expect(JSON.parse(String(init.body))).toEqual({ latestLocale: 'en' });
     expect(useSessionStore.getState().currentUser?.latestLocale).toBe('en');
   });
+  it('testLoadFromStorageRejectsTokensWithoutUserUri', () => {
+    // 1.Arrange
+    localStorage.setItem(
+      'ryden.session',
+      JSON.stringify({ schemaVersion: 1, accessToken: 'a', refreshToken: 'r', currentUserUri: null }),
+    );
+
+    // 2.Act
+    useSessionStore.getState().loadFromStorage();
+
+    // 3.Assert
+    const state = useSessionStore.getState();
+    expect(state.accessToken).toBeNull();
+    expect(state.status).toBe('anonymous');
+    expect(localStorage.getItem('ryden.session')).toBeNull();
+  });
+
 });

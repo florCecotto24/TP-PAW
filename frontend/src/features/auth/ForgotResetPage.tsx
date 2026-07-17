@@ -3,7 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Alert, Button, Form } from 'react-bootstrap';
 import { sessionClient, useSessionStore } from '../../session/sessionStore';
+import { useApiDiscoveryStore } from '../../api/apiDiscovery';
 import { MediaTypes } from '../../api/mediaTypes';
+import { hrefToRelativeApiPath } from '../../api/uri';
 import { paths } from '../../routes/paths';
 import type { ForgotStep, PasswordResetCodeRequest, PasswordResetPatch } from './types';
 import { apiErrorMessage } from './errorMessage';
@@ -50,7 +52,11 @@ export default function ForgotResetPage() {
     const body: PasswordResetCodeRequest = { email: email.trim() };
     setSubmitting(true);
     try {
-      await sessionClient.post('/credentials', body, {
+      const credentialsLink = useApiDiscoveryStore.getState().index?.links?.credentials;
+      const credentialsPath = credentialsLink
+        ? hrefToRelativeApiPath(credentialsLink)
+        : '/credentials';
+      await sessionClient.post(credentialsPath, body, {
         contentType: MediaTypes.credential,
         anonymous: true,
       });

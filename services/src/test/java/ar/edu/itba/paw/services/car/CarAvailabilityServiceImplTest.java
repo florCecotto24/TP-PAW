@@ -22,6 +22,7 @@ import ar.edu.itba.paw.models.domain.car.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.models.domain.car.CarAvailability;
 import ar.edu.itba.paw.models.domain.reservation.Reservation;
+import ar.edu.itba.paw.models.dto.reservation.BlockingReservationProjection;
 import ar.edu.itba.paw.persistence.car.CarAvailabilityDao;
 import ar.edu.itba.paw.policy.CarAvailabilityPolicy;
 import ar.edu.itba.paw.policy.ReservationTimingPolicy;
@@ -81,6 +82,12 @@ public class CarAvailabilityServiceImplTest {
                 .build();
     }
 
+    private static BlockingReservationProjection blockingReservation(
+            final long id, final OffsetDateTime startDate, final OffsetDateTime endDate) {
+        return new BlockingReservationProjection(
+                id, CAR_ID, startDate, endDate, Reservation.Status.ACCEPTED);
+    }
+
     @Test
     public void testFindByCarIdReturnsListFromDao() {
         final CarAvailability a = buildAvailability(1L, CAR_ID,
@@ -126,12 +133,10 @@ public class CarAvailabilityServiceImplTest {
     @Test
     public void testFindReservationBlockedWallRangesByCarMapsActiveReservationsToWallRanges() {
         // 1. Arrange — two future-active reservations on the same car.
-        final Reservation r1 = Mockito.mock(Reservation.class);
-        Mockito.when(r1.getStartDate()).thenReturn(OffsetDateTime.parse("2099-06-05T10:00:00Z"));
-        Mockito.when(r1.getEndDate()).thenReturn(OffsetDateTime.parse("2099-06-07T18:00:00Z"));
-        final Reservation r2 = Mockito.mock(Reservation.class);
-        Mockito.when(r2.getStartDate()).thenReturn(OffsetDateTime.parse("2099-07-10T10:00:00Z"));
-        Mockito.when(r2.getEndDate()).thenReturn(OffsetDateTime.parse("2099-07-12T18:00:00Z"));
+        final BlockingReservationProjection r1 = blockingReservation(
+                1L, OffsetDateTime.parse("2099-06-05T10:00:00Z"), OffsetDateTime.parse("2099-06-07T18:00:00Z"));
+        final BlockingReservationProjection r2 = blockingReservation(
+                2L, OffsetDateTime.parse("2099-07-10T10:00:00Z"), OffsetDateTime.parse("2099-07-12T18:00:00Z"));
         Mockito.when(reservationService.findBlockingReservationsByCarId(CAR_ID))
                 .thenReturn(List.of(r1, r2));
 
@@ -153,12 +158,9 @@ public class CarAvailabilityServiceImplTest {
         // The past one cannot block a new publication, so it must be filtered out.
         final OffsetDateTime longAgoStart = OffsetDateTime.parse("2000-01-01T10:00:00Z");
         final OffsetDateTime longAgoEnd = OffsetDateTime.parse("2000-01-02T18:00:00Z");
-        final Reservation past = Mockito.mock(Reservation.class);
-        Mockito.when(past.getStartDate()).thenReturn(longAgoStart);
-        Mockito.when(past.getEndDate()).thenReturn(longAgoEnd);
-        final Reservation future = Mockito.mock(Reservation.class);
-        Mockito.when(future.getStartDate()).thenReturn(OffsetDateTime.parse("2099-08-01T10:00:00Z"));
-        Mockito.when(future.getEndDate()).thenReturn(OffsetDateTime.parse("2099-08-05T18:00:00Z"));
+        final BlockingReservationProjection past = blockingReservation(1L, longAgoStart, longAgoEnd);
+        final BlockingReservationProjection future = blockingReservation(
+                2L, OffsetDateTime.parse("2099-08-01T10:00:00Z"), OffsetDateTime.parse("2099-08-05T18:00:00Z"));
         Mockito.when(reservationService.findBlockingReservationsByCarId(CAR_ID))
                 .thenReturn(List.of(past, future));
 

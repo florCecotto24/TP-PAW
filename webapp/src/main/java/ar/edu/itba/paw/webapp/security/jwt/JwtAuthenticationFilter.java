@@ -31,6 +31,7 @@ import ar.edu.itba.paw.services.user.UserService;
 import ar.edu.itba.paw.webapp.api.common.VndMediaType;
 import ar.edu.itba.paw.webapp.security.auth.RydenAuthorities;
 import ar.edu.itba.paw.webapp.security.auth.exception.EmailNotValidatedException;
+import ar.edu.itba.paw.webapp.security.auth.exception.InvalidVerificationCodeAuthenticationException;
 import ar.edu.itba.paw.webapp.security.auth.exception.LegacyPasswordMailedException;
 import ar.edu.itba.paw.webapp.security.auth.exception.OtpRateLimitedAuthenticationException;
 import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
@@ -39,8 +40,11 @@ import ar.edu.itba.paw.webapp.security.auth.userdetails.UserRoleAuthorities;
 /**
  * Resolves authentication from {@code Authorization: Basic} (login) or {@code Bearer} (access/refresh).
  * A refresh token authenticates the request and rotates the token pair into response headers.
- * Refresh always reloads the user and roles from the database so revoked accounts and role changes
- * take effect on the next rotation (JWT claims alone are not authoritative for refresh).
+ * Refresh always reloads the user and roles from the database so revoked accounts, role changes,
+ * password changes (credentials epoch), and unverified emails take effect on the next rotation
+ * (JWT claims alone are not authoritative for refresh). Normal access tokens also reload roles from
+ * the database on each request (same credentials-epoch / email-validation gates) so admin demotions
+ * apply immediately; password-reset OTP access keeps JWT authorities because that grant is not a DB role.
  */
 public final class JwtAuthenticationFilter extends OncePerRequestFilter {
 
@@ -107,7 +111,13 @@ public final class JwtAuthenticationFilter extends OncePerRequestFilter {
                     new UsernamePasswordAuthenticationToken(email, password));
             applyAuthentication(auth, request);
             if (auth.getPrincipal() instanceof RydenUserDetails principal) {
-                tokenService.attachTokenHeaders(response, principal, request);
+                // Password-reset OTP: discover user URN via Link only — no JWT grant.
+                // The SPA completes the reset with the same Basic on PATCH /users/{id}.
+                if (hasPasswordResetOtp(principal)) {
+                    tokenService.attachAuthenticatedUserLink(response, principal, request);
+                } else {
+                    tokenService.attachTokenHeaders(response, principal, request);
+                }
                 // OTP Basic probe may hit GET / (permitAll) to discover authenticated-user.
                 // Do not leave a password-reset principal authenticated for business routes.
                 if (hasPasswordResetOtp(principal) && !isUserPasswordPatch(request)) {
@@ -127,6 +137,10 @@ public final class JwtAuthenticationFilter extends OncePerRequestFilter {
             writeError(response, 429, "otp_rate_limited",
                     "Too many failed one-time code attempts. Try again later.");
             return false;
+        } catch (final InvalidVerificationCodeAuthenticationException ex) {
+            writeError(response, HttpServletResponse.SC_UNAUTHORIZED, "user.verification.codeInvalid",
+                    "Invalid or expired verification code.");
+            return false;
         } catch (final AuthenticationException ex) {
             writeError(response, HttpServletResponse.SC_UNAUTHORIZED, "invalid_credentials",
                     "Invalid email or password.");
@@ -144,17 +158,27 @@ public final class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         final RydenUserDetails principal;
         if (parsed.type().isRefresh()) {
-            final Optional<RydenUserDetails> refreshed = reloadPrincipalFromDatabase(parsed.principal().getUserId());
+            final Optional<RydenUserDetails> refreshed =
+                    reloadPrincipalFromDatabase(parsed.principal().getUserId(), parsed.principal().getPasswordVersion());
             if (refreshed.isEmpty()) {
                 return;
             }
             principal = refreshed.get();
-        } else {
-            principal = parsed.principal();
-            // Access tokens issued for password-reset OTP must only authorize PATCH /users/{id}.
-            if (hasPasswordResetOtp(principal) && !isUserPasswordPatch(request)) {
+        } else if (hasPasswordResetOtp(parsed.principal())) {
+            // OTP grant is not a DB role — keep JWT authorities; only gate credentials + route.
+            if (!credentialsStillValid(parsed.principal().getUserId(), parsed.principal().getPasswordVersion())
+                    || !isUserPasswordPatch(request)) {
                 return;
             }
+            principal = parsed.principal();
+        } else {
+            // Access: reload roles from DB so demotions take effect without waiting for TTL.
+            final Optional<RydenUserDetails> reloaded =
+                    reloadPrincipalFromDatabase(parsed.principal().getUserId(), parsed.principal().getPasswordVersion());
+            if (reloaded.isEmpty()) {
+                return;
+            }
+            principal = reloaded.get();
         }
 
         final UsernamePasswordAuthenticationToken authentication =
@@ -186,15 +210,23 @@ public final class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     /**
-     * Rebuilds the security principal from current DB state. Missing users do not authenticate
+     * Rebuilds the security principal from current DB state. Missing users, unverified emails,
+     * and tokens whose {@code passwordVersion} claim does not match the DB epoch do not authenticate
      * and do not rotate tokens. Blocked users remain eligible (same policy as login).
      */
-    private Optional<RydenUserDetails> reloadPrincipalFromDatabase(final long userId) {
+    private Optional<RydenUserDetails> reloadPrincipalFromDatabase(final long userId,
+                                                                   final int tokenPasswordVersion) {
         final Optional<User> userOpt = userService.getUserById(userId);
         if (userOpt.isEmpty()) {
             return Optional.empty();
         }
         final User user = userOpt.get();
+        if (!Boolean.TRUE.equals(user.getEmailValidated().orElse(false))) {
+            return Optional.empty();
+        }
+        if (user.getPasswordVersion() != tokenPasswordVersion) {
+            return Optional.empty();
+        }
         return Optional.of(new RydenUserDetails(
                 user.getId(),
                 user.getEmail(),
@@ -202,7 +234,23 @@ public final class JwtAuthenticationFilter extends OncePerRequestFilter {
                 user.getSurname(),
                 null,
                 new ArrayList<>(UserRoleAuthorities.fromUserRoles(userService.findRolesForUser(user.getId()))),
-                user.getRoleAssignedBy().orElse(null)));
+                user.getRoleAssignedBy().orElse(null),
+                user.getPasswordVersion()));
+    }
+
+    /**
+     * Lightweight gate for access tokens: email still verified and credentials epoch unchanged.
+     */
+    private boolean credentialsStillValid(final long userId, final int tokenPasswordVersion) {
+        final Optional<User> userOpt = userService.getUserById(userId);
+        if (userOpt.isEmpty()) {
+            return false;
+        }
+        final User user = userOpt.get();
+        if (!Boolean.TRUE.equals(user.getEmailValidated().orElse(false))) {
+            return false;
+        }
+        return user.getPasswordVersion() == tokenPasswordVersion;
     }
 
     private static void applyAuthentication(final Authentication authentication,

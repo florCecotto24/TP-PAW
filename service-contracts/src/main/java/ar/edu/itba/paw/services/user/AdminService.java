@@ -9,10 +9,11 @@ import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.models.domain.car.CarBrand;
 import ar.edu.itba.paw.models.domain.car.CarModel;
 import ar.edu.itba.paw.models.domain.reservation.Reservation;
-import ar.edu.itba.paw.models.domain.reservation.ReservationMessage;
 import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.reservation.ReservationCard;
+import ar.edu.itba.paw.models.dto.reservation.ReservationMessageDto;
+import ar.edu.itba.paw.models.util.search.ReservationSearchCriteria;
 
 /** Admin operations: user management, car moderation, catalog validation, and reservation inspection. */
 public interface AdminService {
@@ -71,15 +72,13 @@ public interface AdminService {
 
     Page<Car> listCars(int page, int pageSize);
 
-    List<Car> findAdminPausedCars();
-
-    Page<ReservationCard> listAllReservations(int page, int pageSize);
+    Page<ReservationCard> listAllReservations(ReservationSearchCriteria criteria);
 
     Optional<Reservation> getReservationById(long reservationId);
 
-    List<ReservationMessage> getAdminChatMessages(long reservationId, int offset, int limit);
+    List<ReservationMessageDto> getAdminChatMessages(long reservationId, int offset, int limit);
 
-    List<ReservationMessage> getChatMessagesAfter(long reservationId, long afterMessageId, int limit);
+    List<ReservationMessageDto> getChatMessagesAfter(long reservationId, long afterMessageId, int limit);
 
     long countReservationMessages(long reservationId);
 }

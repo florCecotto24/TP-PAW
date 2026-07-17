@@ -11,6 +11,7 @@ import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.car.CarCard;
+import ar.edu.itba.paw.models.dto.car.CarModelPriceSample;
 import ar.edu.itba.paw.models.dto.car.CarPriceMarketInsight;
 import ar.edu.itba.paw.models.dto.car.ConsumerCarCardMarketContext;
 import ar.edu.itba.paw.models.util.search.CarSearchCriteria;
@@ -176,20 +177,34 @@ public interface CarService {
      * allowed to filter by status), or {@code null} (no filter, i.e. every status) for the owner/admin
      * default view, or {@code ACTIVE}-only for any other viewer — browsing "cars owned by X" publicly
      * only shows currently-active listings, paused/deactivated/pending cars stay private to their owner.
+     * Delegates to {@link CarListingPolicyService}.
      */
     List<Car.Status> resolveOwnerListingStatuses(List<Car.Status> requestedStatuses, boolean viewerIsSelfOrAdmin);
 
     /**
      * Market price stats (min / max / average) for active cars with the same brand and model.
      * {@code excludeCarId} omits one car when editing (typically the current one).
+     * Delegates to {@link CarMarketInsightService}.
      */
     Optional<CarPriceMarketInsight> getPriceMarketInsightForCar(
             Car car, Long excludeCarId);
 
     /**
      * Market badge context per car id for consumer browse cards. Missing keys mean no badge for that card.
+     * Delegates to {@link CarMarketInsightService}.
      */
     Map<Long, ConsumerCarCardMarketContext> resolveConsumerPriceMarketContexts(List<CarCard> cards);
+
+    /**
+     * Narrow DAO read for {@link CarMarketInsightService}: market stats for one brand/model pair.
+     */
+    Optional<CarPriceMarketInsight> findActiveDayPriceMarketInsightByBrandAndModel(
+            String brand, String model, Long excludeCarId);
+
+    /**
+     * Narrow DAO read for {@link CarMarketInsightService}: day prices for many brand/model pairs.
+     */
+    List<CarModelPriceSample> findActiveDayPricesForBrandModelPairs(List<String> brands, List<String> models);
 
     /**
      * For each car of the owner whose status is {@link Car.Status#ACTIVE} or {@link Car.Status#PAUSED},
@@ -248,9 +263,6 @@ public interface CarService {
     // owns the surrounding admin policy (e.g. forbidding pausing an admin-owned car, cascading reservation
     // cancellations, sending notification emails).
     // -----------------------------------------------------------------------------------------------------------
-
-    /** Admin-only: all cars currently in {@link Car.Status#ADMIN_PAUSED}. */
-    List<Car> findAdminPausedCars();
 
     /** Admin-only: paginated list of all cars in the catalog. */
     Page<Car> findAllCarsPaginated(int page, int pageSize);

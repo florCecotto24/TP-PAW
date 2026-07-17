@@ -1,14 +1,11 @@
 package ar.edu.itba.paw.webapp.controller.catalog;
 
-import java.util.List;
-import java.util.stream.Collectors;
-
+import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
-import javax.ws.rs.core.GenericEntity;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 
@@ -16,44 +13,40 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Component;
 
-import ar.edu.itba.paw.services.car.CarModelService;
 import ar.edu.itba.paw.webapp.api.common.VndMediaType;
-import ar.edu.itba.paw.webapp.dto.rest.ModelDto;
+import ar.edu.itba.paw.webapp.support.ModelCatalogSupport;
+import ar.edu.itba.paw.webapp.support.PaginationSupport;
 
-/** Admin pending-model collection only ({@code GET /models?validated=false}). */
+/**
+ * Admin pending-model collection only ({@code GET /models?validated=false}).
+ * HTTP routing only; collection binding lives in {@link ModelCatalogSupport}.
+ */
 @Path("/models")
 @Component
 public class ModelController {
 
-    private final CarModelService carModelService;
+    private final ModelCatalogSupport modelCatalogSupport;
+    private final PaginationSupport paginationSupport;
 
     @Context
     private UriInfo uriInfo;
 
     @Autowired
-    public ModelController(final CarModelService carModelService) {
-        this.carModelService = carModelService;
+    public ModelController(
+            final ModelCatalogSupport modelCatalogSupport,
+            final PaginationSupport paginationSupport) {
+        this.modelCatalogSupport = modelCatalogSupport;
+        this.paginationSupport = paginationSupport;
     }
 
     @GET
     @PreAuthorize("@userResourceAccess.isAdmin()")
     @Produces(VndMediaType.MODEL_V1_JSON)
-    public Response listPendingModels(@QueryParam("validated") final Boolean validated) {
-        // This is the admin moderation queue of PENDING models. An omitted `validated` defaults to the
-        // pending view (never a bare 400). `validated=true` has no collection here (validated models are
-        // reached through their brand), so it is a real client error — and it must carry a structured
-        // ErrorDto body (rendered by WebApplicationExceptionMapper), never an empty 400.
-        if (Boolean.TRUE.equals(validated)) {
-            throw new javax.ws.rs.BadRequestException(
-                    "GET /models only serves the pending-model moderation queue; use validated=false (or omit it). "
-                            + "Validated models are reached via their brand.");
-        }
-        final List<ModelDto> dtos = carModelService.findPendingOrdered().stream()
-                .map(model -> ModelDto.from(model, uriInfo))
-                .collect(Collectors.toList());
-        if (dtos.isEmpty()) {
-            return Response.noContent().build();
-        }
-        return Response.ok(new GenericEntity<List<ModelDto>>(dtos) {}).build();
+    public Response listPendingModels(
+            @QueryParam("validated") final Boolean validated,
+            @QueryParam("page") @DefaultValue("1") final int page,
+            @QueryParam("pageSize") final Integer pageSize) {
+        return modelCatalogSupport.listPendingModels(
+                validated, paginationSupport.forDefaultCollection(page, pageSize), uriInfo);
     }
 }

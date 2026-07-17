@@ -1,5 +1,6 @@
 // Helpers compartidos por las páginas OWNER.
 
+import { useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useSessionStore } from '../../session/sessionStore';
@@ -33,20 +34,23 @@ export function hasCbu(user: UserDto | null | undefined): boolean {
  */
 export function useApiErrorMessage(): (err: unknown, fallbackKey?: string) => string {
   const { t } = useTranslation();
-  return (err, fallbackKey = 'owner.errors.generic') => resolveApiErrorMessage(t, err, fallbackKey);
+  return useCallback(
+    (err, fallbackKey = 'owner.errors.generic') => resolveApiErrorMessage(t, err, fallbackKey),
+    [t],
+  );
 }
 
 /** Página de "Mis autos" con filtros avanzados (paridad myCars.jsp) + paginación numerada. */
 export function useMyCarsPage(
-  ownerId: string | null | undefined,
   filters: MyCarsFilters,
   pageIndex: number,
 ) {
+  const carsLink = useSessionStore((s) => s.currentUser?.links?.cars);
   return useQuery({
-    queryKey: ['owner', 'cars', 'page', ownerId, filters, pageIndex],
-    enabled: ownerId != null,
+    queryKey: ['owner', 'cars', 'page', carsLink, filters, pageIndex],
+    enabled: !!carsLink,
     queryFn: async () => {
-      const res = await fetchOwnerCars(ownerId as string, {
+      const res = await fetchOwnerCars(carsLink as string, {
         page: pageIndex + 1,
         pageSize: MY_CARS_PAGE_SIZE,
         q: filters.q,

@@ -1,11 +1,11 @@
-import { ApiError, AUTH_PROBE_PATH, extractPageLinks, type ApiResponse } from '../../api/client';
+import { ApiError, extractPageLinks, type ApiResponse } from '../../api/client';
 import { MediaTypes } from '../../api/mediaTypes';
 import { encodeMultipart, type MultipartPart } from '../../api/multipart';
 import { resolveApiUrl } from '../../api/uri';
 import { sessionClient, useSessionStore } from '../../session/sessionStore';
 import {
+  chatLimits,
   computeUploadTimeoutMs,
-  getChatMaxAttachmentMb,
   UPLOAD_MAX_RETRIES,
 } from './chatAttachment';
 import type { MessageDto } from './types';
@@ -93,14 +93,7 @@ function xhrPostMessage(
 }
 
 async function refreshAccessToken(): Promise<void> {
-  const refresh = useSessionStore.getState().refreshToken;
-  if (!refresh) throw new ApiError(401);
-  await sessionClient.request(AUTH_PROBE_PATH, {
-    method: 'GET',
-    accept: MediaTypes.api,
-    authorization: `Bearer ${refresh}`,
-    retryOnUnauthorized: false,
-  });
+  await sessionClient.refreshSessionTokens();
 }
 
 async function postWithRefreshRetry(
@@ -146,7 +139,7 @@ export async function sendChatMessage(
 ): Promise<ApiResponse<MessageDto>> {
   const { body: payload, contentType } = await encodeChatMessageBody(body, file);
 
-  const maxMb = options?.maxAttachmentMb ?? getChatMaxAttachmentMb();
+  const maxMb = options?.maxAttachmentMb ?? chatLimits().maxAttachmentMegabytes;
   const timeoutMs = file ? computeUploadTimeoutMs(maxMb) : 60_000;
   const uploadOpts = { timeoutMs, onProgress: options?.onProgress };
 
@@ -156,8 +149,9 @@ export async function sendChatMessage(
       return await postWithRefreshRetry(messagesUri, payload, contentType, uploadOpts);
     } catch (err) {
       lastError = err;
-      const retriable =
-        err instanceof Error && (err.message === 'network' || err.message === 'timeout');
+      // Timeout after send is ambiguous (server may have persisted) — do not retry (N-38).
+      // Only retry clear pre-response network failures once.
+      const retriable = err instanceof Error && err.message === 'network';
       if (retriable && attempt < UPLOAD_MAX_RETRIES) continue;
       throw err;
     }

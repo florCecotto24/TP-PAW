@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useSessionStore } from '../../../session/sessionStore';
 import { pageCount } from '../../browse/hooks';
 import { listReservations, type ReservationListQuery } from '../api';
 import { jspReservationSortToApi } from '../reservationListSort';
@@ -37,12 +38,16 @@ export function useOwnerReservationsPage(
   pageIndex: number,
   carId?: string | number,
 ) {
+  const ownedReservationsLink = useSessionStore(
+    (s) => s.currentUser?.links?.['owned-reservations'],
+  );
   return useQuery({
-    queryKey: ['reservations', 'owner-page', ownerId, carId, filters, pageIndex],
-    enabled: ownerId != null,
+    queryKey: ['reservations', 'owner-page', ownedReservationsLink, ownerId, carId, filters, pageIndex],
+    enabled: ownerId != null || !!ownedReservationsLink,
     queryFn: async () => {
       const res = await listReservations(
         filtersToApiQuery(ownerId as string | number, filters, pageIndex, carId),
+        ownedReservationsLink,
       );
       return {
         items: (res.data ?? []) as ReservationSummaryDto[],

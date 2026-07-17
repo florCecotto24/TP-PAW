@@ -11,7 +11,10 @@ import javax.validation.Payload;
 
 import ar.edu.itba.paw.webapp.validation.user.OptionalCbuValidator;
 
-/** When non-blank, value must be a valid Argentine CBU length and digit checksum. */
+/**
+ * Optional CBU on profile PATCH: {@code null}/absent leaves the stored value unchanged; blank/empty
+ * clears it (service pauses cars that require a CBU). When non-blank, must pass Argentine CBU checks.
+ */
 @Documented
 @Constraint(validatedBy = OptionalCbuValidator.class)
 @Target({ ElementType.FIELD })

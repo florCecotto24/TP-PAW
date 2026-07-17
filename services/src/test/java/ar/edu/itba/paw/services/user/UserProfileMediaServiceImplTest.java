@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.services.user;
 
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,6 +18,7 @@ import ar.edu.itba.paw.models.domain.file.Image;
 import ar.edu.itba.paw.models.domain.file.StoredFile;
 import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.models.domain.user.UserDocumentType;
+import ar.edu.itba.paw.models.security.UserRole;
 import ar.edu.itba.paw.policy.ProfileDocumentUploadPolicy;
 import ar.edu.itba.paw.policy.ProfileDocumentUploadPolicyImpl;
 
@@ -62,7 +64,7 @@ public class UserProfileMediaServiceImplTest {
     }
 
     @Test
-    public void testUploadValidatedProfileDocumentDoesNotThrowForLicense() {
+    public void testUploadProfileDocumentLeavesNonAdminPendingReview() {
         // 1. Arrange
         final byte[] pdfBytes = {0x25, 0x50, 0x44, 0x46, 0x2d}; // "%PDF-" magic header
         final User user = User.identities(1L, "u@mail.com", "A", "B");
@@ -71,14 +73,47 @@ public class UserProfileMediaServiceImplTest {
                 .thenReturn(StoredFile.identified(10L,
                         User.identities(1L, "u@test.com", "U", "U"),
                         "licencia.pdf", "application/pdf", pdfBytes, null));
+        final AtomicBoolean validated = new AtomicBoolean(true);
+        Mockito.doAnswer(invocation -> {
+            validated.set(invocation.getArgument(2));
+            return null;
+        }).when(userService).updateLicenseDocumentFk(Mockito.eq(1L), Mockito.eq(10L), Mockito.anyBoolean());
 
-        // 2. Execute and 3. Assert
-        Assertions.assertDoesNotThrow(() -> profileMediaService.uploadValidatedProfileDocument(
-                1L, UserDocumentType.LICENSE, "licencia.pdf", "application/pdf", pdfBytes));
+        // 2. Act
+        profileMediaService.uploadProfileDocument(
+                1L, UserDocumentType.LICENSE, "licencia.pdf", "application/pdf", pdfBytes);
+
+        // 3. Assert
+        Assertions.assertFalse(validated.get());
     }
 
     @Test
-    public void testUploadValidatedProfileDocumentReplacesExistingLicense() {
+    public void testUploadProfileDocumentAutoValidatesForAdmin() {
+        // 1. Arrange
+        final byte[] pdfBytes = {0x25, 0x50, 0x44, 0x46, 0x2d};
+        final User admin = User.identities(1L, "admin@mail.com", "A", "B");
+        admin.setUserRole(UserRole.ADMIN);
+        Mockito.when(userService.getUserById(1L)).thenReturn(Optional.of(admin));
+        Mockito.when(storedFileService.create(1L, "dni.pdf", "application/pdf", pdfBytes))
+                .thenReturn(StoredFile.identified(11L,
+                        User.identities(1L, "admin@mail.com", "A", "B"),
+                        "dni.pdf", "application/pdf", pdfBytes, null));
+        final AtomicBoolean validated = new AtomicBoolean(false);
+        Mockito.doAnswer(invocation -> {
+            validated.set(invocation.getArgument(2));
+            return null;
+        }).when(userService).updateIdentityDocumentFk(Mockito.eq(1L), Mockito.eq(11L), Mockito.anyBoolean());
+
+        // 2. Act
+        profileMediaService.uploadProfileDocument(
+                1L, UserDocumentType.IDENTITY, "dni.pdf", "application/pdf", pdfBytes);
+
+        // 3. Assert
+        Assertions.assertTrue(validated.get());
+    }
+
+    @Test
+    public void testUploadProfileDocumentReplacesExistingLicense() {
         // 1. Arrange — slot already occupied (SPA "replace" path)
         final byte[] pdfBytes = {0x25, 0x50, 0x44, 0x46, 0x2d};
         final StoredFile previous = StoredFile.identified(9L,
@@ -93,18 +128,15 @@ public class UserProfileMediaServiceImplTest {
                         "licencia.pdf", "application/pdf", pdfBytes, null));
 
         // 2. Act / 3. Assert — PUT must replace, not reject with alreadyUploaded
-        Assertions.assertDoesNotThrow(() -> profileMediaService.uploadValidatedProfileDocument(
+        Assertions.assertDoesNotThrow(() -> profileMediaService.uploadProfileDocument(
                 1L, UserDocumentType.LICENSE, "licencia.pdf", "application/pdf", pdfBytes));
     }
 
     @Test
-    public void testUploadValidatedProfileDocumentRejectsInvalidType() {
-        final User user = User.identities(1L, "u@mail.com", "A", "B");
-        Mockito.when(userService.getUserById(1L)).thenReturn(Optional.of(user));
-
+    public void testUploadProfileDocumentRejectsInvalidType() {
         final InvalidProfileDocumentException thrown = Assertions.assertThrows(
                 InvalidProfileDocumentException.class,
-                () -> profileMediaService.uploadValidatedProfileDocument(
+                () -> profileMediaService.uploadProfileDocument(
                         1L, UserDocumentType.IDENTITY, "dni.txt", "text/plain", new byte[] {1, 2}));
         Assertions.assertEquals(MessageKeys.USER_PROFILE_DOCUMENT_INVALID, thrown.getMessageCode());
     }

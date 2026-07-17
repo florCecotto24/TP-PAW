@@ -4,7 +4,7 @@ import { getCollectionPath } from '../../api/apiDiscovery';
 import { type ApiResponse, getLinkCollectionPage } from '../../api/client';
 import { encodeMultipart } from '../../api/multipart';
 import { sessionClient } from '../../session/sessionStore';
-import { getChatHistoryPageSize } from './chatAttachment';
+import { chatLimits } from './chatAttachment';
 import { MediaTypes } from '../../api/mediaTypes';
 import { idFromUri } from '../../api/uri';
 import { openAuthenticatedBinary } from '../../api/openAuthenticatedBinary';
@@ -53,16 +53,20 @@ function toQueryArray(value?: string | string[]): string[] | undefined {
 
 export async function listReservations(
   q: ReservationListQuery,
+  reservationsLink?: string,
 ): Promise<ApiResponse<ReservationSummaryDto[]>> {
+  // When the call starts from a user link that already encodes riderId/ownerId,
+  // do not re-send those keys (would duplicate query params).
+  const roleEncodedInLink = Boolean(reservationsLink);
   const collectionRes = await getLinkCollectionPage<ReservationSummaryDto>(
     sessionClient,
-    getCollectionPath('reservations'),
+    reservationsLink ?? getCollectionPath('reservations'),
     {
       collectionAccept: MediaTypes.reservationLinks,
       itemAccept: MediaTypes.reservationSummary,
       query: {
-        riderId: q.riderId,
-        ownerId: q.ownerId,
+        riderId: roleEncodedInLink ? undefined : q.riderId,
+        ownerId: roleEncodedInLink ? undefined : q.ownerId,
         carId: q.carId,
         status: toQueryArray(q.status),
         riderStatus: toQueryArray(q.riderStatus),
@@ -292,7 +296,7 @@ export async function listMessagesLatestPage(
 ): Promise<ApiResponse<MessageDto[]>> {
   const probe = await sessionClient.get<MessageDto[]>(messagesUri, {
     accept: MediaTypes.message,
-    query: { page: 1, pageSize: getChatHistoryPageSize() },
+    query: { page: 1, pageSize: chatLimits().historyPageSize },
   });
   if (probe.status === 204 || (probe.page.total ?? 0) === 0) {
     return { ...probe, data: [] };
@@ -301,7 +305,7 @@ export async function listMessagesLatestPage(
     return sessionClient.follow<MessageDto[]>(probe.page.last, { accept: MediaTypes.message });
   }
   const total = probe.page.total ?? 0;
-  const pageSize = getChatHistoryPageSize();
+  const pageSize = chatLimits().historyPageSize;
   const lastPage = Math.max(1, Math.ceil(total / pageSize));
   return listMessages(messagesUri, { page: lastPage, pageSize });
 }

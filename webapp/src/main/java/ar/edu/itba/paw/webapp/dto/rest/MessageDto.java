@@ -4,7 +4,6 @@ import java.time.format.DateTimeFormatter;
 
 import javax.ws.rs.core.UriInfo;
 
-import ar.edu.itba.paw.models.domain.reservation.ReservationMessage;
 import ar.edu.itba.paw.models.dto.reservation.ReservationMessageDto;
 import ar.edu.itba.paw.webapp.util.RestUriUtils;
 
@@ -23,28 +22,6 @@ public final class MessageDto {
     private LinksDto links;
 
     public MessageDto() {
-    }
-
-    public static MessageDto from(final ReservationMessage message, final UriInfo uriInfo) {
-        final MessageDto dto = new MessageDto();
-        dto.body = message.getBody();
-        dto.createdAt = message.getCreatedAt() == null
-                ? null
-                : ISO_OFFSET.format(message.getCreatedAt());
-        dto.seen = message.isSeen();
-        dto.hasAttachment = message.getAttachmentFileId() != null;
-        dto.attachment = MessageAttachmentDto.fromStoredFile(message.getAttachment());
-        final long reservationId = message.getReservationId();
-        final long messageId = message.getId();
-        dto.links = LinksDto.ofSelf(RestUriUtils.reservationMessageUri(uriInfo, reservationId, messageId).toString())
-                .withRelated("reservation", RestUriUtils.reservationUri(uriInfo, reservationId).toString())
-                .withRelated("sender", RestUriUtils.userUri(uriInfo, message.getSenderUserId()).toString());
-        if (dto.hasAttachment) {
-            dto.links = dto.links.withRelated(
-                    "attachment",
-                    RestUriUtils.reservationMessageAttachmentUri(uriInfo, reservationId, messageId).toString());
-        }
-        return dto;
     }
 
     public static MessageDto fromDto(final ReservationMessageDto dto, final UriInfo uriInfo) {

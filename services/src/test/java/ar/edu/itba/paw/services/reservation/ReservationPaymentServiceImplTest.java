@@ -131,6 +131,34 @@ class ReservationPaymentServiceImplTest {
     }
 
     @Test
+    void testAttachPaymentReceiptDeletesOrphanWhenAttachFails() {
+        // 1. Arrange — create succeeds, atomic attach loses (race / ineligible)
+        final Reservation pending = pendingReservation(OffsetDateTime.now().plusDays(1));
+        final StoredFile file = StoredFile.identified(
+                99L, User.identities(RIDER_ID, "r@test.com", "R", "Rider"),
+                "proof.pdf", "application/pdf", PDF_BYTES, null);
+        final long[] deletedId = {-1L};
+        Mockito.when(queryService.getRiderReservationById(RIDER_ID, RESERVATION_ID))
+                .thenReturn(Optional.of(pending));
+        Mockito.when(storedFileService.create(RIDER_ID, "proof.pdf", "application/pdf", PDF_BYTES))
+                .thenReturn(file);
+        Mockito.when(reservationService.attachPaymentReceiptAndAccept(RESERVATION_ID, RIDER_ID, 99L))
+                .thenReturn(0);
+        Mockito.when(storedFileService.deleteById(99L)).thenAnswer(inv -> {
+            deletedId[0] = inv.getArgument(0);
+            return true;
+        });
+
+        // 2. Act / 3. Assert
+        final RiderReservationException thrown = Assertions.assertThrows(
+                RiderReservationException.class,
+                () -> paymentService.attachPaymentReceipt(
+                        RIDER_ID, RESERVATION_ID, "proof.pdf", "application/pdf", PDF_BYTES));
+        Assertions.assertEquals(MessageKeys.RESERVATION_PAYMENT_RECEIPT_INVALID, thrown.getMessageCode());
+        Assertions.assertEquals(99L, deletedId[0]);
+    }
+
+    @Test
     void testAttachRefundReceiptRejectsWrongStatus() {
         // 1. Arrange
         final Reservation accepted = baseReservation(Reservation.Status.ACCEPTED)
@@ -201,6 +229,36 @@ class ReservationPaymentServiceImplTest {
 
         // 3. Assert — domain outcome: owner is no longer blocked
         Assertions.assertFalse(blockedOwner.isBlocked());
+    }
+
+    @Test
+    void testAttachRefundReceiptDeletesOrphanWhenAttachFails() {
+        // 1. Arrange
+        final Reservation cancelled = baseReservation(Reservation.Status.CANCELLED_BY_OWNER)
+                .paymentRefundRequired(true)
+                .build();
+        final StoredFile file = StoredFile.identified(
+                77L, User.identities(OWNER_ID, "o@test.com", "O", "Owner"),
+                "refund.pdf", "application/pdf", PDF_BYTES, null);
+        final long[] deletedId = {-1L};
+        Mockito.when(queryService.getOwnerReservationById(OWNER_ID, RESERVATION_ID))
+                .thenReturn(Optional.of(cancelled));
+        Mockito.when(storedFileService.create(OWNER_ID, "refund.pdf", "application/pdf", PDF_BYTES))
+                .thenReturn(file);
+        Mockito.when(reservationService.attachRefundReceipt(RESERVATION_ID, OWNER_ID, 77L))
+                .thenReturn(0);
+        Mockito.when(storedFileService.deleteById(77L)).thenAnswer(inv -> {
+            deletedId[0] = inv.getArgument(0);
+            return true;
+        });
+
+        // 2. Act / 3. Assert
+        final RiderReservationException thrown = Assertions.assertThrows(
+                RiderReservationException.class,
+                () -> paymentService.attachRefundReceiptByOwner(
+                        OWNER_ID, RESERVATION_ID, "refund.pdf", "application/pdf", PDF_BYTES));
+        Assertions.assertEquals(MessageKeys.RESERVATION_REFUND_RECEIPT_INVALID, thrown.getMessageCode());
+        Assertions.assertEquals(77L, deletedId[0]);
     }
 
     @Test

@@ -133,15 +133,32 @@ describe('openapi.yaml contract (frontend)', () => {
   it('testClientRestMediaTypesAreDeclaredInOpenApi', () => {
     // 1.Arrange
     const inSpec = vendorJsonMediaTypes(yaml);
-    const clientTypes = Object.values(MediaTypes).filter(
-      (t) => t.endsWith('+json') && t !== MediaTypes.emailVerificationCode,
-    );
+    const clientTypes = Object.values(MediaTypes).filter((t) => t.endsWith('+json'));
 
     // 2.Act
     const missing = clientTypes.filter((t) => !inSpec.has(t));
 
     // 3.Assert
     expect(missing, `client MIME types missing in openapi: ${missing.join(', ')}`).toEqual([]);
+  });
+
+  it('testAdminUsersCollectionUsesUserPrivateMime', () => {
+    // 1.Arrange — la lista admin GET /users devuelve la vista privada (UserPrivateDto).
+    const usersGetBlock =
+      yaml.match(/^ {2}\/users:\r?\n {4}get:\r?\n([\s\S]*?)^ {4}post:/m)?.[1] ?? '';
+
+    // 2.Act
+    const declaresPrivateList =
+      usersGetBlock.includes(MediaTypes.userPrivate) &&
+      usersGetBlock.includes('items: { $ref: "#/components/schemas/UserPrivateDto" }');
+    const declaresPublicList = usersGetBlock.includes(
+      'items: { $ref: "#/components/schemas/UserDto" }',
+    );
+
+    // 3.Assert
+    expect(usersGetBlock, 'GET /users missing in openapi.yaml').not.toBe('');
+    expect(declaresPrivateList).toBe(true);
+    expect(declaresPublicList).toBe(false);
   });
 
   it('testReservationStatusMatchesOpenApi', () => {
@@ -428,7 +445,7 @@ describe('openapi.yaml contract (frontend)', () => {
     const specProps = schemaProperties(yaml, 'ApiIndexResourceDescriptor').sort();
 
     // 2.Act
-    const clientShape = ['href', 'queryParams'].sort();
+    const clientShape = ['href', 'itemTemplate', 'queryParams'].sort();
 
     // 3.Assert
     expect(clientShape).toEqual(specProps);

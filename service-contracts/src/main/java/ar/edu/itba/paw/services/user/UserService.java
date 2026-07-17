@@ -107,7 +107,7 @@ public interface UserService {
     /**
      * Stores or replaces one profile document per {@link UserDocumentType} (PUT create-or-replace).
      */
-    void uploadValidatedProfileDocument(long userId, UserDocumentType documentType, String originalFilename, String contentType, byte[] data);
+    void uploadProfileDocument(long userId, UserDocumentType documentType, String originalFilename, String contentType, byte[] data);
 
     /** Clears the stored file reference for the given document slot. */
     void clearProfileDocument(long userId, UserDocumentType documentType);

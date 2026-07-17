@@ -13,7 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.models.domain.car.CarModel;
-import ar.edu.itba.paw.persistence.car.CarModelDao;
+import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.persistence.support.DaoIntegrationTestSupport;
 
 class CarModelJpaDaoTest extends DaoIntegrationTestSupport {
@@ -102,4 +102,35 @@ class CarModelJpaDaoTest extends DaoIntegrationTestSupport {
         Assertions.assertEquals("Civic", match.get().getName());
         Assertions.assertTrue(wrongBrand.isEmpty());
     }
+
+    @Test
+    void testFindPendingPageUsesNativeLimitAndPreservesOrder() {
+        // 1. Arrange — three pending models across brands; one validated must be excluded.
+        jdbcTemplate.update(
+                "INSERT INTO car_models (brand_id, name, validated, type) VALUES (?, ?, ?, ?)",
+                otherBrandId, "Yaris", false, Car.Type.HATCHBACK.name());
+        jdbcTemplate.update(
+                "INSERT INTO car_models (brand_id, name, validated, type) VALUES (?, ?, ?, ?)",
+                brandId, "Civic", false, Car.Type.SEDAN.name());
+        jdbcTemplate.update(
+                "INSERT INTO car_models (brand_id, name, validated, type) VALUES (?, ?, ?, ?)",
+                brandId, "Accord", false, Car.Type.SEDAN.name());
+        jdbcTemplate.update(
+                "INSERT INTO car_models (brand_id, name, validated, type) VALUES (?, ?, ?, ?)",
+                brandId, "CR-V", true, Car.Type.SUV.name());
+
+        // 2. Act
+        final Page<CarModel> first = dao.findPendingPage(0, 2);
+        final Page<CarModel> second = dao.findPendingPage(1, 2);
+
+        // 3. Assert — brand_id ASC, LOWER(name) ASC; validated excluded from total.
+        Assertions.assertEquals(3L, first.getTotalItems());
+        Assertions.assertEquals(2, first.getContent().size());
+        Assertions.assertEquals("Accord", first.getContent().get(0).getName());
+        Assertions.assertEquals("Civic", first.getContent().get(1).getName());
+        Assertions.assertNotNull(first.getContent().get(0).getBrand());
+        Assertions.assertEquals(1, second.getContent().size());
+        Assertions.assertEquals("Yaris", second.getContent().get(0).getName());
+    }
+
 }

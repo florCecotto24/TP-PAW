@@ -1,5 +1,5 @@
 import { CarReservationCard } from '../../../components/ryden';
-import { apiAssetUrl, idFromUri } from '../../../api/uri';
+import { idFromUri } from '../../../api/uri';
 import { formatDateTime, formatPrice } from '../format';
 import type { ReservationSummaryDto } from '../types';
 import { myReservationDetailTo } from '../../../routes/navigationState';
@@ -22,7 +22,7 @@ export default function ReservationListCard({
     ? myReservationDetailTo(reservationId, reservation.links?.self, detailQuery)
     : '#';
 
-  const imageUrl = reservation.links?.cover ? apiAssetUrl(reservation.links.cover) : null;
+  const coverUri = reservation.links?.cover ?? null;
   const brand = reservation.brandName?.trim() || '—';
   const model = reservation.modelName?.trim() ?? '';
 
@@ -32,7 +32,7 @@ export default function ReservationListCard({
         statusKey: reservation.status,
         brand,
         model,
-        imageUrl,
+        coverUri,
         pickupDateTime: formatDateTime(reservation.startDate),
         returnDateTime: formatDateTime(reservation.endDate),
         totalPrice: formatPrice(reservation.totalPrice),

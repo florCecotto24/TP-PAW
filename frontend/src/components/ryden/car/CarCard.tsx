@@ -23,6 +23,7 @@ export interface CarCardProps {
   carId?: number | null;
   showFavoriteButton?: boolean;
   favorited?: boolean;
+  favoriteBusy?: boolean;
   onToggleFavorite?: (carId: number) => void;
   imageSlot?: ReactNode;
   overlay?: ReactNode;
@@ -49,6 +50,7 @@ export default function CarCard({
   carId,
   showFavoriteButton = false,
   favorited = false,
+  favoriteBusy = false,
   onToggleFavorite,
   imageSlot,
   overlay,
@@ -108,6 +110,7 @@ export default function CarCard({
           <button
             type="submit"
             className={`carcard-favorite-btn${favorited ? ' carcard-favorite-btn--on' : ''}`}
+            disabled={favoriteBusy}
             aria-label={t(favorited ? 'carCard.favorite.remove' : 'carCard.favorite.add')}
             title={t(favorited ? 'carCard.favorite.remove' : 'carCard.favorite.add')}
           >

@@ -6,16 +6,18 @@ import { MediaTypes } from '../../../api/mediaTypes';
 import { pageIndexFromParams, withPageIndex } from '../../../api/pageParam';
 import { EmptyState, LoadingBlock } from '../../../components/ryden';
 import { patchCarStatus } from '../api';
+import {
+  ADMIN_CAR_STATUS_FILTERS,
+  parseAdminCarStatus,
+  withAdminCarStatus,
+  type AdminCarStatusFilter,
+} from '../adminListFilters';
 import AdminPageHeader from '../components/AdminPageHeader';
 import AdminPagination from '../components/AdminPagination';
-import { idFromSelf, type CarDto, type CarStatus } from '../types';
+import { idFromSelf, type CarDto } from '../types';
 import { useAdminErrorMessage } from '../useAdminErrorMessage';
 import { usePagedList } from '../usePagedList';
 import { carDetailTo } from '../../../routes/navigationState';
-
-const STATUS_FILTERS: Array<CarStatus | ''> = [
-  '', 'active', 'paused', 'admin_paused', 'lack_doc', 'unavailable', 'deactivated',
-];
 
 type PendingCarAction = { car: CarDto; mode: 'pause' | 'resume' };
 
@@ -23,14 +25,14 @@ export default function AdminCarsPage() {
   const { t } = useTranslation();
   const errorMessage = useAdminErrorMessage();
 
-  const [statusFilter, setStatusFilter] = useState<CarStatus | ''>('');
   const [actionError, setActionError] = useState<string | null>(null);
   const [busyLink, setBusyLink] = useState<string | null>(null);
   const [pending, setPending] = useState<PendingCarAction | null>(null);
 
-  // La página vive en la URL (?page=N, 0-based como SearchPage) -> bookmarkeable y resiste refresh.
+  // Filtros + página en la URL (?status=&page=N) — bookmarkeable, F5-safe, sanitizados (V-10).
   const [searchParams, setSearchParams] = useSearchParams();
   const pageIndex = pageIndexFromParams(searchParams);
+  const statusFilter = parseAdminCarStatus(searchParams);
   const goToPage = useCallback(
     (next: number) => setSearchParams(withPageIndex(searchParams, next)),
     [searchParams, setSearchParams],
@@ -42,10 +44,8 @@ export default function AdminCarsPage() {
 
   const list = usePagedList<CarDto>(listPath, MediaTypes.car, pageIndex + 1, [statusFilter]);
 
-  const onStatusFilterChange = (value: CarStatus | '') => {
-    setStatusFilter(value);
-    // Cambiar el filtro vuelve a la primera página.
-    setSearchParams(withPageIndex(searchParams, 0));
+  const onStatusFilterChange = (value: AdminCarStatusFilter) => {
+    setSearchParams(withPageIndex(withAdminCarStatus(searchParams, value), 0));
   };
 
   const confirmAction = async () => {
@@ -78,9 +78,9 @@ export default function AdminCarsPage() {
           id="adminCarStatus"
           className="form-select form-select-sm w-auto"
           value={statusFilter}
-          onChange={(e) => onStatusFilterChange(e.target.value as CarStatus | '')}
+          onChange={(e) => onStatusFilterChange(e.target.value as AdminCarStatusFilter)}
         >
-          {STATUS_FILTERS.map((s) => (
+          {ADMIN_CAR_STATUS_FILTERS.map((s) => (
             <option key={s || 'all'} value={s}>
               {s ? t(`admin.cars.statuses.${s}`) : t('admin.cars.filter.all')}
             </option>

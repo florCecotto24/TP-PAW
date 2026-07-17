@@ -59,11 +59,8 @@ const POWERTRAINS: Powertrain[] = ['gasoline', 'diesel', 'electric', 'hybrid', '
 const OTHER = '__other__';
 
 // Un usuario cumple los prerequisitos de publicación cuando tiene identidad
-// cargada/validada Y un CBU. `identityValidated` lo fija el admin, pero el viejo
-// flujo dejaba publicar apenas el documento estaba subido; como el DTO no expone
-// "documento subido pero no validado", usamos identityValidated como señal y, si
-// el owner sube el documento en esta misma pantalla, marcamos el paso como hecho
-// localmente (identityJustUploaded) para no bloquearlo.
+// cargada (identityUploaded) o validada por admin (identityValidated), y un CBU.
+// Tras N-01 el self-upload deja validated=false; identityUploaded cubre ese caso.
 
 // =============================================================================
 // Coordinador: decide entre (1) prerequisitos, (2) formulario, (3) resultado.
@@ -75,7 +72,6 @@ export default function PublishCarPage() {
   const sessionUser = useSessionStore((s) => s.currentUser);
 
   const [user, setUser] = useState<UserDto | null>(sessionUser);
-  const [identityJustUploaded, setIdentityJustUploaded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [published, setPublished] = useState<{ car: CarDto; newCatalogEntry: boolean } | null>(null);
 
@@ -115,7 +111,7 @@ export default function PublishCarPage() {
   }
 
   const cbuOk = hasCbu(user);
-  const identityOk = !!user?.identityValidated || identityJustUploaded;
+  const identityOk = !!user?.identityValidated || !!user?.identityUploaded;
 
   // (1) Prerequisitos no cumplidos.
   if (!cbuOk || !identityOk) {
@@ -126,7 +122,6 @@ export default function PublishCarPage() {
         identityOk={identityOk}
         errorMessage={errorMessage}
         onUserUpdated={(u) => setUser(u)}
-        onIdentityUploaded={() => setIdentityJustUploaded(true)}
       />
     );
   }
@@ -152,14 +147,12 @@ function PublishPrerequisites({
   identityOk,
   errorMessage,
   onUserUpdated,
-  onIdentityUploaded,
 }: {
   user: UserDto | null;
   cbuOk: boolean;
   identityOk: boolean;
   errorMessage: (err: unknown, fallbackKey?: string) => string;
   onUserUpdated: (u: UserDto) => void;
-  onIdentityUploaded: () => void;
 }) {
   const { t } = useTranslation();
   const userUri = useSessionStore((s) => s.currentUserUri);
@@ -189,11 +182,12 @@ function PublishPrerequisites({
 
   async function onUploadIdentity(file: File) {
     setIdentityError(null);
-    if (!user) return;
+    if (!user || !userUri) return;
     setIdentityBusy(true);
     try {
       await uploadIdentityDocument(user, file);
-      onIdentityUploaded();
+      const refreshed = await fetchUser(userUri);
+      onUserUpdated(refreshed.data);
     } catch (err) {
       setIdentityError(errorMessage(err, 'owner.prereq.errors.identitySaveFailed'));
       throw err;

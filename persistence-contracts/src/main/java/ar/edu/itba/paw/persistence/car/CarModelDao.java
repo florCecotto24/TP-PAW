@@ -5,6 +5,7 @@ import java.util.Optional;
 
 import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.models.domain.car.CarModel;
+import ar.edu.itba.paw.models.dto.Page;
 
 /**
  * Read/write catalog of vehicle models. Models are scoped to a brand and locked to a body type, mirroring
@@ -33,6 +34,9 @@ public interface CarModelDao {
 
     /** All unvalidated models ordered alphabetically by brand then name. */
     List<CarModel> findPendingOrdered();
+
+    /** SQL-paginated unvalidated models ordered alphabetically by brand then name. */
+    Page<CarModel> findPendingPage(int page, int pageSize);
 
     /** Removes a model row by id. */
     void deleteById(long modelId);

@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ExploreFilterDropdown } from '../../../components/ryden';
@@ -66,6 +66,15 @@ export default function MyReservationsOwnerFilterForm({
     initial.ownerPriceMax != null ? String(initial.ownerPriceMax) : '',
   );
   const [selectedFilters, setSelectedFilters] = useState<MultiFilters>(() => toMulti(initial));
+
+  const initialKey = JSON.stringify(initial);
+  useEffect(() => {
+    setQuery(initial.ownerQ ?? '');
+    setPriceMin(initial.ownerPriceMin != null ? String(initial.ownerPriceMin) : '');
+    setPriceMax(initial.ownerPriceMax != null ? String(initial.ownerPriceMax) : '');
+    setSelectedFilters(toMulti(initial));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialKey]);
 
   const hasActivePrice = Boolean(priceMin || priceMax);
 

@@ -166,6 +166,6 @@ class CarResourceAccessTest {
     }
 
     private static RydenUserDetails viewer(final long userId) {
-        return new RydenUserDetails(userId, "u@example.com", "A", "B", "hash", List.of(), null);
+        return new RydenUserDetails(userId, "u@example.com", "A", "B", "hash", List.of(), null, 0);
     }
 }

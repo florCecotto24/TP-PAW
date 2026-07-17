@@ -30,6 +30,7 @@ import ar.edu.itba.paw.models.domain.car.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.models.util.time.WallDateTimeParsing;
 import ar.edu.itba.paw.models.domain.reservation.Reservation;
+import ar.edu.itba.paw.models.dto.reservation.BlockingReservationProjection;
 import ar.edu.itba.paw.models.domain.reservation.ReservationParticipantRole;
 import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.models.util.time.AppTimezone;
@@ -37,6 +38,7 @@ import ar.edu.itba.paw.services.reservation.ReservationPricingService.Reservatio
 import ar.edu.itba.paw.util.ReservationMailComposer;
 
 import ar.edu.itba.paw.services.car.CarService;
+import ar.edu.itba.paw.services.user.UserReadinessService;
 import ar.edu.itba.paw.services.user.UserService;
 /**
  * Mutating reservation lifecycle: rider submissions, rider-driven period edits, participant
@@ -59,6 +61,7 @@ public class ReservationWorkflowServiceImpl implements ReservationWorkflowServic
     private final ReservationQueryService queryService;
     private final ReservationPricingService pricingService;
     private final UserService userService;
+    private final UserReadinessService userReadinessService;
     private final CarService carService;
     private final ReservationMailComposer mailComposer;
     private final ReservationPaymentService reservationPaymentService;
@@ -70,6 +73,7 @@ public class ReservationWorkflowServiceImpl implements ReservationWorkflowServic
             final ReservationQueryService queryService,
             final ReservationPricingService pricingService,
             final UserService userService,
+            final UserReadinessService userReadinessService,
             final CarService carService,
             final ReservationMailComposer mailComposer,
             @Lazy final ReservationPaymentService reservationPaymentService) {
@@ -78,6 +82,7 @@ public class ReservationWorkflowServiceImpl implements ReservationWorkflowServic
         this.queryService = queryService;
         this.pricingService = pricingService;
         this.userService = userService;
+        this.userReadinessService = userReadinessService;
         this.carService = carService;
         this.mailComposer = mailComposer;
         this.reservationPaymentService = reservationPaymentService;
@@ -101,8 +106,18 @@ public class ReservationWorkflowServiceImpl implements ReservationWorkflowServic
         if (car.getOwner() != null && car.getOwner().isBlocked()) {
             throw new RiderReservationException(MessageKeys.RESERVATION_OWNER_BLOCKED);
         }
+        // Only ACTIVE cars are bookable. Paused / admin-paused / lack-doc / unavailable / deactivated
+        // cars may still expose OFFERED availability rows, but a direct POST must be rejected regardless.
+        if (car.getStatus() != Car.Status.ACTIVE) {
+            throw new RiderReservationException(MessageKeys.RESERVATION_CAR_NOT_ACTIVE);
+        }
         final User rider = userService.getUserById(riderId)
                 .orElseThrow(() -> new RiderReservationException(MessageKeys.RESERVATION_RIDER_USER_NOT_FOUND));
+        // Blocked riders may still authenticate (e.g. to finish in-progress trips) but must not
+        // create new reservations. Existing reservations are left alone (see product rule N-34).
+        if (rider.isBlocked()) {
+            throw new RiderReservationException(MessageKeys.RESERVATION_RIDER_BLOCKED);
+        }
         final OffsetDateTime[] interval = parseAndOrderInterval(fromDateTime, untilDateTime);
         final OffsetDateTime startDate = interval[0];
         final OffsetDateTime endDate = interval[1];
@@ -111,7 +126,7 @@ public class ReservationWorkflowServiceImpl implements ReservationWorkflowServic
         if (car.getOwner().getId() == rider.getId()) {
             throw new RiderReservationException(MessageKeys.RESERVATION_RIDER_CANNOT_RESERVE_OWN_LISTING);
         }
-        if (!userService.hasUploadedLicenseAndIdentity(rider)) {
+        if (!userReadinessService.hasUploadedLicenseAndIdentity(rider)) {
             throw new RiderReservationException(MessageKeys.RESERVATION_RIDER_DOCUMENTATION_REQUIRED);
         }
         final String cbu;
@@ -152,6 +167,11 @@ public class ReservationWorkflowServiceImpl implements ReservationWorkflowServic
         final long carId = reservation.getCarId();
         final Car car = carService.getCarById(carId)
                 .orElseThrow(() -> new RiderReservationException(MessageKeys.RESERVATION_RIDER_LISTING_NOT_FOUND));
+        // Moving or extending the reservation window re-introduces bookability, so a car that
+        // became non-ACTIVE after the reservation was created can no longer be edited.
+        if (car.getStatus() != Car.Status.ACTIVE) {
+            throw new RiderReservationException(MessageKeys.RESERVATION_CAR_NOT_ACTIVE);
+        }
         pricingService.validateRiderReservationPricingInterval(
                 carId, null, startDate, endDate, car.getMinimumRentalDays());
         carService.lockForReservationWrite(carId);
@@ -258,8 +278,10 @@ public class ReservationWorkflowServiceImpl implements ReservationWorkflowServic
     @Transactional
     public void cancelBlockingReservationsForAdminCarPause(final long carId) {
         final OffsetDateTime nowUtc = OffsetDateTime.now(ZoneOffset.UTC);
-        for (final Reservation r : reservationService.findBlockingReservationsByCarId(carId)) {
-            cancelReservationForAdminCarPause(r, nowUtc);
+        for (final BlockingReservationProjection projection :
+                reservationService.findBlockingReservationsByCarId(carId)) {
+            reservationService.getReservationById(projection.getId())
+                    .ifPresent(reservation -> cancelReservationForAdminCarPause(reservation, nowUtc));
         }
     }
 

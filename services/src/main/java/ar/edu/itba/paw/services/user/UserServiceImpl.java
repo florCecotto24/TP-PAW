@@ -32,7 +32,6 @@ import ar.edu.itba.paw.exception.user.RegistrationPasswordException;
 import ar.edu.itba.paw.exception.user.UserForbiddenException;
 import ar.edu.itba.paw.exception.user.UserNotFoundException;
 import ar.edu.itba.paw.models.security.UserRole;
-import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.models.domain.file.StoredFile;
 import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.models.domain.user.UserDocumentType;
@@ -46,7 +45,6 @@ import ar.edu.itba.paw.models.util.time.AppTimezone;
 import ar.edu.itba.paw.models.util.rules.CbuRules;
 import ar.edu.itba.paw.models.util.format.EmailNormalizer;
 import ar.edu.itba.paw.models.util.format.TextTruncationLimits;
-import ar.edu.itba.paw.models.util.rules.SupportedLocales;
 import ar.edu.itba.paw.persistence.user.UserDao;
 import ar.edu.itba.paw.policy.UserValidationPolicy;
 
@@ -76,6 +74,9 @@ public class UserServiceImpl implements UserService {
     private final CarService carService;
     private final UserProfileMediaService userProfileMediaService;
     private final AdminService adminService;
+    private final UserReadinessService userReadinessService;
+    private final UserLocaleService userLocaleService;
+    private final UserOwnerCbuService userOwnerCbuService;
 
     @Autowired
     public UserServiceImpl(
@@ -86,7 +87,10 @@ public class UserServiceImpl implements UserService {
             @Lazy final EmailVerificationService emailVerificationService,
             @Lazy final CarService carService,
             @Lazy final UserProfileMediaService userProfileMediaService,
-            @Lazy final AdminService adminService) {
+            @Lazy final AdminService adminService,
+            final UserReadinessService userReadinessService,
+            @Lazy final UserLocaleService userLocaleService,
+            @Lazy final UserOwnerCbuService userOwnerCbuService) {
         this.userDao = userDao;
         this.emailService = emailService;
         this.passwordEncoder = passwordEncoder;
@@ -95,6 +99,9 @@ public class UserServiceImpl implements UserService {
         this.carService = carService;
         this.userProfileMediaService = userProfileMediaService;
         this.adminService = adminService;
+        this.userReadinessService = userReadinessService;
+        this.userLocaleService = userLocaleService;
+        this.userOwnerCbuService = userOwnerCbuService;
     }
 
     @Override
@@ -319,13 +326,13 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public void uploadValidatedProfileDocument(
+    public void uploadProfileDocument(
             final long userId,
             final UserDocumentType documentType,
             final String originalFilename,
             final String contentType,
             final byte[] data) {
-        userProfileMediaService.uploadValidatedProfileDocument(userId, documentType, originalFilename, contentType, data);
+        userProfileMediaService.uploadProfileDocument(userId, documentType, originalFilename, contentType, data);
     }
 
     @Override
@@ -375,7 +382,8 @@ public class UserServiceImpl implements UserService {
         final String plain = randomMigrationPlainPassword();
         userDao.updatePasswordHash(userId, passwordEncoder.encode(plain));
         userDao.updateEmailValidated(userId, true);
-        final Locale mailLocale = resolveMailLocaleOrElse(userId, locale != null ? locale : Locale.ENGLISH);
+        final Locale mailLocale = userLocaleService.resolveMailLocaleOrElse(
+                userId, locale != null ? locale : Locale.ENGLISH);
         emailService.sendMigratedUserPassword(MigratedUserPasswordEmailPayload.builder()
                 .messageLocale(mailLocale)
                 .recipientEmail(withHash.getEmail())
@@ -423,24 +431,7 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional(readOnly = true)
     public Optional<String> findOwnerCbuForCar(final long carId) {
-        final Optional<Long> ownerIdOpt = carService.getCarById(carId)
-                .map(Car::getOwner)
-                .map(User::getId);
-        if (ownerIdOpt.isEmpty()) {
-            LOGGER.atWarn().addArgument(carId).log("Car owner missing when resolving CBU for car (carId={})");
-            return Optional.empty();
-        }
-        final long ownerId = ownerIdOpt.get();
-        try {
-            return Optional.of(getUserCbu(ownerId));
-        } catch (final UserNotFoundException | CBUNotFoundException e) {
-            LOGGER.atWarn()
-                    .setCause(e)
-                    .addArgument(carId)
-                    .addArgument(ownerId)
-                    .log("Owner CBU unavailable for car (carId={}, ownerId={})");
-            return Optional.empty();
-        }
+        return userOwnerCbuService.findOwnerCbuForCar(carId);
     }
 
     private void assertNewPasswordPair(final String password, final String passwordConfirm) {
@@ -511,70 +502,43 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional(readOnly = true)
     public Optional<Locale> findUserPreferredLocale(final long userId) {
-        return preferredLocaleFor(userId);
+        return userLocaleService.findUserPreferredLocale(userId);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Locale resolveMailLocale(final long userId) {
-        return resolveMailLocaleOrElse(userId, Locale.ENGLISH);
+        return userLocaleService.resolveMailLocale(userId);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Locale resolveMailLocaleOrElse(final long userId, final Locale fallback) {
-        final Locale fb = fallback != null ? fallback : Locale.ENGLISH;
-        return preferredLocaleFor(userId).orElse(fb);
-    }
-
-    /**
-     * Private helper shared by {@link #findUserPreferredLocale(long)} and
-     * {@link #resolveMailLocaleOrElse(long, Locale)}. Extracted so the latter no longer self-invokes
-     * the public {@code findUserPreferredLocale}, which would skip the Spring proxy and ignore its
-     * {@code @Transactional(readOnly = true)} annotation if propagation rules ever changed.
-     */
-    private Optional<Locale> preferredLocaleFor(final long userId) {
-        return getUserById(userId)
-                .flatMap(User::getLatestLocale)
-                .flatMap(loc -> SupportedLocales.parse(loc.toLanguageTag()));
+        return userLocaleService.resolveMailLocaleOrElse(userId, fallback);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Locale resolveMailLocaleFor(final User user) {
-        if (user == null) {
-            return Locale.ENGLISH;
-        }
-        return user.getLatestLocale()
-                .flatMap(loc -> SupportedLocales.parse(loc.toLanguageTag()))
-                .orElse(Locale.ENGLISH);
+        return userLocaleService.resolveMailLocaleFor(user);
     }
 
     @Override
     @Transactional(readOnly = true)
     public boolean hasValidCbu(final User user) {
-        if (user == null) {
-            return false;
-        }
-        return user.getCbu().filter(CbuRules::isValidFormat).isPresent();
+        return userReadinessService.hasValidCbu(user);
     }
 
     @Override
     @Transactional(readOnly = true)
     public boolean hasUploadedLicenseAndIdentity(final User user) {
-        if (user == null) {
-            return false;
-        }
-        return user.getLicenseFileId().isPresent() && user.getIdentityFileId().isPresent();
+        return userReadinessService.hasUploadedLicenseAndIdentity(user);
     }
 
     @Override
     @Transactional(readOnly = true)
     public boolean meetsPublishingPrerequisites(final User user) {
-        if (user == null) {
-            return false;
-        }
-        return hasValidCbu(user) && user.getIdentityFileId().isPresent();
+        return userReadinessService.meetsPublishingPrerequisites(user);
     }
 
     @Override
@@ -593,7 +557,7 @@ public class UserServiceImpl implements UserService {
     // Intentionally not @Transactional: pure static-format validation delegating to CbuRules
     @Override
     public boolean isValidCbuFormat(final String cbuRaw) {
-        return CbuRules.isValidFormat(cbuRaw);
+        return userReadinessService.isValidCbuFormat(cbuRaw);
     }
 
     @Override
@@ -685,7 +649,7 @@ public class UserServiceImpl implements UserService {
             throw new UserAlreadyAdminException();
         }
         userDao.updateUserRoleAndGrantor(targetUserId, UserRole.ADMIN, assignedByUserId);
-        final Locale mailLocale = resolveMailLocaleOrElse(targetUserId, Locale.ENGLISH);
+        final Locale mailLocale = userLocaleService.resolveMailLocaleOrElse(targetUserId, Locale.ENGLISH);
         emailService.sendAdminPromoted(AdminPromotedEmailPayload.builder()
                 .messageLocale(mailLocale)
                 .recipientEmail(target.getEmail())

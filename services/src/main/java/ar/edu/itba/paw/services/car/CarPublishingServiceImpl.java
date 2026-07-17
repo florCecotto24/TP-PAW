@@ -17,6 +17,7 @@ import ar.edu.itba.paw.models.domain.car.CarBrand;
 import ar.edu.itba.paw.models.domain.car.CarModel;
 import ar.edu.itba.paw.models.domain.user.User;
 
+import ar.edu.itba.paw.services.user.UserReadinessService;
 import ar.edu.itba.paw.services.user.AdminService;
 import ar.edu.itba.paw.services.user.UserService;
 /**
@@ -32,6 +33,7 @@ public class CarPublishingServiceImpl implements CarPublishingService {
     private final CarBrandService carBrandService;
     private final CarModelService carModelService;
     private final UserService userService;
+    private final UserReadinessService userReadinessService;
     private final AdminService adminService;
 
     @Autowired
@@ -40,11 +42,13 @@ public class CarPublishingServiceImpl implements CarPublishingService {
             final CarBrandService carBrandService,
             final CarModelService carModelService,
             final UserService userService,
+            final UserReadinessService userReadinessService,
             final AdminService adminService) {
         this.carService = carService;
         this.carBrandService = carBrandService;
         this.carModelService = carModelService;
         this.userService = userService;
+        this.userReadinessService = userReadinessService;
         this.adminService = adminService;
     }
 
@@ -54,7 +58,7 @@ public class CarPublishingServiceImpl implements CarPublishingService {
             final long ownerId, final PublishCarRequest request, final Locale locale) {
         final User owner = userService.getUserById(ownerId)
                 .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
-        if (!userService.meetsPublishingPrerequisites(owner)) {
+        if (!userReadinessService.meetsPublishingPrerequisites(owner)) {
             throw new CarPublishPrerequisitesMissingException();
         }
 

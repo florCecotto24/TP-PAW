@@ -18,9 +18,9 @@ app.security.jwt.secret=change-me-to-a-long-random-secret
 # Gmail / SMTP app password
 mail.server.password=change-me-smtp
 
-# Schema is owned by Flyway in production; Hibernate must not auto-mutate it. Use "validate" to fail fast
-# on drift, or "none" to skip the check. Never "update" outside local.
-hibernate.hbm2ddl.auto=none
+# Cátedra requires hibernate.hbm2ddl.auto=update (same as application.properties). Flyway still runs
+# versioned migrations; do not override this to none/validate in the deployed profile.
+# hibernate.hbm2ddl.auto=update
 
 # CORS is disabled when the "local" profile is inactive (default on Pampero): SPA and API share the same
 # origin from this WAR. Do not re-enable wildcard CORS in production.

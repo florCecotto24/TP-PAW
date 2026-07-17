@@ -1,10 +1,33 @@
-import { useState, type FormEvent } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Alert, Button, Form } from 'react-bootstrap';
+import { canonicalApiUserPath } from '../../api/uri';
 import { sessionClient, useSessionStore } from '../../session/sessionStore';
 import { apiErrorMessage } from './errorMessage';
 import { paths } from '../../routes/paths';
+
+/** Accept only same-origin API user URNs (`/users/{id}`) before POSTing credentials. */
+function isTrustedApiUserUri(userUri: string): boolean {
+  const trimmed = userUri.trim();
+  if (!trimmed) return false;
+  if (/^[a-z][a-z0-9+.-]*:/i.test(trimmed) && !/^https?:\/\//i.test(trimmed)) {
+    return false;
+  }
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    if (typeof window === 'undefined') return false;
+    try {
+      if (new URL(trimmed).origin !== window.location.origin) return false;
+    } catch {
+      return false;
+    }
+  }
+  try {
+    return /^\/users\/\d+$/.test(canonicalApiUserPath(trimmed));
+  } catch {
+    return false;
+  }
+}
 
 // /verificar-email — tras POST /users el servidor envía un OTP por mail.
 // Verificar = Basic auth email:otp (el OTP actúa como password); el backend
@@ -16,7 +39,11 @@ export default function VerifyEmailPage() {
   const login = useSessionStore((s) => s.login);
   const [params] = useSearchParams();
 
-  const userUri = params.get('userUri');
+  const rawUserUri = params.get('userUri');
+  const userUri = useMemo(
+    () => (rawUserUri && isTrustedApiUserUri(rawUserUri) ? canonicalApiUserPath(rawUserUri) : null),
+    [rawUserUri],
+  );
   const email = params.get('email') ?? '';
 
   const [code, setCode] = useState('');

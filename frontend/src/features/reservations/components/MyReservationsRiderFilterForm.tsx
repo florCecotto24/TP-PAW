@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ExploreFilterDropdown } from '../../../components/ryden';
@@ -56,6 +56,15 @@ export default function MyReservationsRiderFilterForm({
   const [priceMin, setPriceMin] = useState(initial.priceMin != null ? String(initial.priceMin) : '');
   const [priceMax, setPriceMax] = useState(initial.priceMax != null ? String(initial.priceMax) : '');
   const [selectedFilters, setSelectedFilters] = useState<MultiFilters>(() => toMulti(initial));
+
+  const initialKey = JSON.stringify(initial);
+  useEffect(() => {
+    setQuery(initial.q ?? '');
+    setPriceMin(initial.priceMin != null ? String(initial.priceMin) : '');
+    setPriceMax(initial.priceMax != null ? String(initial.priceMax) : '');
+    setSelectedFilters(toMulti(initial));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialKey]);
 
   const hasActivePrice = Boolean(priceMin || priceMax);
 

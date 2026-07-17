@@ -38,7 +38,7 @@ import ar.edu.itba.paw.policy.ReservationMessageValidationPolicy;
 import ar.edu.itba.paw.policy.ReviewValidationPolicy;
 import ar.edu.itba.paw.policy.UserValidationPolicy;
 import ar.edu.itba.paw.policy.VerificationCodePolicy;
-import ar.edu.itba.paw.services.user.UserService;
+import ar.edu.itba.paw.services.user.UserLocaleService;
 import ar.edu.itba.paw.webapp.config.properties.AppMoneyProperties;
 import ar.edu.itba.paw.webapp.config.properties.AppReservationChatProperties;
 import ar.edu.itba.paw.webapp.config.properties.AppSecurityJwtProperties;
@@ -94,8 +94,8 @@ public class WebConfig {
     }
 
     @Bean
-    public RydenLocaleResolver rydenLocaleResolver(final UserService userService) {
-        return new RydenLocaleResolver(userService);
+    public RydenLocaleResolver rydenLocaleResolver(final UserLocaleService userLocaleService) {
+        return new RydenLocaleResolver(userLocaleService);
     }
 
     @Bean

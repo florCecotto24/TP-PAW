@@ -25,6 +25,7 @@ export interface ConsumerCarCardProps {
   href?: To | AppLinkTarget | null;
   reviewCount?: number | null;
   onToggleFavorite?: (carId: number) => void;
+  favoriteBusy?: boolean;
   imageSlot?: CarCardProps['imageSlot'];
   overlay?: CarCardProps['overlay'];
 }
@@ -36,6 +37,7 @@ export default function ConsumerCarCard({
   href,
   reviewCount,
   onToggleFavorite,
+  favoriteBusy,
   imageSlot,
   overlay,
 }: ConsumerCarCardProps) {
@@ -57,6 +59,7 @@ export default function ConsumerCarCard({
       carId={card.carId}
       showFavoriteButton={card.favoritable}
       favorited={card.favorited}
+      favoriteBusy={favoriteBusy}
       onToggleFavorite={onToggleFavorite}
       imageSlot={imageSlot}
       overlay={overlay}

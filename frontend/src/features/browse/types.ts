@@ -55,17 +55,20 @@ export const CAR_SORTS: readonly CarSort[] = [
 
 /**
  * Links de un CarDto. `self` siempre presente (heredado de Links); el resto
- * según openapi: self, owner, model, brand, pictures, availabilities, insurance,
- * reviews, similar. Se tipan como opcionales porque no toda vista trae todos.
+ * según openapi: self, owner, model, brand, price-insight, cover, pictures,
+ * availabilities, bookable-segments, insurance, reviews, similar. Se tipan
+ * como opcionales porque no toda vista trae todos.
  */
 export interface CarLinks {
   self: string;
   owner?: string;
   model?: string;
   brand?: string;
+  'price-insight'?: string;
   pictures?: string;
   cover?: string;
   availabilities?: string;
+  'bookable-segments'?: string;
   insurance?: string;
   reviews?: string;
   similar?: string;
@@ -123,7 +126,8 @@ export interface AvailabilityDto {
   checkInTime: string;
   checkOutTime: string;
   kind: 'offered' | 'withdrawn';
-  links: Links & { car?: string; neighborhood?: string };
+  /** Month projections may omit `self`; persisted rows include it. */
+  links: { self?: string; car?: string; neighborhood?: string; [rel: string]: string | undefined };
 }
 
 /** DTO de imagen/video. Los bytes se sirven en links.self (binario, sin versionar). */

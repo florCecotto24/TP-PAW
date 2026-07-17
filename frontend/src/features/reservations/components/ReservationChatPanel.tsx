@@ -7,9 +7,8 @@ import { sessionClient } from '../../../session/sessionStore';
 import { idFromUri, listMessages, listMessagesLatestPage } from '../api';
 import {
   CHAT_FILE_ACCEPT,
+  chatLimits,
   formatFileSize,
-  getChatMaxAttachmentMb,
-  getChatMessageMaxLength,
   validateChatFile,
 } from '../chatAttachment';
 import { formatDayLabel, groupMessagesByDay, latestMessageId, mergeMessages } from '../chatLog';
@@ -204,18 +203,18 @@ export default function ReservationChatPanel({
     if (!messagesUri || !onLastPage || !chatAvailable) return;
     const timer = window.setInterval(() => {
       setMessages((prev) => {
+        // Poll even when the thread is empty (afterId=0): otherwise the first message from
+        // the counterparty never appears until remount/reload.
         const after = latestMessageId(prev);
-        if (after > 0) {
-          void listMessages(messagesUri, { afterId: after })
-            .then((res) => {
-              if (res.data?.length) {
-                setMessages((cur) => mergeMessages(cur, res.data as MessageDto[]));
-              }
-            })
-            .catch(() => {
-              /* polling en segundo plano */
-            });
-        }
+        void listMessages(messagesUri, { afterId: after })
+          .then((res) => {
+            if (res.data?.length) {
+              setMessages((cur) => mergeMessages(cur, res.data as MessageDto[]));
+            }
+          })
+          .catch(() => {
+            /* polling en segundo plano */
+          });
         return prev;
       });
     }, POLL_INTERVAL_MS);
@@ -248,7 +247,7 @@ export default function ReservationChatPanel({
     }
     const validation = validateChatFile(next);
     if (validation === 'tooLarge') {
-      setSendError(t('res.chat.tooLarge', { max: getChatMaxAttachmentMb() }));
+      setSendError(t('res.chat.tooLarge', { max: chatLimits().maxAttachmentMegabytes }));
       return;
     }
     if (validation === 'invalidType') {
@@ -316,7 +315,7 @@ export default function ReservationChatPanel({
     if (file) {
       const validation = validateChatFile(file);
       if (validation === 'tooLarge') {
-        setSendError(t('res.chat.tooLarge', { max: getChatMaxAttachmentMb() }));
+        setSendError(t('res.chat.tooLarge', { max: chatLimits().maxAttachmentMegabytes }));
         return;
       }
       if (validation === 'invalidType') {
@@ -537,7 +536,7 @@ export default function ReservationChatPanel({
               id="chatBody"
               className="form-control reservation-chat-page__input"
               rows={1}
-              maxLength={getChatMessageMaxLength()}
+              maxLength={chatLimits().messageMaxLength}
               value={body}
               disabled={composerDisabled}
               onChange={(e) => setBody(e.target.value)}

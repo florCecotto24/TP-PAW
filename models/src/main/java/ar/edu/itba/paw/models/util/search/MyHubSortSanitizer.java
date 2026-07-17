@@ -8,7 +8,15 @@ import java.util.Set;
 public final class MyHubSortSanitizer {
 
     private static final Set<String> VALID =
-            Set.of("date,desc", "date,asc", "price,asc", "price,desc", "rating,asc", "rating,desc");
+            Set.of(
+                    "date,desc",
+                    "date,asc",
+                    "price,asc",
+                    "price,desc",
+                    "rating,asc",
+                    "rating,desc",
+                    "name,asc",
+                    "name,desc");
 
     private MyHubSortSanitizer() {
     }

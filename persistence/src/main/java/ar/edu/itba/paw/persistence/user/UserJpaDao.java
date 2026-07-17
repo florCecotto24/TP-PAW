@@ -185,6 +185,7 @@ public class UserJpaDao implements UserDao {
             return;
         }
         user.setPasswordHash(passwordHash);
+        user.bumpPasswordVersion();
     }
 
     @Override

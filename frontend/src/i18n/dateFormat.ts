@@ -5,6 +5,20 @@ import type { Options } from 'flatpickr/dist/types/options';
 /** Zona horaria de negocio (Argentina). Alineado con AppTimezone.WALL_ZONE del backend. */
 export const APP_TIMEZONE = 'America/Argentina/Buenos_Aires';
 
+/** Today's calendar date (YYYY-MM-DD) in the business wall timezone — not the browser local TZ. */
+export function wallTodayYmd(now: Date = new Date()): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: APP_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(now);
+  const y = parts.find((p) => p.type === 'year')?.value ?? '1970';
+  const m = parts.find((p) => p.type === 'month')?.value ?? '01';
+  const d = parts.find((p) => p.type === 'day')?.value ?? '01';
+  return `${y}-${m}-${d}`;
+}
+
 /** Mapea el código i18next (`es`, `en`, …) a un locale BCP 47 para Intl. */
 export function resolveIntlLocale(language: string | undefined): string {
   const lang = (language || 'es').toLowerCase();
@@ -144,7 +158,8 @@ export function formatMonthYear(yyyyMm: string, language?: string): string {
   const y = Number(match[1]);
   const m = Number(match[2]);
   if (m < 1 || m > 12) return yyyyMm;
-  const d = new Date(y, m - 1, 1);
+  // Noon anchor avoids month shift when formatting with APP_TIMEZONE vs local midnight.
+  const d = new Date(y, m - 1, 1, 12, 0, 0, 0);
   const locale = resolveIntlLocale(language);
   const parts = new Intl.DateTimeFormat(locale, {
     month: 'long',

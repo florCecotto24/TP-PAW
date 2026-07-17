@@ -54,7 +54,7 @@ export interface CarSummaryDto {
   links: Links;
 }
 
-/** DTO de auto (lectura completa). `links`: self, owner, model, brand, pictures, availabilities, insurance, reviews. */
+/** DTO de auto (lectura completa). `links`: self, owner, model, brand, price-insight, cover, pictures, availabilities, bookable-segments, insurance, reviews, similar. */
 export interface CarDto {
   plate: string;
   year?: number | null;
@@ -70,7 +70,18 @@ export interface CarDto {
   modelValidated: boolean;
   hasInsurance?: boolean;
   createdAt: string;
-  links: Links;
+  links: Links & {
+    'price-insight'?: string;
+    cover?: string;
+    pictures?: string;
+    availabilities: string;
+    'bookable-segments'?: string;
+    insurance?: string;
+    reviews?: string;
+    similar?: string;
+    model?: string;
+    brand?: string;
+  };
 }
 
 /** Cuerpo del POST /cars (parte `car` del multipart, o JSON puro). */
@@ -97,7 +108,20 @@ export interface CarPatchDto {
 
 export type AvailabilityKind = 'offered' | 'withdrawn';
 
-/** DTO de período de disponibilidad. `links`: self, car, neighborhood. */
+/**
+ * Links de availability.
+ * - Recurso persistido: `self` dereferenciable (PATCH/DELETE por id).
+ * - Proyección mensual (`?month=`): sin `self`; mutaciones van por colección del auto
+ *   (`car.links.availabilities` + `from`/`until`).
+ */
+export interface AvailabilityLinks {
+  self?: string;
+  car?: string;
+  neighborhood?: string;
+  [rel: string]: string | undefined;
+}
+
+/** DTO de período de disponibilidad. */
 export interface AvailabilityDto {
   startDate: string;
   endDate: string;
@@ -107,7 +131,7 @@ export interface AvailabilityDto {
   checkInTime: string;
   checkOutTime: string;
   kind: AvailabilityKind;
-  links: Links;
+  links: AvailabilityLinks;
 }
 
 /** Cuerpo del POST/PATCH availabilities. */
@@ -139,12 +163,12 @@ export interface BrandDto {
   links: Links;
 }
 
-/** Modelo de catálogo. `links`: self, brand. */
+/** Modelo de catálogo. `links`: self, brand, price-insight. */
 export interface ModelDto {
   name: string;
   type: CarType;
   validated: boolean;
-  links: Links;
+  links: Links & { brand?: string; 'price-insight'?: string };
 }
 
 /** Barrio (select de ubicación en disponibilidad). `links`: self. */

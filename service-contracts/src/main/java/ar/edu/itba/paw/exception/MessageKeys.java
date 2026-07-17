@@ -56,6 +56,8 @@ public final class MessageKeys {
     public static final String RESERVATION_OWNER_PAYMENT_DETAILS_UNAVAILABLE = "reservation.rider.ownerPaymentDetailsUnavailable";
     public static final String RESERVATION_RIDER_DOCUMENTATION_REQUIRED = "reservation.rider.documentationRequired";
     public static final String RESERVATION_OWNER_BLOCKED = "reservation.rider.ownerBlocked";
+    public static final String RESERVATION_RIDER_BLOCKED = "reservation.rider.riderBlocked";
+    public static final String RESERVATION_CAR_NOT_ACTIVE = "reservation.rider.carNotActive";
 
     // user
     public static final String USER_EMAIL_ALREADY_EXISTS = "user.email.alreadyExists";

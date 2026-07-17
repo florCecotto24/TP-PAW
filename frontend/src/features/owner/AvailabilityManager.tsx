@@ -7,11 +7,12 @@ import type { Options } from 'flatpickr/dist/types/options';
 import FlatpickrCalendar, { compactPrice, dayStartFromYmd, dayEndFromYmd, ymd } from '../../components/FlatpickrCalendar';
 import { NeighborhoodPicker } from '../../components/ryden';
 import PriceMarketInsightCard from '../../components/ryden/car/PriceMarketInsightCard';
-import { formatDateRange, flatpickrLocale, formatMonthYear, shiftMonth } from '../../i18n/dateFormat';
+import { formatDateRange, flatpickrLocale, formatMonthYear, shiftMonth, wallTodayYmd } from '../../i18n/dateFormat';
 import { idFromUri } from '../../api/uri';
 import { getClientConfig } from '../../api/clientConfig';
 import { firstAvailabilityValidationError, minAvailabilityStartDateYmd } from './availabilityValidation';
 import {
+  availabilityIdentity,
   createAvailability,
   deleteAvailability,
   fetchAvailabilities,
@@ -34,8 +35,8 @@ import type {
 // permite crear / editar / retirar. La navegación de mes recarga ese mes.
 
 function currentMonth(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const ymd = wallTodayYmd();
+  return ymd.slice(0, 7);
 }
 
 const EMPTY_FORM: AvailabilityCreateDto = {
@@ -64,7 +65,7 @@ export default function AvailabilityManager({ car }: { car: CarDto }) {
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [reloadTick, setReloadTick] = useState(0);
-  const [highlightedSelf, setHighlightedSelf] = useState<string | null>(null);
+  const [highlightedKey, setHighlightedKey] = useState<string | null>(null);
   const [priceInsight, setPriceInsight] = useState<{
     minPrice: number;
     maxPrice: number;
@@ -96,13 +97,13 @@ export default function AvailabilityManager({ car }: { car: CarDto }) {
 
   useEffect(() => {
     let active = true;
-    const modelUri = car.links.model;
+    const priceInsightLink = car.links['price-insight'];
     const carId = idFromUri(car.links.self);
-    if (!modelUri || !carId) {
+    if (!priceInsightLink || !carId) {
       setPriceInsight(null);
       return undefined;
     }
-    fetchPriceMarketInsight(modelUri, carId)
+    fetchPriceMarketInsight(priceInsightLink, carId)
       .then((res) => {
         if (!active) return;
         const data = res.data;
@@ -241,7 +242,7 @@ export default function AvailabilityManager({ car }: { car: CarDto }) {
     // Si varios períodos cubren el día, gana el más reciente (último en la lista).
     const covering = periods.filter((p) => p.startDate <= d && d <= p.endDate);
     const best = covering.length > 0 ? covering[covering.length - 1] : null;
-    setHighlightedSelf(best ? best.links.self : null);
+    setHighlightedKey(best ? availabilityIdentity(best) : null);
   }, [periods]);
 
   function startEdit(p: AvailabilityDto) {
@@ -299,8 +300,8 @@ export default function AvailabilityManager({ car }: { car: CarDto }) {
     setError(null);
     setBusy(true);
     try {
-      await deleteAvailability(p);
-      if (editing && editing.links.self === p.links.self) resetForm();
+      await deleteAvailability(car, p);
+      if (editing && availabilityIdentity(editing) === availabilityIdentity(p)) resetForm();
       setReloadTick((n) => n + 1);
     } catch (err) {
       setError(errorMessage(err, 'owner.availability.errors.withdrawFailed'));
@@ -353,10 +354,12 @@ export default function AvailabilityManager({ car }: { car: CarDto }) {
           <p className="text-secondary mb-4">{t('owner.availability.empty')}</p>
         ) : (
           <div className="d-flex flex-column gap-2 mb-4">
-            {periods.map((p) => (
+            {periods.map((p) => {
+              const key = availabilityIdentity(p);
+              return (
               <div
-                key={p.links.self}
-                className={`manage-period-card p-3 border rounded-3 bg-white d-flex align-items-center justify-content-between gap-2 flex-wrap${highlightedSelf === p.links.self ? ' period-highlighted' : ''}`}
+                key={key}
+                className={`manage-period-card p-3 border rounded-3 bg-white d-flex align-items-center justify-content-between gap-2 flex-wrap${highlightedKey === key ? ' period-highlighted' : ''}`}
               >
                 <div className="d-flex align-items-center gap-2 min-w-0">
                   <i className="bi bi-calendar-range text-primary flex-shrink-0" aria-hidden="true" />
@@ -388,7 +391,8 @@ export default function AvailabilityManager({ car }: { car: CarDto }) {
                   </button>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
 

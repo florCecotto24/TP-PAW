@@ -31,6 +31,12 @@ export interface UserDto {
   links: Links & {
     identityDocument?: string;
     licenseDocument?: string;
+    cars?: string;
+    reservations?: string;
+    'owned-reservations'?: string;
+    favorites?: string;
+    reviews?: string;
+    profilePicture?: string;
   };
 }
 

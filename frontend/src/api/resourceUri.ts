@@ -1,14 +1,13 @@
 /**
  * Canonical API item URNs for bookmark/F5 when {@code location.state} has no hypermedia self.
  * List → detail navigation must pass {@code links.self} in router state; these helpers align
- * with OpenAPI paths and {@link getCollectionPath} from API discovery.
+ * with URI templates published by API discovery.
  */
-import { getCollectionPath, type ApiCollectionName } from './apiDiscovery';
+import { expandItemTemplate, type ApiCollectionName } from './apiDiscovery';
 
-/** Item URN under a collection (e.g. {@code /cars/42}). */
+/** Item URI expanded from the API index descriptor (e.g. {@code /cars/42}). */
 export function canonicalItemUri(collection: ApiCollectionName, id: string): string {
-  const base = getCollectionPath(collection).replace(/\/+$/, '');
-  return `${base}/${id}`;
+  return expandItemTemplate(collection, id);
 }
 
 export function canonicalCarUri(carId: string): string {
@@ -31,7 +30,7 @@ export interface ResolveResourceUriOptions {
   collection: ApiCollectionName;
 }
 
-/** Prefer hypermedia self from navigation; otherwise canonical item URI from route id. */
+/** Prefer hypermedia self from navigation; otherwise expand the discovered template. */
 export function resolveResourceUri(opts: ResolveResourceUriOptions): string | null {
   const fromState = opts.stateUri?.trim();
   if (fromState) return fromState;

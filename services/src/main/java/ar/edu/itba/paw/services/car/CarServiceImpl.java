@@ -2,21 +2,17 @@ package ar.edu.itba.paw.services.car;
 
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,7 +26,6 @@ import ar.edu.itba.paw.exception.car.CarValidationException;
 import ar.edu.itba.paw.exception.car.DuplicatePlateException;
 import ar.edu.itba.paw.models.domain.car.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.car.Car;
-import ar.edu.itba.paw.models.domain.file.Image;
 import ar.edu.itba.paw.models.domain.file.StoredFile;
 import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.models.dto.car.CarCard;
@@ -41,17 +36,16 @@ import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.email.listing.CarPausedMissingCbuOwnerEmailPayload;
 import ar.edu.itba.paw.models.security.UserRole;
 import ar.edu.itba.paw.models.util.rules.CbuRules;
-import ar.edu.itba.paw.models.util.media.BinaryMagicBytes;
-import ar.edu.itba.paw.models.util.media.CarGalleryMediaContentTypes;
 import ar.edu.itba.paw.models.util.search.CarSearchCriteria;
 import ar.edu.itba.paw.models.util.search.CarSearchRequest;
 import ar.edu.itba.paw.models.util.search.OwnerCarSearchCriteria;
 import ar.edu.itba.paw.persistence.car.CarDao;
 
 import ar.edu.itba.paw.services.email.EmailService;
-import ar.edu.itba.paw.services.file.ImageService;
 import ar.edu.itba.paw.services.file.StoredFileService;
 import ar.edu.itba.paw.services.user.AdminService;
+import ar.edu.itba.paw.services.user.UserLocaleService;
+import ar.edu.itba.paw.services.user.UserReadinessService;
 import ar.edu.itba.paw.services.user.UserService;
 @Service
 public class CarServiceImpl implements CarService {
@@ -59,35 +53,44 @@ public class CarServiceImpl implements CarService {
     private static final Logger LOGGER = LoggerFactory.getLogger(CarServiceImpl.class);
 
     private final CarDao carDao;
-    private final ImageService imageService;
-    private final CarPictureService carPictureService;
     private final UserService userService;
+    private final UserReadinessService userReadinessService;
+    private final UserLocaleService userLocaleService;
     private final CarAvailabilityService carAvailabilityService;
     private final EmailService emailService;
     private final StoredFileService storedFileService;
     private final CarSearchService carSearchService;
     private final AdminService adminService;
+    private final CarListingPolicyService carListingPolicyService;
+    private final CarMarketInsightService carMarketInsightService;
+    private final CarGalleryMediaService carGalleryMediaService;
 
     @Autowired
     public CarServiceImpl(
             final CarDao carDao,
-            final ImageService imageService,
-            final CarPictureService carPictureService,
             final UserService userService,
+            final UserReadinessService userReadinessService,
+            final UserLocaleService userLocaleService,
             @Lazy final CarAvailabilityService carAvailabilityService,
             final EmailService emailService,
             final StoredFileService storedFileService,
             @Lazy final CarSearchService carSearchService,
-            @Lazy final AdminService adminService) {
+            @Lazy final AdminService adminService,
+            final CarListingPolicyService carListingPolicyService,
+            final CarMarketInsightService carMarketInsightService,
+            final CarGalleryMediaService carGalleryMediaService) {
         this.carDao = carDao;
-        this.imageService = imageService;
-        this.carPictureService = carPictureService;
         this.userService = userService;
+        this.userReadinessService = userReadinessService;
+        this.userLocaleService = userLocaleService;
         this.carAvailabilityService = carAvailabilityService;
         this.emailService = emailService;
         this.storedFileService = storedFileService;
         this.carSearchService = carSearchService;
         this.adminService = adminService;
+        this.carListingPolicyService = carListingPolicyService;
+        this.carMarketInsightService = carMarketInsightService;
+        this.carGalleryMediaService = carGalleryMediaService;
     }
 
     @Override
@@ -99,7 +102,14 @@ public class CarServiceImpl implements CarService {
             final Integer year,
             final Car.Powertrain powertrain,
             final Car.Transmission transmission) {
-        return carDao.createCar(ownerId, plate, carModelId, year, powertrain, transmission);
+        if (carDao.existsByOwnerAndPlate(ownerId, plate)) {
+            throw new DuplicatePlateException(plate);
+        }
+        try {
+            return carDao.createCar(ownerId, plate, carModelId, year, powertrain, transmission);
+        } catch (final DataIntegrityViolationException ex) {
+            throw new DuplicatePlateException(plate);
+        }
     }
 
     @Override
@@ -119,41 +129,24 @@ public class CarServiceImpl implements CarService {
         // Defense-in-depth: the UI hides the publish entry point and the controller redirects blocked
         // owners away from GET /publish-car. A direct POST still needs the same guard because the form
         // could be replayed from a cached page or hit via cURL.
-        requireOwnerNotBlocked(ownerId);
+        carListingPolicyService.requireOwnerNotBlocked(ownerId);
         if (carDao.existsByOwnerAndPlate(ownerId, plate)) {
             throw new DuplicatePlateException(plate);
         }
-        if (countNonEmptyGalleryUploads(galleryMedia) < 1) {
+        if (carGalleryMediaService.countNonEmptyGalleryUploads(galleryMedia) < 1) {
             throw new CarValidationException(MessageKeys.CAR_GALLERY_PICTURES_REQUIRED);
         }
-        final Car car = carDao.createCar(ownerId, plate, carModelId, year, powertrain, transmission);
+        final Car car;
+        try {
+            car = carDao.createCar(ownerId, plate, carModelId, year, powertrain, transmission);
+        } catch (final DataIntegrityViolationException ex) {
+            // Concurrent publish with the same owner+plate (PG UNIQUE / HSQL unique index).
+            throw new DuplicatePlateException(plate);
+        }
         if (description != null && !description.isBlank()) {
             car.setDescription(description.strip());
         }
-        int displayOrder = 1;
-        if (galleryMedia != null) {
-            for (final GalleryMediaUpload media : galleryMedia) {
-                if (media.getData() == null || media.getData().length == 0) {
-                    continue;
-                }
-                if (CarGalleryMediaContentTypes.isImageContentType(media.getContentType())) {
-                    final Image image = imageService.createImage(
-                            media.getFilename(), media.getContentType(), media.getData());
-                    carPictureService.createCarPicture(car.getId(), image.getId(), displayOrder);
-                } else if (CarGalleryMediaContentTypes.isVideoContentType(
-                        media.getContentType(), media.getFilename())) {
-                    final StoredFile video = storedFileService.create(
-                            ownerId,
-                            media.getFilename() != null ? media.getFilename() : "video",
-                            media.getContentType() != null ? media.getContentType() : "video/mp4",
-                            media.getData());
-                    carPictureService.createCarPictureFromVideo(car.getId(), video.getId(), displayOrder);
-                } else {
-                    throw new CarValidationException(MessageKeys.CAR_GALLERY_MEDIA_INVALID_TYPE);
-                }
-                displayOrder++;
-            }
-        }
+        carGalleryMediaService.attachGalleryMedia(ownerId, car.getId(), galleryMedia, 1);
         if (insuranceData != null && insuranceData.length > 0) {
             final StoredFile stored = storedFileService.create(
                     ownerId,
@@ -167,18 +160,6 @@ public class CarServiceImpl implements CarService {
         return car;
     }
 
-    private static int countNonEmptyGalleryUploads(final List<GalleryMediaUpload> galleryMedia) {
-        if (galleryMedia == null || galleryMedia.isEmpty()) {
-            return 0;
-        }
-        int count = 0;
-        for (final GalleryMediaUpload media : galleryMedia) {
-            if (media.getData() != null && media.getData().length > 0) {
-                count++;
-            }
-        }
-        return count;
-    }
 
     @Override
     @Transactional(readOnly = true)
@@ -207,6 +188,7 @@ public class CarServiceImpl implements CarService {
     @Override
     @Transactional
     public Car.Status toggleCarStatus(final long ownerId, final long carId) {
+        carDao.lockForReservationWrite(carId);
         final Optional<Car> carOpt = carDao.getCarById(carId);
         if (carOpt.isEmpty() || carOpt.get().getOwnerId() != ownerId) {
             throw new CarValidationException(MessageKeys.CAR_NOT_FOUND);
@@ -218,7 +200,7 @@ public class CarServiceImpl implements CarService {
             newCarStatus = Car.Status.PAUSED;
         } else if (current == Car.Status.PAUSED) {
             final Optional<User> ownerRow = userService.getUserById(ownerId);
-            if (ownerRow.isEmpty() || !userService.hasValidCbu(ownerRow.get())) {
+            if (ownerRow.isEmpty() || !userReadinessService.hasValidCbu(ownerRow.get())) {
                 throw new CarValidationException(
                         MessageKeys.CAR_ACTIVATE_CBU_REQUIRED, CbuRules.REQUIRED_DIGIT_LENGTH);
             }
@@ -243,6 +225,7 @@ public class CarServiceImpl implements CarService {
     @Override
     @Transactional
     public boolean deactivateCar(final long ownerId, final long carId) {
+        carDao.lockForReservationWrite(carId);
         final Optional<Car> carOpt = carDao.getCarById(carId);
         if (carOpt.isEmpty() || carOpt.get().getOwnerId() != ownerId) {
             return false;
@@ -258,6 +241,7 @@ public class CarServiceImpl implements CarService {
             final Car.Status target,
             final long actingUserId,
             final Locale locale) {
+        carDao.lockForReservationWrite(carId);
         final Car car = carDao.getCarById(carId)
                 .orElseThrow(() -> new CarNotFoundException(carId));
         assertStatusPatchAuthorized(car, target, actingUserId);
@@ -403,39 +387,47 @@ public class CarServiceImpl implements CarService {
     @Override
     public List<Car.Status> resolveOwnerListingStatuses(
             final List<Car.Status> requestedStatuses, final boolean viewerIsSelfOrAdmin) {
-        if (requestedStatuses != null && !requestedStatuses.isEmpty()) {
-            return requestedStatuses;
-        }
-        return viewerIsSelfOrAdmin ? null : List.of(Car.Status.ACTIVE);
+        return carListingPolicyService.resolveOwnerListingStatuses(requestedStatuses, viewerIsSelfOrAdmin);
     }
 
     @Override
     @Transactional
     public void refreshExhaustedCarsToPaused() {
-        final List<Car> activeCars = carDao.findCarsByStatus(Car.Status.ACTIVE);
-        if (activeCars.isEmpty()) {
+        final int batchSize = 200;
+        Long afterId = null;
+        int paused = 0;
+        int scanned = 0;
+        while (true) {
+            final List<Long> activeCarIds =
+                    carDao.findCarIdsByStatusAfter(Car.Status.ACTIVE, afterId, batchSize);
+            if (activeCarIds.isEmpty()) {
+                break;
+            }
+            scanned += activeCarIds.size();
+            afterId = activeCarIds.get(activeCarIds.size() - 1);
+            // Batch the bookable-day calculation for this page: the calendar service turns the N+1
+            // (one availability + one blocking-reservation query per car) into 2 queries total.
+            final Map<Long, List<AvailabilityPeriod>> bookableByCarId =
+                    carAvailabilityService.getBookableWallAvailabilityPeriodsByCars(activeCarIds);
+            for (final Long carId : activeCarIds) {
+                final List<AvailabilityPeriod> bookable = bookableByCarId.getOrDefault(carId, List.of());
+                if (bookable.isEmpty()) {
+                    if (carDao.updateCarStatusIfCurrent(carId, Car.Status.PAUSED, Car.Status.ACTIVE)) {
+                        paused++;
+                    }
+                }
+            }
+            if (activeCarIds.size() < batchSize) {
+                break;
+            }
+        }
+        if (scanned == 0) {
             LOGGER.atInfo().log("Car exhaustion sweep: no active cars");
             return;
         }
-        // Batch the bookable-day calculation for every active car at once: the calendar service
-        // turns the N+1 (one availability + one blocking-reservation query per car) into 2
-        // queries total. The atomic per-car status flip below still runs once per row, but it
-        // is a single column update so PostgreSQL pipelines it efficiently.
-        final List<Long> activeCarIds = activeCars.stream().map(Car::getId).toList();
-        final Map<Long, List<AvailabilityPeriod>> bookableByCarId =
-                carAvailabilityService.getBookableWallAvailabilityPeriodsByCars(activeCarIds);
-        int paused = 0;
-        for (final Long carId : activeCarIds) {
-            final List<AvailabilityPeriod> bookable = bookableByCarId.getOrDefault(carId, List.of());
-            if (bookable.isEmpty()) {
-                if (carDao.updateCarStatusIfCurrent(carId, Car.Status.PAUSED, Car.Status.ACTIVE)) {
-                    paused++;
-                }
-            }
-        }
         LOGGER.atInfo()
                 .addArgument(paused)
-                .addArgument(activeCars.size())
+                .addArgument(scanned)
                 .log("Car exhaustion sweep: paused {} of {} active cars");
     }
 
@@ -456,7 +448,7 @@ public class CarServiceImpl implements CarService {
             return;
         }
         final String ownerFullName = owner.getForename() + " " + owner.getSurname();
-        final Locale ownerMailLocale = userService.resolveMailLocale(ownerId);
+        final Locale ownerMailLocale = userLocaleService.resolveMailLocale(ownerId);
         for (final Car car : active) {
             final Car.Status current = car.getStatus();
             if (!carDao.updateCarStatusIfCurrent(car.getId(), Car.Status.LACK_DOC, current)) {
@@ -497,28 +489,26 @@ public class CarServiceImpl implements CarService {
             final byte[] data) {
         // Defense-in-depth: insurance upload can promote a LACK_DOC car back to ACTIVE, so a blocked
         // owner could re-introduce a bookable car this way. Reject before touching storage.
-        requireOwnerNotBlocked(ownerId);
+        carListingPolicyService.requireOwnerNotBlocked(ownerId);
         final Optional<Car> carOpt = carDao.getCarById(carId);
         if (carOpt.isEmpty() || carOpt.get().getOwnerId() != ownerId) {
             throw new CarValidationException(MessageKeys.CAR_NOT_FOUND);
         }
-        if (data == null || data.length == 0) {
-            throw new CarValidationException(MessageKeys.CAR_INSURANCE_INVALID);
-        }
-        if (!StoredFile.isAllowedPaymentReceiptContentType(contentType)
-                || !BinaryMagicBytes.matchesDeclared(contentType, data)) {
-            throw new CarValidationException(MessageKeys.CAR_INSURANCE_INVALID);
-        }
+        carListingPolicyService.assertInsurancePayloadValid(contentType, data);
         final Car car = carOpt.get();
+        final Long previousInsuranceId = car.getInsuranceFileId().orElse(null);
         final StoredFile stored = storedFileService.create(
                 ownerId,
                 originalFilename != null ? originalFilename : "insurance",
                 contentType,
                 data);
         carDao.updateInsuranceDocument(carId, stored.getId());
+        if (previousInsuranceId != null && previousInsuranceId > 0 && !previousInsuranceId.equals(stored.getId())) {
+            storedFileService.deleteById(previousInsuranceId);
+        }
         if (car.getStatus() == Car.Status.LACK_DOC) {
             final User owner = userService.getUserById(ownerId).orElse(null);
-            if (owner != null && userService.hasValidCbu(owner)) {
+            if (owner != null && userReadinessService.hasValidCbu(owner)) {
                 carDao.updateCarStatusIfCurrent(carId, Car.Status.ACTIVE, Car.Status.LACK_DOC);
             }
         }
@@ -531,8 +521,12 @@ public class CarServiceImpl implements CarService {
         if (carOpt.isEmpty() || carOpt.get().getOwnerId() != ownerId) {
             throw new CarValidationException(MessageKeys.CAR_NOT_FOUND);
         }
-        carDao.clearInsuranceDocument(carId);
         final Car car = carOpt.get();
+        final Long previousInsuranceId = car.getInsuranceFileId().orElse(null);
+        carDao.clearInsuranceDocument(carId);
+        if (previousInsuranceId != null && previousInsuranceId > 0) {
+            storedFileService.deleteById(previousInsuranceId);
+        }
         if (car.getStatus() == Car.Status.ACTIVE || car.getStatus() == Car.Status.PAUSED) {
             carDao.setCarStatus(carId, Car.Status.LACK_DOC);
         }
@@ -583,12 +577,6 @@ public class CarServiceImpl implements CarService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<Car> findAdminPausedCars() {
-        return carDao.findCarsByStatus(Car.Status.ADMIN_PAUSED);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
     public Page<Car> findAllCarsPaginated(final int page, final int pageSize) {
         return carDao.findAllCarsPaginated(page, pageSize);
     }
@@ -602,6 +590,10 @@ public class CarServiceImpl implements CarService {
     @Override
     @Transactional
     public void markCarAsAdminPaused(final long carId) {
+        // Serialize this status flip against concurrent status transitions and reservation writes on
+        // the same car row (same PESSIMISTIC_WRITE lock as lockForReservationWrite). Reentrant when
+        // reached through applyStatusTransition, which already holds the lock.
+        carDao.lockForReservationWrite(carId);
         final Car car = carDao.getCarById(carId)
                 .orElseThrow(() -> new CarNotFoundException(carId));
         if (car.getStatus() == Car.Status.DEACTIVATED) {
@@ -613,6 +605,10 @@ public class CarServiceImpl implements CarService {
     @Override
     @Transactional
     public void releaseAdminCarPause(final long carId) {
+        // Serialize this status flip against concurrent status transitions and reservation writes on
+        // the same car row (same PESSIMISTIC_WRITE lock as lockForReservationWrite). Reentrant when
+        // reached through applyStatusTransition, which already holds the lock.
+        carDao.lockForReservationWrite(carId);
         final Car car = carDao.getCarById(carId)
                 .orElseThrow(() -> new CarNotFoundException(carId));
         if (car.getStatus() != Car.Status.ADMIN_PAUSED) {
@@ -625,7 +621,7 @@ public class CarServiceImpl implements CarService {
         // (insurance upload / CBU restored) bring the car back online once the owner completes them.
         final boolean hasInsurance = car.getInsuranceFileId().isPresent();
         final boolean hasValidCbu = userService.getUserById(car.getOwnerId())
-                .map(userService::hasValidCbu)
+                .map(userReadinessService::hasValidCbu)
                 .orElse(false);
         if (hasInsurance && hasValidCbu) {
             car.setStatus(Car.Status.ACTIVE);
@@ -651,107 +647,27 @@ public class CarServiceImpl implements CarService {
     @Transactional(readOnly = true)
     public Optional<CarPriceMarketInsight> getPriceMarketInsightForCar(
             final Car car, final Long excludeCarId) {
-        if (car == null) {
-            return Optional.empty();
-        }
-        return normalizedBrandModel(car.getBrand(), car.getModel())
-                .flatMap(bm -> carDao.findActiveDayPriceMarketInsightByBrandAndModel(
-                        bm[0], bm[1], excludeCarId));
+        return carMarketInsightService.getPriceMarketInsightForCar(car, excludeCarId);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Map<Long, ConsumerCarCardMarketContext> resolveConsumerPriceMarketContexts(
             final List<CarCard> cards) {
-        if (cards == null || cards.isEmpty()) {
-            return Map.of();
-        }
-        // Distinct (brand, model) pairs across the whole page, keyed case-insensitively so "Toyota"
-        // and "toyota" on two cards share one entry.
-        final Map<String, String[]> distinctPairs = new LinkedHashMap<>();
-        for (final CarCard card : cards) {
-            normalizedBrandModel(card.getBrand(), card.getModel())
-                    .ifPresent(bm -> distinctPairs.putIfAbsent(pairKey(bm[0], bm[1]), bm));
-        }
-        if (distinctPairs.isEmpty()) {
-            return Map.of();
-        }
-
-        // Was previously one findActiveDayPriceMarketInsightByBrandAndModel call per card (N+1):
-        // the cache key included card.getCarId(), which is unique per card, so it never deduplicated
-        // anything. A single batched query fetches every eligible car's price for every distinct
-        // brand/model on the page, and the per-card min/max/avg (excluding that card itself) is
-        // aggregated here in memory instead of once per card in the database.
-        final List<String> brands = new ArrayList<>(distinctPairs.size());
-        final List<String> models = new ArrayList<>(distinctPairs.size());
-        for (final String[] bm : distinctPairs.values()) {
-            brands.add(bm[0]);
-            models.add(bm[1]);
-        }
-        final List<CarModelPriceSample> samples = carDao.findActiveDayPricesForBrandModelPairs(brands, models);
-        final Map<String, List<CarModelPriceSample>> samplesByPair = samples.stream()
-                .collect(Collectors.groupingBy(s -> pairKey(s.getBrand(), s.getModel())));
-
-        final Map<Long, ConsumerCarCardMarketContext> contexts = new HashMap<>();
-        for (final CarCard card : cards) {
-            normalizedBrandModel(card.getBrand(), card.getModel())
-                    .flatMap(bm -> {
-                        final List<CarModelPriceSample> group =
-                                samplesByPair.getOrDefault(pairKey(bm[0], bm[1]), List.of());
-                        final List<BigDecimal> otherPrices = group.stream()
-                                .filter(s -> s.getCarId() != card.getCarId())
-                                .map(CarModelPriceSample::getMinPrice)
-                                .collect(Collectors.toList());
-                        return ConsumerCarCardMarketContext.fromInsight(
-                                aggregate(otherPrices), card.getDayPrice());
-                    })
-                    .ifPresent(ctx -> contexts.put(card.getCarId(), ctx));
-        }
-        return contexts;
+        return carMarketInsightService.resolveConsumerPriceMarketContexts(cards);
     }
 
-    private static String pairKey(final String brand, final String model) {
-        return brand.toLowerCase(Locale.ROOT) + "|" + model.toLowerCase(Locale.ROOT);
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<CarPriceMarketInsight> findActiveDayPriceMarketInsightByBrandAndModel(
+            final String brand, final String model, final Long excludeCarId) {
+        return carDao.findActiveDayPriceMarketInsightByBrandAndModel(brand, model, excludeCarId);
     }
 
-    /** Min/max/average of {@code prices}, mirroring the SQL aggregation this replaces per card. */
-    private static Optional<CarPriceMarketInsight> aggregate(final List<BigDecimal> prices) {
-        if (prices.isEmpty()) {
-            return Optional.empty();
-        }
-        BigDecimal min = prices.get(0);
-        BigDecimal max = prices.get(0);
-        BigDecimal sum = BigDecimal.ZERO;
-        for (final BigDecimal price : prices) {
-            if (price.compareTo(min) < 0) {
-                min = price;
-            }
-            if (price.compareTo(max) > 0) {
-                max = price;
-            }
-            sum = sum.add(price);
-        }
-        final BigDecimal avg = sum.divide(BigDecimal.valueOf(prices.size()), 4, RoundingMode.HALF_UP);
-        return Optional.of(new CarPriceMarketInsight(min, max, avg, prices.size()));
-    }
-
-    private static Optional<String[]> normalizedBrandModel(final String brand, final String model) {
-        if (brand == null || brand.isBlank() || model == null || model.isBlank()) {
-            return Optional.empty();
-        }
-        return Optional.of(new String[] {brand.trim(), model.trim()});
-    }
-
-    /**
-     * Throws {@link CarValidationException} with {@link MessageKeys#CAR_MUTATION_OWNER_BLOCKED} when
-     * {@code ownerId} is currently blocked (e.g. by the overdue-refund-proof sweep). Used as a guard
-     * by every owner-side mutation that could re-introduce a bookable car/listing. Reads through
-     * {@link UserService} (not {@code UserDao}) to respect the "service may only call its own DAO" rule.
-     */
-    private void requireOwnerNotBlocked(final long ownerId) {
-        final Optional<User> ownerOpt = userService.getUserById(ownerId);
-        if (ownerOpt.isPresent() && ownerOpt.get().isBlocked()) {
-            throw new CarValidationException(MessageKeys.CAR_MUTATION_OWNER_BLOCKED);
-        }
+    @Override
+    @Transactional(readOnly = true)
+    public List<CarModelPriceSample> findActiveDayPricesForBrandModelPairs(
+            final List<String> brands, final List<String> models) {
+        return carDao.findActiveDayPricesForBrandModelPairs(brands, models);
     }
 }

@@ -1,9 +1,7 @@
 package ar.edu.itba.paw.webapp.dto.rest;
 
-import ar.edu.itba.paw.models.domain.file.StoredFile;
 import ar.edu.itba.paw.models.dto.reservation.ReservationMessageAttachmentDto;
 import ar.edu.itba.paw.models.util.media.ChatAttachmentKind;
-import ar.edu.itba.paw.models.util.media.ChatAttachmentKindResolver;
 
 /**
  * Non-binary attachment metadata on {@link MessageDto} (filename, MIME, size, display kind).
@@ -16,18 +14,6 @@ public final class MessageAttachmentDto {
     private ChatAttachmentKind kind;
 
     public MessageAttachmentDto() {
-    }
-
-    public static MessageAttachmentDto fromStoredFile(final StoredFile file) {
-        if (file == null) {
-            return null;
-        }
-        final MessageAttachmentDto dto = new MessageAttachmentDto();
-        dto.fileName = file.getFileName();
-        dto.contentType = file.getContentType();
-        dto.sizeBytes = file.getSizeBytes();
-        dto.kind = ChatAttachmentKindResolver.resolve(file.getContentType(), file.getFileName());
-        return dto;
     }
 
     public static MessageAttachmentDto fromInternal(final ReservationMessageAttachmentDto attachment) {

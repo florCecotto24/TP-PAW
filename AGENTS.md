@@ -67,7 +67,7 @@ PostgreSQL **`DataSource`** is built in **`RydenDataSourceFactory`**: idempotent
 
 Tests use **in-memory HSQLDB** via **`TestPersistenceConfig`** (`schema-hsqldb.sql` under `persistence/src/test/resources`) — no PostgreSQL required for tests.
 
-At runtime, **`application.properties`** sets `hibernate.hbm2ddl.auto=update` for local convenience when `@Entity` / `@Column` evolve (`WebConfig#entityManagerFactory` reads that property); production schema changes must still ship as **Flyway** migrations (`V<number>__<description>.sql`), not auto-DDL alone. Flyway flags in **`RydenDataSourceFactory`**: `baselineOnMigrate(true)`, `baselineVersion("1")`, `failOnMissingLocations(true)`.
+At runtime, **`application.properties`** must keep `hibernate.hbm2ddl.auto=update` — **cátedra requirement** (do not change to `none` / `validate`). `WebConfig#entityManagerFactory` reads that property. Flyway still applies versioned migrations (`V<number>__<description>.sql`) via **`RydenDataSourceFactory`**; auto-DDL does not replace shipping migrations. Flyway flags: `baselineOnMigrate(true)`, `baselineVersion("1")`, `failOnMissingLocations(true)`.
 
 ## Architecture
 
@@ -107,7 +107,7 @@ frontend  →  (assets into WAR)  webapp → services → persistence → models
 - **Enum persistence**: taxonomy enums (`Car.Type`, …) may use `@Enumerated(EnumType.STRING)`; lifecycle enums (`Car.Status`, `Reservation.Status`) use **`AttributeConverter`** implementations that persist **lowercase** names to match legacy SQL and `LOWER(status)` filters.
 - **IDs**: sequences use `@GeneratedValue(strategy = GenerationType.SEQUENCE, …)` with `@SequenceGenerator(…, allocationSize = 1)` aligned with PostgreSQL sequences.
 - **Pagination**: paginate in SQL (`LIMIT`/`OFFSET` + separate `COUNT`) — never overfetch and slice in memory. For entity queries with joins, avoid relying on `setFirstResult` / `setMaxResults` alone on large sets — prefer ID-page + `IN` fetch or DTO-native queries.
-- **Configuration**: Java `@Configuration` (`WebConfig`, `SpringMailConfig`, `WebAuthConfig`, …) plus `web.xml` for servlet/filter bootstrap (Jersey `ServletContainer` as a **filter** on `/api/*`). Properties from `application/application.properties`; profile overrides from `application/application-{profile}.properties` if present. `hibernate.hbm2ddl.auto` is set in **`application.properties`** (local default `update`; deployed example uses `none`) — not in `WebConfig` itself.
+- **Configuration**: Java `@Configuration` (`WebConfig`, `SpringMailConfig`, `WebAuthConfig`, …) plus `web.xml` for servlet/filter bootstrap (Jersey `ServletContainer` as a **filter** on `/api/*`). Properties from `application/application.properties`; profile overrides from `application/application-{profile}.properties` if present. `hibernate.hbm2ddl.auto=update` in **`application.properties`** is **required by the cátedra** — agents must not switch it to `none`/`validate`; schema evolution still ships as Flyway migrations. Not set in `WebConfig` itself.
 - **Dependency versions**: Root `pom.xml` `<dependencyManagement>`; child POMs omit versions where managed. JPA stack: Hibernate 5.6.x, `javax.persistence-api` 2.2, `spring-orm` aligned with Spring 5.3. Jersey version: `jersey.version` in root POM.
 - **UI**: source in `frontend/src/`; production assets come from `frontend/dist/` (`index.html` + `/public/`) and are merged into the WAR and Jetty composite webapp at build time. Static images not produced by Vite live under `webapp/src/main/webapp/assets/`. Deep links are handled by `SpaFallbackFilter` (HTML GETs → `/index.html`).
 - **Component scan** (`WebConfig`): `ar.edu.itba.paw.webapp.controller`, `.exception.mapper`, `.util`, `.support`, `.security`, `.validation`, `.config.properties`, plus `ar.edu.itba.paw.services`, `.persistence`, `.mail`, `.policy`, `.scheduling`, `.util`. **Excludes** Spring `@Controller` (no MVC controllers). Servlet listeners are declared in `WEB-INF/web.xml`.
@@ -240,7 +240,7 @@ Domain / validation exception copy: **`exception-messages.properties`** (+ `_es`
 
 ### Application properties
 
-- **Main**: `webapp/src/main/resources/application/application.properties` — port, context path (`/webapp` local; Pampero `…/paw-2026a-08`), uploads, validation, pagination, reservation timing, JWT, `app.scheduler.*` crons/zones.
+- **Main**: `webapp/src/main/resources/application/application.properties` — port, context path (`/webapp` local; Pampero `…/paw-2026a-08`), uploads, validation, pagination, reservation timing, JWT, `app.scheduler.*` crons/zones. Keep `hibernate.hbm2ddl.auto=update` (cátedra); do not “harden” it to `none`.
 - **Profiles**: `application/application-local.properties`, `application/application-deployed.properties` (examples in folder); secrets not committed.
 - **Mail**: `mail/config/emailconfig.properties`, `mail/config/javamail.properties` under `webapp/src/main/resources/mail/`.
 

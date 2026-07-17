@@ -1,6 +1,8 @@
 package ar.edu.itba.paw.persistence.review;
 
+import java.math.BigDecimal;
 import java.sql.Timestamp;
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -268,6 +270,45 @@ class ReviewJpaDaoTest extends DaoIntegrationTestSupport {
 
         // 3. Assert
         Assertions.assertEquals(0L, total);
+    }
+
+    @Test
+    void testFindCarPublicReviewsExcludesOwnerToRiderReviews() {
+        // 1. Arrange — same car gets a rider→car review and an owner→rider review; public feed
+        // must only surface the rider→car row (N-30).
+        final long carId = insertCar("REV061");
+        final long resRider = insertFinishedReservation(carId, riderId);
+        final long resOwner = insertFinishedReservation(carId, otherRiderId);
+        final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        insertRiderReview(resRider, carId, 5, "Great car", now.minusHours(1));
+        insertOwnerReview(resOwner, carId, 1, "Bad rider", now);
+
+        // 2. Act
+        final Page<CarPublicReview> page = dao.findCarPublicReviews(carId, 0, 10);
+
+        // 3. Assert
+        Assertions.assertEquals(1L, page.getTotalItems());
+        Assertions.assertEquals("Great car", page.getContent().get(0).getComment().orElse(null));
+        Assertions.assertEquals(5, page.getContent().get(0).getRating());
+    }
+
+    @Test
+    void testFindAverageRatingForCarExcludesOwnerToRiderReviews() {
+        // 1. Arrange — rider rates car 5; owner rates rider 1. Car avg must stay 5.00.
+        final long carId = insertCar("REV062");
+        final long resRider = insertFinishedReservation(carId, riderId);
+        final long resOwner = insertFinishedReservation(carId, otherRiderId);
+        final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        insertRiderReview(resRider, carId, 5, "Great car", now.minusHours(1));
+        insertOwnerReview(resOwner, carId, 1, "Bad rider", now);
+
+        // 2. Act
+        final BigDecimal avg = dao.findAverageRatingForCar(carId);
+        final long count = dao.countReviewsForCar(carId);
+
+        // 3. Assert
+        Assertions.assertEquals(0, new BigDecimal("5.00").compareTo(avg));
+        Assertions.assertEquals(1L, count);
     }
 
     @Test

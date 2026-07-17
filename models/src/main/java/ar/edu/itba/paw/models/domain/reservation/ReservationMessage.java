@@ -46,6 +46,13 @@ public class ReservationMessage {
     @JoinColumn(name = "attachment_file_id", unique = true)
     private StoredFile attachment;
 
+    /**
+     * Read-only mirror of the FK so digest/list paths can detect an attachment without initializing
+     * the {@link StoredFile} association (and its LOB).
+     */
+    @Column(name = "attachment_file_id", insertable = false, updatable = false)
+    private Long attachmentFileId;
+
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
 
@@ -69,6 +76,7 @@ public class ReservationMessage {
         this.sender = sender;
         this.body = body;
         this.attachment = attachment;
+        this.attachmentFileId = attachment == null ? null : attachment.getId();
         this.createdAt = createdAt;
         this.emailNotified = false;
         this.seen = false;
@@ -103,7 +111,7 @@ public class ReservationMessage {
     }
 
     public Long getAttachmentFileId() {
-        return attachment == null ? null : attachment.getId();
+        return attachmentFileId;
     }
 
     public OffsetDateTime getCreatedAt() {

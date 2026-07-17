@@ -22,8 +22,14 @@ public final class PaginationLinks {
             return;
         }
         final int totalPages = Math.max(1, (int) Math.ceil((double) totalItems / pageSize));
-        final UriBuilder base = uriInfo.getRequestUriBuilder()
-                .replaceQueryParam("page", (Object[]) null)
+        // Host-relative (path + query only), same policy as Link rel=authenticated-user: avoid baking
+        // an absolute origin from Host / X-Forwarded-* that reverse proxies or Vite can get wrong.
+        UriBuilder base = UriBuilder.fromPath(uriInfo.getRequestUri().getRawPath());
+        final String rawQuery = uriInfo.getRequestUri().getRawQuery();
+        if (rawQuery != null && !rawQuery.isBlank()) {
+            base = base.replaceQuery(rawQuery);
+        }
+        base = base.replaceQueryParam("page", (Object[]) null)
                 .replaceQueryParam("pageSize", (Object[]) null);
 
         builder.link(buildPageLink(base, 1, pageSize), "first");

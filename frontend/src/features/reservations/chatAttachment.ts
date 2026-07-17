@@ -33,21 +33,6 @@ export function chatLimits() {
   return getClientConfig().chat;
 }
 
-/** @deprecated Prefer {@link chatLimits}.maxAttachmentMegabytes */
-export function getChatMaxAttachmentMb(): number {
-  return chatLimits().maxAttachmentMegabytes;
-}
-
-/** @deprecated Prefer {@link chatLimits}.messageMaxLength */
-export function getChatMessageMaxLength(): number {
-  return chatLimits().messageMaxLength;
-}
-
-/** @deprecated Prefer {@link chatLimits}.historyPageSize */
-export function getChatHistoryPageSize(): number {
-  return chatLimits().historyPageSize;
-}
-
 export function computeUploadTimeoutMs(maxAttachmentMb?: number): number {
   const mb = maxAttachmentMb ?? chatLimits().maxAttachmentMegabytes;
   const safe = Number.isFinite(mb) ? mb : chatLimits().maxAttachmentMegabytes;

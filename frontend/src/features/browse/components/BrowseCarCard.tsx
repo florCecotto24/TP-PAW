@@ -19,7 +19,7 @@ export default function BrowseCarCard({
 }) {
   const { t } = useTranslation();
   const card = carDtoToConsumerCard(car);
-  const { favoritable, favorited, onToggleFavorite } = useBrowseCarFavorite(car);
+  const { favoritable, favorited, favoriteBusy, onToggleFavorite } = useBrowseCarFavorite(car);
   const resolvedHref = href ?? carDetailHref(car, searchQuery ? { ...searchQuery, src: 'search' } : undefined);
   const imageUrl = car.links.cover ? apiAssetUrl(car.links.cover) : null;
 
@@ -31,7 +31,15 @@ export default function BrowseCarCard({
         favorited,
       }}
       href={resolvedHref}
-      onToggleFavorite={favoritable ? () => onToggleFavorite() : undefined}
+      favoriteBusy={favoriteBusy}
+      onToggleFavorite={
+        favoritable
+          ? () => {
+              if (favoriteBusy) return;
+              onToggleFavorite();
+            }
+          : undefined
+      }
       image={imageUrl}
       imageSlot={
         <CarCardImage coverUri={car.links.cover}>

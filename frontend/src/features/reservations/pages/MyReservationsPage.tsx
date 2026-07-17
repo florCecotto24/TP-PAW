@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { BreadcrumbTrail, EmptyState, LoadingBlock, Pagination, SortBar } from '../../../components/ryden';
@@ -83,6 +83,22 @@ function RiderReservationsView({ riderId }: { riderId: string | null }) {
   const currentSort = currentJspReservationSort(filters.sort);
   const firstItem = total != null && total > 0 ? pageIndex * RIDER_RESERVATIONS_PAGE_SIZE + 1 : 0;
   const lastItem = total != null ? Math.min((pageIndex + 1) * RIDER_RESERVATIONS_PAGE_SIZE, total) : 0;
+
+  useEffect(() => {
+    if (list.isLoading || list.isFetching || total == null) return;
+    const maxPage = Math.max(0, totalPages - 1);
+    if (pageIndex > maxPage) {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          if (maxPage <= 0) next.delete('riderPage');
+          else next.set('riderPage', String(maxPage));
+          return next;
+        },
+        { replace: true },
+      );
+    }
+  }, [list.isLoading, list.isFetching, total, totalPages, pageIndex, setSearchParams]);
 
   const applyFilters = (next: RiderReservationFilters) => {
     const params = filtersToRiderSearchParams(next);
@@ -210,6 +226,22 @@ function OwnerReservationsView({ ownerId }: { ownerId: string | null }) {
     total != null && total > 0 ? pageIndex * OWNER_RESERVATIONS_PAGE_SIZE + 1 : 0;
   const lastItem =
     total != null ? Math.min((pageIndex + 1) * OWNER_RESERVATIONS_PAGE_SIZE, total) : 0;
+
+  useEffect(() => {
+    if (list.isLoading || list.isFetching || total == null) return;
+    const maxPage = Math.max(0, totalPages - 1);
+    if (pageIndex > maxPage) {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          if (maxPage <= 0) next.delete('page');
+          else next.set('page', String(maxPage));
+          return next;
+        },
+        { replace: true },
+      );
+    }
+  }, [list.isLoading, list.isFetching, total, totalPages, pageIndex, setSearchParams]);
 
   const heading = t('res.list.ownerTitle');
   const carTitle =

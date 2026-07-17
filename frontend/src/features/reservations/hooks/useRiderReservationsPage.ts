@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useSessionStore } from '../../../session/sessionStore';
 import { pageCount } from '../../browse/hooks';
 import { listReservations, type ReservationListQuery } from '../api';
 import { jspReservationSortToApi } from '../reservationListSort';
@@ -34,11 +35,13 @@ export function useRiderReservationsPage(
   filters: RiderReservationFilters,
   pageIndex: number,
 ) {
+  const reservationsLink = useSessionStore((s) => s.currentUser?.links?.reservations);
   return useQuery({
-    queryKey: ['reservations', 'rider-page', riderId, filters, pageIndex],
-    enabled: riderId != null,
+    queryKey: ['reservations', 'rider-page', reservationsLink, riderId, filters, pageIndex],
+    enabled: riderId != null || !!reservationsLink,
     queryFn: async () => {
-      const res = await listReservations(filtersToApiQuery(riderId as string | number, filters, pageIndex));
+      const query = filtersToApiQuery(riderId as string | number, filters, pageIndex);
+      const res = await listReservations(query, reservationsLink);
       return {
         items: (res.data ?? []) as ReservationSummaryDto[],
         total: res.page.total,
