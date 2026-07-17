@@ -40,7 +40,7 @@ mvn compile -pl webapp -am
 mvn jetty:run -pl webapp
 ```
 
-`mvn compile` / `mvn package` build the frontend (`npm install` + `npm run build` in the `frontend` module) and package `frontend/dist/` into the WAR. **Jetty** serves a merged tree at `webapp/target/webapp-composite/` (`src/main/webapp` shell + fresh `frontend/dist`); run `compile -pl webapp -am` before `jetty:run` so hashed bundles match `index.html`. Hashed Vite assets are **not** stored under `webapp/src/main/webapp/public/` in git.
+`mvn compile` / `mvn package` build the frontend (`npm install` + `npm run build` in the `frontend` module) and package `frontend/dist/` into the WAR. The SPA **Vite `base` is always `/paw-2026a-08/`** (same WAR for Pampero and local Tomcat/Jetty). **Jetty** serves a merged tree at `webapp/target/webapp-composite/`; run `compile -pl webapp -am` before `jetty:run` so hashed bundles match `index.html`. Hashed Vite assets are **not** stored under `webapp/src/main/webapp/public/` in git.
 
 **JVM options** (Spring profile + test Logback), same as configuring **VM options** in your IDE when you run Jetty/Tomcat:
 
@@ -58,14 +58,14 @@ mvn compile -pl webapp -am
 mvn jetty:run -pl webapp
 ```
 
-Alternatively, deploy the **`webapp`** WAR (`webapp/target/webapp.war`) to **Tomcat** on Pampero. Public URL: `http://pawserver.it.itba.edu.ar/paw-2026a-08/`. Build the SPA with Pampero base before packaging:
+Alternatively, deploy the **`webapp`** WAR to **Tomcat** (copy as `paw-2026a-08.war`). Public URL on Pampero: `http://pawserver.it.itba.edu.ar/paw-2026a-08/`. Plain `mvn clean package` already embeds that SPA base
 
 ```bash
-cd frontend && npm run build:pampero
-# or: mvn package -pl webapp -am -Dpampero.spa=true
+mvn clean package -pl webapp -am
+# artefacto: webapp/target/webapp.war → copiar como paw-2026a-08.war
 ```
 
-Local Jetty uses port **8080** and context path **`/webapp`** (default Vite `base`). Open `http://localhost:8080/webapp/`. The SPA and API share that origin (`/webapp/api/…`).
+Local Jetty/Tomcat use the **same** context path **`/paw-2026a-08`**. Open `http://localhost:8080/paw-2026a-08/`. The SPA and API share that origin (`/paw-2026a-08/api/…`). For SPA-only iteration, `cd frontend && npm run dev` (Vite `base: '/'`, proxies API to Jetty).
 
 ### SPA dev server (optional)
 

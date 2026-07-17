@@ -3,8 +3,11 @@ import type { IncomingMessage } from 'node:http';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-/** Local Jetty context (`webapp.war` → `/webapp`). */
-const LOCAL_CONTEXT = '/webapp';
+/**
+ * Context path del WAR (Pampero + Jetty/Tomcat local). Igual que MenuMate:
+ * un solo {@code mvn package} hornea este path; no hay build distinto para deploy.
+ */
+const WAR_CONTEXT = '/paw-2026a-08';
 
 function normalizeBase(path: string): string {
   const trimmed = path.trim();
@@ -15,10 +18,11 @@ function normalizeBase(path: string): string {
 }
 
 /**
- * base del bundler:
- * - test → `/` (URNs relativas en Vitest)
- * - {@code VITE_BASE} → override (Pampero: `/paw-2026a-08/`)
- * - default → `/webapp/` (Jetty local)
+ * base del bundler (estilo MenuMate):
+ * - test → `/` (Vitest)
+ * - {@code VITE_BASE} → override explícito
+ * - production / {@code npm run build} → `/paw-2026a-08/`
+ * - development sin override → `/` (`npm run dev` ya pasa {@code --base=/}; {@code dev:war} usa WAR_CONTEXT)
  */
 function resolveBase(mode: string): string {
   if (mode === 'test') {
@@ -27,7 +31,10 @@ function resolveBase(mode: string): string {
   if (process.env.VITE_BASE) {
     return normalizeBase(process.env.VITE_BASE);
   }
-  return normalizeBase(LOCAL_CONTEXT);
+  if (mode === 'development') {
+    return '/';
+  }
+  return normalizeBase(WAR_CONTEXT);
 }
 
 /** Vite dev: do not proxy the SPA shell or HMR to the API backend. */
@@ -71,14 +78,14 @@ export default defineConfig(({ mode }) => ({
   server: {
     proxy: {
       '/api': {
-        target: `http://localhost:8080${LOCAL_CONTEXT}`,
+        target: `http://localhost:8080${WAR_CONTEXT}`,
         changeOrigin: true,
       },
-      [`${LOCAL_CONTEXT}/api`]: {
+      [`${WAR_CONTEXT}/api`]: {
         target: 'http://localhost:8080',
         changeOrigin: true,
       },
-      [LOCAL_CONTEXT]: {
+      [WAR_CONTEXT]: {
         target: 'http://localhost:8080',
         changeOrigin: true,
         bypass: bypassLocalDevProxy,

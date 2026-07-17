@@ -7,7 +7,7 @@ spring.datasource.username=pawdbuser
 spring.datasource.password=change-me-local
 
 # Public base URL for email CTAs (browser origin, include context path, no trailing slash)
-mail.app.base.url=http://localhost:8080/webapp
+mail.app.base.url=http://localhost:8080/paw-2026a-08
 
 # JWT signing secret. Optional in the local/test profiles ONLY: if left blank the app boots with a random
 # key (tokens reset on restart). Set a fixed value here to keep sessions across restarts during development.

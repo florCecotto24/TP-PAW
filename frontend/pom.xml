@@ -77,24 +77,8 @@
   </build>
 
   <properties>
-    <!-- Local Jetty: empty VITE_BASE → vite default /webapp/. Pampero: -Dpampero.spa=true -->
+    <!-- Un solo WAR: {@code mvn package} siempre hornea base Pampero. -->
     <frontend.build.script>build</frontend.build.script>
-    <frontend.vite.base></frontend.vite.base>
+    <frontend.vite.base>/paw-2026a-08/</frontend.vite.base>
   </properties>
-
-  <profiles>
-    <profile>
-      <id>pampero-spa</id>
-      <activation>
-        <property>
-          <name>pampero.spa</name>
-          <value>true</value>
-        </property>
-      </activation>
-      <properties>
-        <frontend.build.script>build:pampero</frontend.build.script>
-        <frontend.vite.base>/paw-2026a-08/</frontend.vite.base>
-      </properties>
-    </profile>
-  </profiles>
 </project>

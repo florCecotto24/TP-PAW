@@ -1,7 +1,7 @@
 /**
- * Context path del WAR sin barra final: `/webapp` en Jetty local;
- * en Pampero el public path es `/paw-2026a-08` (build con {@code npm run build:pampero}).
- * Vite inyecta {@link import.meta.env.BASE_URL} según {@code --base} / {@code VITE_BASE}.
+ * Context path del WAR sin barra final (`/paw-2026a-08` en package y en Pampero).
+ * Vite inyecta {@link import.meta.env.BASE_URL} según el {@code base} del build
+ * ({@code npm run build} / {@code mvn package}). En {@code npm run dev} suele ser {@code ''}.
  */
 export function appBasePath(): string {
   const base = import.meta.env.BASE_URL;

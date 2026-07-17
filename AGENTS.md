@@ -12,7 +12,7 @@ mvn clean install
 mvn compile -pl webapp -am
 mvn jetty:run -pl webapp
 
-# SPA dev server (proxies /api and /webapp/api → Jetty)
+# SPA dev server (proxies /api and /paw-2026a-08/api → Jetty)
 cd frontend && npm run dev
 
 # Run all tests
@@ -29,14 +29,14 @@ mvn test -pl persistence -Dtest=CarJpaDaoTest
 cd frontend && npm test
 ```
 
-The app is served at `http://localhost:8080/` with context path **`/webapp`** (see `application/application.properties`):
+The app is served at `http://localhost:8080/` with context path **`/paw-2026a-08`** (same as Pampero; see `application/application.properties` and Jetty `contextPath`):
 
-- **SPA UI**: `http://localhost:8080/webapp/...` (client routes)
-- **REST API**: `http://localhost:8080/webapp/api/...`
+- **SPA UI**: `http://localhost:8080/paw-2026a-08/...` (client routes)
+- **REST API**: `http://localhost:8080/paw-2026a-08/api/...`
 
-On **Pampero** the public URL is **`…/paw-2026a-08/`**. Before uploading the WAR, build the SPA with `npm run build:pampero` (or `mvn … -Dpampero.spa=true`) so Vite `base` is `/paw-2026a-08/`.
+On **Pampero** the public URL is **`…/paw-2026a-08/`**. Plain `mvn clean package` embeds Vite `base` `/paw-2026a-08/`.
 
-During SPA development, Vite typically serves the UI on its own port with `base: '/'` and proxies API calls to Jetty.
+During SPA development, Vite typically serves the UI on its own port with `base: '/'` (`npm run dev`) and proxies API calls to Jetty.
 
 ## Building and running
 
@@ -213,7 +213,7 @@ Configured in **`WebAuthConfig`**: Spring Security 5.8.10, `@EnableWebSecurity`,
 
 #### Frontend (`frontend/`, Vitest)
 
-- **Primary style — contract tests** in `*.contract.test.ts`: alignment with `openapi.yaml`, hypermedia (`Link`, `X-Total-Count`, URN resolution under `/webapp/api`), JWT, multipart, and i18n `es`/`en` parity. Prefer these over UI/routing/client-validation unit tests.
+- **Primary style — contract tests** in `*.contract.test.ts`: alignment with `openapi.yaml`, hypermedia (`Link`, `X-Total-Count`, URN resolution under `/paw-2026a-08/api` (or stubbed `/webapp/api` in older tests)), JWT, multipart, and i18n `es`/`en` parity. Prefer these over UI/routing/client-validation unit tests.
 - **Unit helpers**: no real network; mock `fetch` when needed (e.g. `dateFormat.test.ts`, `navActive.test.ts`).
 - **AAA**: each `it` with `// 1.Arrange`, `// 2.Act`, `// 3.Assert` (or `// 2.Act / 3.Assert` when applicable).
 - **Names**: prefix `test` + behaviour (`testParseLinkHeaderReadsNextAndLastRels`).
@@ -229,7 +229,7 @@ Configured in **`WebAuthConfig`**: Spring Security 5.8.10, `@EnableWebSecurity`,
   - `session/` — Zustand store + session client
   - `i18n/`, `styles/` — locales + `ryden-theme.css` / component CSS
 - **Hypermedia**: navigate via DTO `links` and `HypermediaClient` (`follow()`, `followLinkCollection`, `getLinkCollectionPage` in **`frontend/src/api/client.ts`**). Never invent API URLs from bare IDs.
-- **API discovery**: on boot, **`frontend/src/api/apiDiscovery.ts`** loads `GET /api/` (`ApiIndex`) and caches top-level `links` (including `config` for **`clientConfig.ts`**). Feature code should follow those links rather than hardcoding `/webapp/api/...` paths.
+- **API discovery**: on boot, **`frontend/src/api/apiDiscovery.ts`** loads `GET /api/` (`ApiIndex`) and caches top-level `links` (including `config` for **`clientConfig.ts`**). Feature code should follow those links rather than hardcoding `/paw-2026a-08/api/...` paths.
 - **MIME types**: always versioned vendor types from `mediaTypes.ts` (`application/vnd.paw.*.v1+json`). Never use bare `application/json` for API resources.
 - **Feature modules**: pages, hooks, `api.ts`, `types.ts`, routes, and `i18n.ts` live with the feature; shared interaction UI under `components/ryden/`.
 - **SPA routes**: English path shapes in `routes/paths.ts` (aligned with legacy URL shapes for mail CTAs and bookmarks).
@@ -240,7 +240,7 @@ Domain / validation exception copy: **`exception-messages.properties`** (+ `_es`
 
 ### Application properties
 
-- **Main**: `webapp/src/main/resources/application/application.properties` — port, context path (`/webapp` local; Pampero `…/paw-2026a-08`), uploads, validation, pagination, reservation timing, JWT, `app.scheduler.*` crons/zones. Keep `hibernate.hbm2ddl.auto=update` (cátedra); do not “harden” it to `none`.
+- **Main**: `webapp/src/main/resources/application/application.properties` — port, context path (`/paw-2026a-08` local + Pampero), uploads, validation, pagination, reservation timing, JWT, `app.scheduler.*` crons/zones. Keep `hibernate.hbm2ddl.auto=update` (cátedra); do not “harden” it to `none`.
 - **Profiles**: `application/application-local.properties`, `application/application-deployed.properties` (examples in folder); secrets not committed.
 - **Mail**: `mail/config/emailconfig.properties`, `mail/config/javamail.properties` under `webapp/src/main/resources/mail/`.
 
@@ -318,7 +318,7 @@ rg "this\\.[a-zA-Z0-9_]+\\(" services/src/main/java/ar/edu/itba/paw/services
 
 - **Resource identity on GET**: Identifiers that name the resource being accessed (`carId`, `userId`, `reservationId`, `documentType`, …) belong in the path as JAX-RS `@PathParam`s — e.g. `GET /cars/{carId}`, `GET /users/{userId}/profile`, `GET /users/{userId}/documents/{documentType}` — not as `@QueryParam`s. Prefer `/cars/123` over `/car-detail?carId=123`.
 - **Query params for everything else**: Pagination, sorting, filters, and UI state (`page`, `sort`, `status`, `role`, `src`, `fromCar`, `tab`, …) stay as query params.
-- **Consistency**: New resources, OpenAPI paths, SPA routes (`frontend/src/routes/paths.ts`), mail CTA URLs, and client `follow()` targets must agree. Canonical API base (local): `/webapp/api`. Pampero: `/paw-2026a-08/api`. Canonical SPA examples: owner car detail and reservation detail paths in `paths.ts`.
+- **Consistency**: New resources, OpenAPI paths, SPA routes (`frontend/src/routes/paths.ts`), mail CTA URLs, and client `follow()` targets must agree. Canonical API base: `/paw-2026a-08/api` (local Jetty/Tomcat and Pampero). Canonical SPA examples: owner car detail and reservation detail paths in `paths.ts`.
 - **Contract source of truth**: [openapi.yaml](openapi.yaml) at the repo root — agents should consult it for MIME types, link relations, auth headers, and collection shapes before inventing endpoints.
 
 ### Hypermedia collections (embedded teasers vs link-only)

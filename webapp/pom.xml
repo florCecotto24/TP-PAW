@@ -282,7 +282,7 @@
           <webAppSourceDirectory>${webapp.jetty.composite.dir}</webAppSourceDirectory>
           <!-- Jetty 10+: contextPath lives under webApp (same as Tomcat WAR + Vite base). -->
           <webApp>
-            <contextPath>/webapp</contextPath>
+            <contextPath>/paw-2026a-08</contextPath>
           </webApp>
           <httpConnector>
             <port>8080</port>

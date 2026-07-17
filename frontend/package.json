@@ -6,9 +6,9 @@
   "description": "Ryden SPA (React + Vite + TypeScript) — consume la REST API hypermedia de Ryden.",
   "scripts": {
     "dev": "vite --base=/",
-    "dev:war": "vite",
+    "dev:war": "vite --base=/paw-2026a-08/",
     "build": "tsc && vite build",
-    "build:pampero": "tsc && VITE_BASE=/paw-2026a-08/ vite build",
+    "build:pampero": "tsc && vite build",
     "build:root": "tsc && vite build --base=/",
     "preview": "vite preview",
     "test": "vitest run",
