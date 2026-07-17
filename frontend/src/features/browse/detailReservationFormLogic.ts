@@ -9,7 +9,7 @@ export interface BookableSegment {
   checkInTime: string | null;
   checkOutTime: string | null;
   location: string;
-  neighborhoodId?: number | null;
+  neighborhoodUri?: string;
 }
 
 export interface RangeProjection {
@@ -187,7 +187,9 @@ export function initialDefaultDates(
 ): Date[] {
   if (searchNeighborhoodIds.length === 0) return [];
   const matchSeg = segments.find(
-    (seg) => seg.neighborhoodId != null && searchNeighborhoodIds.includes(seg.neighborhoodId),
+    (seg) =>
+      seg.neighborhoodUri != null &&
+      searchNeighborhoodIds.some((id) => seg.neighborhoodUri!.endsWith(`/neighborhoods/${id}`)),
   );
   if (!matchSeg) return [];
   const d1 = dayStartFromYmd(matchSeg.from);

@@ -21,6 +21,11 @@ public final class AvailabilityPeriod {
         this.endInclusive = Objects.requireNonNull(endInclusive);
     }
 
+    /** Static factory preferred over ad-hoc construction at the HTTP boundary. */
+    public static AvailabilityPeriod of(final LocalDate startInclusive, final LocalDate endInclusive) {
+        return new AvailabilityPeriod(startInclusive, endInclusive);
+    }
+
     public LocalDate getStartInclusive() {
         return startInclusive;
     }

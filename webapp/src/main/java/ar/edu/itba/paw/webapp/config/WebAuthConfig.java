@@ -140,10 +140,11 @@ public class WebAuthConfig {
                         .referrerPolicy(referrer -> referrer.policy(
                                 org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter
                                         .ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
-                        // Conservative CSP. Scripts stay 'self' (the Vite bundle is same-origin). Google
-                        // Fonts are allowed explicitly (the SPA loads them from fonts.googleapis.com /
-                        // fonts.gstatic.com); 'unsafe-inline' on style-src covers React/Bootstrap inline
-                        // styles. Images/media also allow {@code data:} and {@code blob:} (local upload
+                        // Conservative CSP. Scripts stay 'self' (the Vite bundle is same-origin).
+                        // Google Fonts remain allowlisted until the SPA self-hosts Plus Jakarta /
+                        // Inter under /public (then drop fonts.googleapis.com / fonts.gstatic.com from CSP).
+                        // 'unsafe-inline' on style-src covers React/Bootstrap inline styles.
+                        // Images/media also allow {@code data:} and {@code blob:} (local upload
                         // previews via {@code URL.createObjectURL}). Everything else is locked to self,
                         // no plugins (object-src 'none'), no framing ancestors, fixed base-uri.
                         .contentSecurityPolicy(csp -> csp.policyDirectives(

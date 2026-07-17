@@ -17,6 +17,7 @@ import ar.edu.itba.paw.exception.user.PasswordResetCodeInvalidException;
 import ar.edu.itba.paw.exception.user.RegistrationPasswordException;
 import ar.edu.itba.paw.exception.user.UserNotFoundException;
 import ar.edu.itba.paw.models.util.format.EmailNormalizer;
+import ar.edu.itba.paw.models.util.security.OtpCodeDigest;
 import ar.edu.itba.paw.models.email.user.PasswordResetCodeEmailPayload;
 import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.policy.UserValidationPolicy;
@@ -76,8 +77,12 @@ public class PasswordResetServiceImpl implements PasswordResetService {
         }
         passwordResetCodeDao.deleteForUser(user.getId());
         final String code = generateNumericCode();
+        // Persist digest only; plaintext goes exclusively in the mail payload.
         passwordResetCodeDao.insert(
-                user.getId(), code, now.plus(verificationCodePolicy.getCodeTtl()), now);
+                user.getId(),
+                OtpCodeDigest.sha256Hex(code),
+                now.plus(verificationCodePolicy.getCodeTtl()),
+                now);
         final Locale fallback = locale != null ? locale : Locale.ENGLISH;
         final Locale mailLocale = userService.resolveMailLocaleOrElse(user.getId(), fallback);
         emailService.sendPasswordResetCode(PasswordResetCodeEmailPayload.builder()
@@ -107,7 +112,8 @@ public class PasswordResetServiceImpl implements PasswordResetService {
         if (userOpt.isEmpty()) {
             return false;
         }
-        final boolean ok = passwordResetCodeDao.matchesValidCode(userOpt.get().getId(), code, Instant.now());
+        final boolean ok = passwordResetCodeDao.matchesValidCode(
+                userOpt.get().getId(), OtpCodeDigest.sha256Hex(code), Instant.now());
         if (ok) {
             otpAttemptLimiter.clear(normalized);
         } else {
@@ -140,7 +146,8 @@ public class PasswordResetServiceImpl implements PasswordResetService {
                     MessageKeys.USER_REGISTRATION_PASSWORD_TOO_LONG,
                     validationPolicy.getRegistrationPasswordMaxLength());
         }
-        final boolean ok = passwordResetCodeDao.deleteIfValid(user.getId(), code, Instant.now());
+        final boolean ok = passwordResetCodeDao.deleteIfValid(
+                user.getId(), OtpCodeDigest.sha256Hex(code), Instant.now());
         if (!ok) {
             otpAttemptLimiter.recordFailure(normalized);
             throw new PasswordResetCodeInvalidException(MessageKeys.USER_PASSWORD_RESET_CODE_INVALID);

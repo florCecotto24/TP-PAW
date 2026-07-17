@@ -2,7 +2,7 @@ import { CarReservationCard } from '../../../components/ryden';
 import { apiAssetUrl, idFromUri } from '../../../api/uri';
 import { formatDateTime, formatPrice } from '../format';
 import type { ReservationSummaryDto } from '../types';
-import { myReservationDetail } from '../../../routes/paths';
+import { myReservationDetailTo } from '../../../routes/navigationState';
 
 /** Tarjeta de reserva — delega en {@link CarReservationCard} (tag JSP) con datos del teaser. */
 export default function ReservationListCard({
@@ -18,7 +18,9 @@ export default function ReservationListCard({
     role === 'owner'
       ? { role: 'OWNER', ...(carId ? { fromCar: carId } : {}) }
       : undefined;
-  const href = reservationId ? myReservationDetail(reservationId, detailQuery) : '#';
+  const linkTarget = reservationId
+    ? myReservationDetailTo(reservationId, reservation.links?.self, detailQuery)
+    : '#';
 
   const imageUrl = reservation.links?.cover ? apiAssetUrl(reservation.links.cover) : null;
   const brand = reservation.brandName?.trim() || '—';
@@ -35,7 +37,7 @@ export default function ReservationListCard({
         returnDateTime: formatDateTime(reservation.endDate),
         totalPrice: formatPrice(reservation.totalPrice),
       }}
-      href={href}
+      to={linkTarget}
       showRefundBadge={false}
     />
   );

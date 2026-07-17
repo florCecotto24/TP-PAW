@@ -224,6 +224,7 @@ export const ownerI18n = {
         errors: {
           datesRequired: 'Ingresá la fecha de inicio y de fin.',
           invalidDateRange: 'La fecha de fin debe ser igual o posterior a la de inicio.',
+          riderLeadTime: 'La primera fecha debe ser {{minDate}} o posterior: los conductores necesitan al menos {{hours}} horas para reservar el retiro.',
           priceInvalid: 'El precio por día debe ser mayor a 0.',
           priceBelowMin: 'El precio por día debe ser al menos {{min}}.',
           priceDigits: 'El precio admite hasta {{integer}} dígitos enteros y {{fraction}} decimales.',
@@ -494,6 +495,7 @@ export const ownerI18n = {
         errors: {
           datesRequired: 'Enter the start and end dates.',
           invalidDateRange: 'The end date must be the same or after the start date.',
+          riderLeadTime: 'The first date must be {{minDate}} or later: riders need at least {{hours}} hours to book pickup.',
           priceInvalid: 'The price per day must be greater than 0.',
           priceBelowMin: 'The price per day must be at least {{min}}.',
           priceDigits: 'The price allows up to {{integer}} integer digits and {{fraction}} decimal places.',

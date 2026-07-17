@@ -75,7 +75,7 @@ public class FavCar {
         if (!(o instanceof FavCar)) {
             return false;
         }
-        return EntityEquality.equalsByEmbeddedId(this.id, ((FavCar) o).getId());
+        return EntityEquality.equalsByEmbeddedId(this.getId(), ((FavCar) o).getId());
     }
 
     @Override

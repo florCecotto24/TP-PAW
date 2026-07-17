@@ -41,9 +41,12 @@ import ar.edu.itba.paw.util.format.MoneyFormat;
  * per-file size budget and makes the email side of the lifecycle easier to scan in one place.
  *
  * <p>Each public method swallows {@link RuntimeException} from the mail layer so a transient
- * mail failure never aborts the surrounding transaction. CBU lookups that fail return early
- * — the underlying confirmation/reminder is harmless if we cannot embed the owner's account
- * details on the rider's side.
+ * mail failure never aborts the surrounding transaction. Interactive flows inject
+ * {@link EmailService}, which is the {@code @Primary}
+ * {@link ar.edu.itba.paw.services.email.TransactionalEmailServiceDecorator}: dispatches run in
+ * {@code afterCommit}, so a rolled-back reservation write never leaves a confirmation/cancel mail.
+ * CBU lookups that fail return early — the underlying confirmation/reminder is harmless if we
+ * cannot embed the owner's account details on the rider's side.
  */
 @Component
 public final class ReservationMailComposer {

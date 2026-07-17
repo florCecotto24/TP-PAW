@@ -105,8 +105,7 @@ public interface UserService {
     void clearProfilePicture(long userId);
 
     /**
-     * Stores one profile document per {@link UserDocumentType}. If that slot already has a file, remove it first via
-     * {@link #clearProfileDocument(long, UserDocumentType)}.
+     * Stores or replaces one profile document per {@link UserDocumentType} (PUT create-or-replace).
      */
     void uploadValidatedProfileDocument(long userId, UserDocumentType documentType, String originalFilename, String contentType, byte[] data);
 

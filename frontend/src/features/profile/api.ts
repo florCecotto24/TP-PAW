@@ -2,6 +2,7 @@ import { sessionClient } from '../../session/sessionStore';
 import { MediaTypes } from '../../api/mediaTypes';
 import { getLinkCollectionPage } from '../../api/client';
 import { openAuthenticatedBinary } from '../../api/openAuthenticatedBinary';
+import { favoriteMembershipUri } from '../../api/uri';
 import type { CarSummaryDto, DocumentType, UserDto, UserPatchDto } from './types';
 import type { ReviewDto } from '../browse/types';
 
@@ -9,7 +10,7 @@ import type { ReviewDto } from '../browse/types';
 // Capa de acceso a la API para el área PROFILE.
 // -----------------------------------------------------------------------------
 // Se navega por hipervínculos cuando el DTO los trae (user.links.favorites,
-// user.links.documents, etc.) y se cae a paths derivados de la URN del usuario
+// user.links.identityDocument, etc.) y se cae a paths derivados de la URN del usuario
 // (currentUserUri = "/users/{id}") cuando todavía no tenemos el DTO. Ningún
 // path se "adivina"; se construye a partir de la URN canónica que da el server.
 // =============================================================================
@@ -61,14 +62,16 @@ export async function deleteProfilePicture(user: UserDto): Promise<void> {
   await sessionClient.del(path);
 }
 
-/** Path de un documento (license/identity) — para subir, borrar y descargar. */
+/** Link tipado de un documento (license/identity) — para subir, borrar y descargar. */
 export function documentPath(user: UserDto, type: DocumentType): string {
-  const self = user.links?.self;
-  if (!self) throw new Error('profile.documents.missingLink');
-  return `${subResource(self, 'documents')}/${type}`;
+  const path = type === 'identity'
+    ? user.links?.identityDocument
+    : user.links?.licenseDocument;
+  if (!path) throw new Error('profile.documents.missingLink');
+  return path;
 }
 
-/** PUT /users/{id}/documents/{type} (raw octet-stream body). */
+/** Sube al link tipado del documento (raw octet-stream body). */
 export async function uploadDocument(
   user: UserDto,
   type: DocumentType,
@@ -81,7 +84,7 @@ export async function uploadDocument(
   });
 }
 
-/** DELETE /users/{id}/documents/{type}. */
+/** Elimina mediante el link tipado del documento. */
 export async function deleteDocument(user: UserDto, type: DocumentType): Promise<void> {
   await sessionClient.del(documentPath(user, type));
 }
@@ -131,13 +134,10 @@ export async function fetchFavoritesPage(user: UserDto, pageIndex: number, pageS
   return { data: res.data ?? [], page: res.page, status: res.status };
 }
 
-/** DELETE /users/{id}/favorites/{carId} (idempotente). */
+/** DELETE membresía de favoritos (idempotente). OpenAPI: `/users/{id}/favorites/{carId}`. */
 export async function removeFavorite(user: UserDto, carSelfLink: string): Promise<void> {
-  // El carId sale del self del auto ("/cars/{id}").
-  const carId = carSelfLink.split('/').filter(Boolean).pop();
   const base = favoritesPath(user);
-  const normalized = base.endsWith('/') ? base.slice(0, -1) : base;
-  await sessionClient.del(`${normalized}/${carId}`);
+  await sessionClient.del(favoriteMembershipUri(base, carSelfLink));
 }
 
 /** Path para listar los autos de un usuario (perfil público): GET /cars?ownerId=. */

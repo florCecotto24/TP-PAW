@@ -76,6 +76,7 @@ export interface CarLinks {
 export interface CarSummaryDto {
   brandName: string;
   modelName: string;
+  year?: number | null;
   status: CarStatus;
   minimumRentalDays: number;
   ratingAvg?: number | null;

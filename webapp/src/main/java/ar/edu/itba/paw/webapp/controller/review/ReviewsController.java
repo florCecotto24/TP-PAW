@@ -37,7 +37,7 @@ import ar.edu.itba.paw.webapp.util.RestUriUtils;
 
 /**
  * Canonical reviews resource ({@code /reviews}, {@code /reviews/{id}}).
- * Create and list share the same collection URI; creation requires {@code reservationId}.
+ * Create and list share the same collection URI; creation receives {@code reservationUri} in multipart.
  */
 @Path("/reviews")
 @Component

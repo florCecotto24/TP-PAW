@@ -16,8 +16,8 @@ app.security.jwt.secret=local-dev-jwt-secret-change-me
 # Gmail / SMTP (JavaMail) — app password, not the account password
 mail.server.password=local-mail-not-configured
 
-# Hibernate dev overrides: dump every SQL statement (formatted) to the console. Override the production-safe
-# defaults from application.properties. Keep these OFF in application-deployed.properties.
+# Hibernate: local may use update for entity tinkering; default application.properties is none (Flyway owns schema).
+hibernate.hbm2ddl.auto=update
 hibernate.show_sql=true
 hibernate.format_sql=true
 hibernate.use_sql_comments=true

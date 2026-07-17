@@ -18,6 +18,7 @@ import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.user.PasswordResetCodeInvalidException;
 import ar.edu.itba.paw.exception.user.RegistrationPasswordException;
 import ar.edu.itba.paw.exception.user.UserNotFoundException;
+import ar.edu.itba.paw.models.util.security.OtpCodeDigest;
 import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.models.email.user.PasswordResetCodeEmailPayload;
 import ar.edu.itba.paw.persistence.user.PasswordResetCodeDao;
@@ -56,7 +57,7 @@ class PasswordResetServiceImplTest {
         service = new PasswordResetServiceImpl(
                 dao, emailService, passwordEncoder, validationPolicy,
                 VerificationCodePolicy.fromValidatedConfiguration(6, 5), userService,
-                new OtpAttemptLimiter(8, java.time.Duration.ofMinutes(15)));
+                OtpAttemptLimiter.forTests(8, java.time.Duration.ofMinutes(15)));
     }
 
     @Test
@@ -209,7 +210,10 @@ class PasswordResetServiceImplTest {
         // 1.Arrange
         final User user = User.identities(USER_ID, EMAIL, "Ada", "Lovelace");
         Mockito.when(userService.findByEmail(EMAIL)).thenReturn(Optional.of(user));
-        Mockito.when(dao.deleteIfValid(Mockito.eq(USER_ID), Mockito.eq("badcde"), Mockito.any(Instant.class)))
+        Mockito.when(dao.deleteIfValid(
+                        Mockito.eq(USER_ID),
+                        Mockito.eq(OtpCodeDigest.sha256Hex("badcde")),
+                        Mockito.any(Instant.class)))
                 .thenReturn(false);
 
         // 2.Act
@@ -226,7 +230,10 @@ class PasswordResetServiceImplTest {
         // 1.Arrange
         final User user = User.identities(USER_ID, EMAIL, "Ada", "Lovelace");
         Mockito.when(userService.findByEmail(EMAIL)).thenReturn(Optional.of(user));
-        Mockito.when(dao.deleteIfValid(Mockito.eq(USER_ID), Mockito.eq("123456"), Mockito.any(Instant.class)))
+        Mockito.when(dao.deleteIfValid(
+                        Mockito.eq(USER_ID),
+                        Mockito.eq(OtpCodeDigest.sha256Hex("123456")),
+                        Mockito.any(Instant.class)))
                 .thenReturn(true);
         Mockito.when(passwordEncoder.encode("newPass12")).thenReturn("hashed");
 

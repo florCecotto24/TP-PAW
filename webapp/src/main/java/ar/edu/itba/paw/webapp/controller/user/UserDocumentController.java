@@ -65,7 +65,7 @@ public class UserDocumentController {
         final UserDocumentType type = parseDocumentType(documentType);
         return userService.findProfileDocumentContent(id, type)
                 .map(this::binaryResponse)
-                .orElseGet(() -> Response.status(Response.Status.NOT_FOUND).build());
+                .orElseThrow(NotFoundException::new);
     }
 
     @PUT

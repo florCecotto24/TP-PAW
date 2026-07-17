@@ -45,6 +45,7 @@ export const STATUS_BADGE: Record<CarStatus, string> = {
 export interface CarSummaryDto {
   brandName: string;
   modelName: string;
+  year?: number | null;
   status: CarStatus;
   minimumRentalDays: number;
   ratingAvg?: number | null;

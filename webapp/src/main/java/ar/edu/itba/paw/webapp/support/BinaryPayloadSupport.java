@@ -34,6 +34,14 @@ public final class BinaryPayloadSupport {
         return bytes;
     }
 
+    /**
+     * Reads up to the configured upload ceiling without Bean Validation (empty payloads stay
+     * empty). Oversized streams yield {@code 413 Request Entity Too Large}.
+     */
+    public byte[] readBounded(final InputStream body) throws IOException {
+        return body == null ? new byte[0] : readBounded(body, maxBytes);
+    }
+
     private static byte[] readBounded(final InputStream body, final long maxBytes) throws IOException {
         final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
         final byte[] chunk = new byte[READ_CHUNK_BYTES];

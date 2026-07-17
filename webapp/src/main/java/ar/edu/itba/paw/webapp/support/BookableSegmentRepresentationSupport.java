@@ -6,6 +6,7 @@ import java.util.stream.Collectors;
 
 import javax.ws.rs.core.GenericEntity;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.UriInfo;
 
 import org.springframework.stereotype.Component;
 
@@ -28,12 +29,15 @@ public final class BookableSegmentRepresentationSupport {
         this.carResourceAccess = carResourceAccess;
     }
 
-    public Response listBookableSegments(final long carId, final RydenUserDetails viewer) {
+    public Response listBookableSegments(
+            final long carId,
+            final RydenUserDetails viewer,
+            final UriInfo uriInfo) {
         carResourceAccess.requireViewableCar(carId, viewer);
         final List<BookableSegmentProjection> segments =
                 carAvailabilityService.getBookableSegmentsForRiderDatePickerByCar(carId, Instant.now());
         final List<BookableSegmentDto> dtos = segments.stream()
-                .map(BookableSegmentDto::from)
+                .map(segment -> BookableSegmentDto.from(segment, uriInfo))
                 .collect(Collectors.toList());
         if (dtos.isEmpty()) {
             return Response.noContent().build();

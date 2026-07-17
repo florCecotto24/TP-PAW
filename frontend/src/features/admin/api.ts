@@ -32,12 +32,11 @@ export function userDocumentPath(
   user: Pick<UserDto, 'links'>,
   type: 'license' | 'identity',
 ): string {
-  const self = user.links?.self;
-  const documents = user.links?.documents;
-  const base = documents ?? (self ? `${self.replace(/\/$/, '')}/documents` : null);
-  if (!base) throw new Error('admin.user.missingDocumentsLink');
-  const normalized = base.endsWith('/') ? base.slice(0, -1) : base;
-  return `${normalized}/${type}`;
+  const path = type === 'identity'
+    ? user.links?.identityDocument
+    : user.links?.licenseDocument;
+  if (!path) throw new Error('admin.user.missingDocumentLink');
+  return path;
 }
 
 export async function approveBrand(brandSelfLink: string): Promise<ApiResponse<BrandDto>> {

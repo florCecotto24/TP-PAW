@@ -75,6 +75,10 @@ export type { SearchWithFiltersProps } from './search/SearchWithFilters';
 export { default as Avatar } from './profile/Avatar';
 export type { AvatarProps } from './profile/Avatar';
 
+// Media
+export { default as AuthenticatedImg } from './media/AuthenticatedImg';
+export type { AuthenticatedImgProps } from './media/AuthenticatedImg';
+
 // Review
 export { default as ReviewCard } from './review/ReviewCard';
 export type { ReviewCardProps } from './review/ReviewCard';

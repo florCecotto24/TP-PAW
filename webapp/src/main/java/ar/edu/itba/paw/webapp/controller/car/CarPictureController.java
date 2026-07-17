@@ -1,7 +1,6 @@
 package ar.edu.itba.paw.webapp.controller.car;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URI;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -10,6 +9,7 @@ import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
+import javax.ws.rs.NotFoundException;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -30,9 +30,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Component;
 
 import ar.edu.itba.paw.dto.GalleryMediaUpload;
-import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.car.CarNotFoundException;
-import ar.edu.itba.paw.exception.car.CarValidationException;
 import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.models.domain.car.CarPicture;
 import ar.edu.itba.paw.models.dto.car.CarPictureSummary;
@@ -44,21 +42,21 @@ import ar.edu.itba.paw.services.file.StoredFileService;
 import ar.edu.itba.paw.webapp.api.common.PaginationLinks;
 import ar.edu.itba.paw.webapp.api.common.VndMediaType;
 import ar.edu.itba.paw.webapp.dto.rest.PictureDto;
-import ar.edu.itba.paw.webapp.support.BinaryPayloadSupport;
+import ar.edu.itba.paw.webapp.form.common.OctetStreamBodyForm;
 import ar.edu.itba.paw.webapp.support.CacheableBinaryResponses;
 import ar.edu.itba.paw.webapp.support.CarGalleryUploadSupport;
 import ar.edu.itba.paw.webapp.support.CarResourceAccess;
 import ar.edu.itba.paw.webapp.support.CurrentUserResolver;
+import ar.edu.itba.paw.webapp.support.FormValidationSupport;
 import ar.edu.itba.paw.webapp.support.PaginationParams;
 import ar.edu.itba.paw.webapp.support.PaginationSupport;
 
 /**
  * Car gallery sub-resource ({@code /cars/{id}/pictures}).
  *
- * Gallery metadata ({@code list}) is gated by {@link CarResourceAccess#canViewCar}; raw
- * picture bytes ({@code /primary}, {@code /{pictureId}}) stay anonymously readable so
- * {@code <img src>} thumbnails work without an {@code Authorization} header (browse +
- * owner cards). Car JSON detail remains protected separately on {@code GET /cars/{id}}.
+ * Metadata and raw bytes share the same visibility gate as car detail
+ * ({@link CarResourceAccess#requireViewableCar}): anonymous {@code <img src>} still works for
+ * publicly viewable cars; paused / lack-doc / non-visible listings do not leak bytes by id.
  */
 @Path("/cars/{id}/pictures")
 @Component
@@ -69,7 +67,7 @@ public class CarPictureController {
     private final ImageService imageService;
     private final StoredFileService storedFileService;
     private final CarGalleryUploadSupport carGalleryUploadSupport;
-    private final BinaryPayloadSupport binaryPayloadSupport;
+    private final FormValidationSupport formValidationSupport;
     private final PaginationSupport paginationSupport;
     private final CurrentUserResolver currentUserResolver;
     private final CarResourceAccess carResourceAccess;
@@ -87,7 +85,7 @@ public class CarPictureController {
             final ImageService imageService,
             final StoredFileService storedFileService,
             final CarGalleryUploadSupport carGalleryUploadSupport,
-            final BinaryPayloadSupport binaryPayloadSupport,
+            final FormValidationSupport formValidationSupport,
             final PaginationSupport paginationSupport,
             final CurrentUserResolver currentUserResolver,
             final CarResourceAccess carResourceAccess) {
@@ -96,7 +94,7 @@ public class CarPictureController {
         this.imageService = imageService;
         this.storedFileService = storedFileService;
         this.carGalleryUploadSupport = carGalleryUploadSupport;
-        this.binaryPayloadSupport = binaryPayloadSupport;
+        this.formValidationSupport = formValidationSupport;
         this.paginationSupport = paginationSupport;
         this.currentUserResolver = currentUserResolver;
         this.carResourceAccess = carResourceAccess;
@@ -136,12 +134,11 @@ public class CarPictureController {
             @FormDataParam("file") final FormDataBodyPart filePart) throws IOException {
         final Car car = requireCarExists(carId);
         if (filePart == null) {
-            throw new CarValidationException(MessageKeys.CAR_GALLERY_MEDIA_INVALID_TYPE);
+            formValidationSupport.validate(OctetStreamBodyForm.of(new byte[0]));
         }
-        final byte[] bytes = filePart.getEntityAs(byte[].class);
-        if (bytes == null || bytes.length == 0) {
-            throw new CarValidationException(MessageKeys.CAR_GALLERY_MEDIA_INVALID_TYPE);
-        }
+        final byte[] rawBytes = filePart.getEntityAs(byte[].class);
+        final byte[] bytes = rawBytes == null ? new byte[0] : rawBytes;
+        formValidationSupport.validate(OctetStreamBodyForm.of(bytes));
         final String filename = filePart.getContentDisposition() != null
                 ? filePart.getContentDisposition().getFileName()
                 : "upload";
@@ -158,16 +155,18 @@ public class CarPictureController {
                 .path("cars").path(String.valueOf(carId))
                 .path("pictures").path(String.valueOf(created.getId()))
                 .build();
-        return Response.created(location).build();
+        return Response.created(location)
+                .entity(PictureDto.from(created, uriInfo))
+                .build();
     }
 
     @GET
     @Path("/primary")
     public Response getPrimaryPictureBytes(@PathParam("id") final long carId) {
-        requireCarExists(carId);
+        carResourceAccess.requireViewableCar(carId, currentUserResolver.currentPrincipalOrNull());
         final CarPicture picture = carPictureService.findPrimaryPictureByCarId(carId)
                 .orElseThrow(() -> new CarNotFoundException(carId));
-        return pictureBytesResponse(carId, picture);
+        return pictureBytesResponse(picture);
     }
 
     @GET
@@ -175,30 +174,30 @@ public class CarPictureController {
     public Response getPictureBytes(
             @PathParam("id") final long carId,
             @PathParam("pictureId") final long pictureId) {
-        requireCarExists(carId);
+        carResourceAccess.requireViewableCar(carId, currentUserResolver.currentPrincipalOrNull());
         final CarPicture picture = carPictureService.getCarPictureById(pictureId)
                 .filter(p -> p.getCarId() == carId)
                 .orElseThrow(() -> new CarNotFoundException(carId));
-        return pictureBytesResponse(carId, picture);
+        return pictureBytesResponse(picture);
     }
 
-    private Response pictureBytesResponse(final long carId, final CarPicture picture) {
+    private Response pictureBytesResponse(final CarPicture picture) {
         if (picture.isVideo()) {
             final Long storedFileId = picture.getStoredFileId();
             if (storedFileId == null) {
-                return Response.status(Response.Status.NOT_FOUND).build();
+                throw new NotFoundException();
             }
             return storedFileService.findContentById(storedFileId)
                     .map(content -> CacheableBinaryResponses.of(request, content))
-                    .orElseGet(() -> Response.status(Response.Status.NOT_FOUND).build());
+                    .orElseThrow(NotFoundException::new);
         }
         final Long imageId = picture.getImageId();
         if (imageId == null) {
-            return Response.status(Response.Status.NOT_FOUND).build();
+            throw new NotFoundException();
         }
         return imageService.getImageContent(imageId)
                 .map(content -> CacheableBinaryResponses.of(request, content))
-                .orElseGet(() -> Response.status(Response.Status.NOT_FOUND).build());
+                .orElseThrow(NotFoundException::new);
     }
 
     @DELETE

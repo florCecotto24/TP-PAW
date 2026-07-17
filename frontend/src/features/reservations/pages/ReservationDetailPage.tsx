@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { BreadcrumbTrail, ConfirmModal, LoadingBlock, ReceiptUploadPicker, ReviewImageInput, StarRatingInput, Avatar } from '../../../components/ryden';
 import { carCoverAssetUrl, profilePictureAssetUrl } from '../../../api/uri';
@@ -19,8 +19,9 @@ import ReservationChatPanel from '../components/ReservationChatPanel';
 import ReservationReviewItem from '../components/ReservationReviewItem';
 import { formatDateTime, formatPrice, statusLabelKey } from '../format';
 import { isChatAvailable } from '../reservationChat';
-import { paths, publicProfile, ownerReservationsCar } from '../../../routes/paths';
-import { carDetailTo } from '../../../routes/navigationState';
+import { paths, ownerReservationsCar } from '../../../routes/paths';
+import { carDetailTo, publicProfileTo, type ReservationDetailLocationState } from '../../../routes/navigationState';
+import { resolveResourceUri } from '../../../api/resourceUri';
 import { reservationActionError } from '../reservationError';
 import {
   availableActions,
@@ -42,6 +43,15 @@ function pickupAddress(reservation: ReservationDto): string {
   return parts.join(' ') || '—';
 }
 
+/** Wall-clock handover as {@code HH:mm:ss} for PATCH date payloads (keeps existing times). */
+function normalizeHandoverTime(hhmm: string | null | undefined): string {
+  if (!hhmm || !hhmm.trim()) return '00:00:00';
+  const t = hhmm.trim();
+  if (/^\d{2}:\d{2}:\d{2}$/.test(t)) return t;
+  if (/^\d{2}:\d{2}$/.test(t)) return `${t}:00`;
+  return '00:00:00';
+}
+
 function userAlreadyReviewed(reviews: ReviewDto[], side: Side): boolean {
   if (side === 'none') return true;
   const expectRider = side === 'rider';
@@ -52,15 +62,21 @@ export default function ReservationDetailPage() {
   const { t } = useTranslation();
   const reviewCommentMaxLength = getClientConfig().review.commentMaxLength;
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
+  const reservationSelfFromNav = (location.state as ReservationDetailLocationState | null)?.reservationSelf;
   const [searchParams] = useSearchParams();
   const fromCarId = searchParams.get('fromCar');
   const queryClient = useQueryClient();
   const { id: myId, isAuthenticated } = useCurrentUser();
 
-  const reservationUri = id ? `/reservations/${id}` : null;
+  const reservationUri = resolveResourceUri({
+    stateUri: reservationSelfFromNav,
+    routeId: id,
+    collection: 'reservations',
+  });
 
   const reservationQuery = useQuery({
-    queryKey: ['reservations', 'detail', id],
+    queryKey: ['reservations', 'detail', reservationUri],
     queryFn: () => getReservation(reservationUri as string).then((r) => r.data),
     enabled: Boolean(reservationUri && isAuthenticated),
   });
@@ -135,6 +151,9 @@ export default function ReservationDetailPage() {
   const counterpartyId = counterpartyQuery.data?.links?.self
     ? idFromUri(counterpartyQuery.data.links.self)
     : null;
+  const counterpartyProfileLink = counterpartyId
+    ? publicProfileTo(counterpartyId, counterpartyQuery.data?.links?.self)
+    : null;
 
   const paymentReceiptDownloadLink =
     reservation?.hasPaymentReceipt && reservation.links['payment-receipt']
@@ -146,7 +165,7 @@ export default function ReservationDetailPage() {
       : null;
 
   const invalidate = async () => {
-    await queryClient.invalidateQueries({ queryKey: ['reservations', 'detail', id] });
+    await queryClient.invalidateQueries({ queryKey: ['reservations', 'detail', reservationUri] });
     if (reviewsUri) {
       await queryClient.invalidateQueries({ queryKey: ['reservations', 'detail', 'reviews', reviewsUri] });
     }
@@ -187,8 +206,11 @@ export default function ReservationDetailPage() {
 
   const onSaveDates = () => {
     if (!reservation || !editStart || !editEnd) return;
-    const startIso = `${editStart}T00:00:00`;
-    const endIso = `${editEnd}T00:00:00`;
+    // Preserve existing handover wall-clock times (P3-6); date-only edit must not force midnight.
+    const checkIn = normalizeHandoverTime(reservation.checkInTime);
+    const checkOut = normalizeHandoverTime(reservation.checkOutTime);
+    const startIso = `${editStart}T${checkIn}`;
+    const endIso = `${editEnd}T${checkOut}`;
     void runAction(async () => {
       await patchReservation(reservation.links.self, { startDate: startIso, endDate: endIso });
       setEditDatesOpen(false);
@@ -616,8 +638,12 @@ export default function ReservationDetailPage() {
                         : t('res.detail.counterparty.riderTitle')}
                     </h2>
                     <div className="counterparty-summary-card__identity d-flex align-items-center gap-2 mb-3">
-                      {counterpartyId ? (
-                        <Link to={publicProfile(counterpartyId)} className="text-decoration-none">
+                      {counterpartyProfileLink ? (
+                        <Link
+                          to={counterpartyProfileLink.pathname}
+                          state={counterpartyProfileLink.state}
+                          className="text-decoration-none"
+                        >
                           <Avatar
                             src={counterpartyAvatarUrl}
                             forename={counterpartyQuery.data.forename}
@@ -648,8 +674,12 @@ export default function ReservationDetailPage() {
                         <a href={`tel:${counterpartyQuery.data.phoneNumber}`}>{counterpartyQuery.data.phoneNumber}</a>
                       </p>
                     ) : null}
-                    {counterpartyId ? (
-                      <Link to={publicProfile(counterpartyId)} className="btn btn-outline-secondary btn-sm">
+                    {counterpartyProfileLink ? (
+                      <Link
+                        to={counterpartyProfileLink.pathname}
+                        state={counterpartyProfileLink.state}
+                        className="btn btn-outline-secondary btn-sm"
+                      >
                         {t('res.detail.counterparty.viewProfile')}
                       </Link>
                     ) : null}

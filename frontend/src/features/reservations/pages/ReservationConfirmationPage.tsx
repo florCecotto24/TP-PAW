@@ -1,25 +1,32 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import BreadcrumbTrail from '../../../components/ryden/layout/BreadcrumbTrail';
 import { LoadingBlock, ReceiptUploadPicker } from '../../../components/ryden';
 import { getCar, getReservation, idFromUri, uploadReceipt } from '../api';
 import { formatDateTime, formatPrice } from '../format';
-import { paths, myReservationDetail } from '../../../routes/paths';
-import { carDetailTo } from '../../../routes/navigationState';
+import { paths } from '../../../routes/paths';
+import { carDetailTo, myReservationDetailTo, type ReservationConfirmationLocationState } from '../../../routes/navigationState';
+import { resolveResourceUri } from '../../../api/resourceUri';
 import { useSessionStore } from '../../../session/sessionStore';
 
 /** Espejo de reservationConfirmation.jsp: agradecimiento + subida de comprobante de pago. */
 export default function ReservationConfirmationPage() {
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
+  const reservationSelfFromNav = (location.state as ReservationConfirmationLocationState | null)?.reservationSelf;
   const queryClient = useQueryClient();
   const currentUser = useSessionStore((s) => s.currentUser);
 
-  const reservationUri = id ? `/reservations/${id}` : null;
+  const reservationUri = resolveResourceUri({
+    stateUri: reservationSelfFromNav,
+    routeId: id,
+    collection: 'reservations',
+  });
   const reservationQuery = useQuery({
-    queryKey: ['reservations', 'confirmation', id],
+    queryKey: ['reservations', 'confirmation', reservationUri],
     queryFn: () => getReservation(reservationUri as string).then((r) => r.data),
     enabled: Boolean(reservationUri),
   });
@@ -63,7 +70,7 @@ export default function ReservationConfirmationPage() {
     try {
       await uploadReceipt(uri, file);
       setUploadDone(true);
-      await queryClient.invalidateQueries({ queryKey: ['reservations', 'confirmation', id] });
+      await queryClient.invalidateQueries({ queryKey: ['reservations', 'confirmation', reservationUri] });
     } finally {
       setUploading(false);
     }
@@ -75,6 +82,7 @@ export default function ReservationConfirmationPage() {
   const carDetailLink = reservation?.links?.car
     ? carDetailTo(idFromUri(reservation.links.car) ?? '', reservation.links.car)
     : null;
+  const reservationDetailLink = myReservationDetailTo(id, reservation?.links?.self, { role: 'rider' });
 
   return (
     <main className="container py-5 reservation-confirmation">
@@ -89,8 +97,7 @@ export default function ReservationConfirmationPage() {
             <div className="card-body p-4 p-md-5">
               {reservationQuery.isLoading ? (
                 <LoadingBlock variant="page" className="py-3" />
-              ) : null}
-              {reservationQuery.isError || !reservation ? (
+              ) : reservationQuery.isError || !reservation ? (
                 <div className="alert alert-danger">{t('res.detail.error')}</div>
               ) : (
                 <>
@@ -151,7 +158,8 @@ export default function ReservationConfirmationPage() {
 
                   <div className="d-flex flex-wrap justify-content-center align-items-center gap-2">
                     <Link
-                      to={myReservationDetail(id, { role: 'rider' })}
+                      to={reservationDetailLink.pathname}
+                      state={reservationDetailLink.state}
                       className="btn btn-sm btn-outline-primary px-3"
                     >
                       {t('res.confirmation.viewReservation')}

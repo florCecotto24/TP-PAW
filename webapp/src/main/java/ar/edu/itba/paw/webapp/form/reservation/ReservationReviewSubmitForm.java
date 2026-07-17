@@ -5,7 +5,7 @@ import ar.edu.itba.paw.webapp.validation.constraint.reservation.ValidReviewImage
 import ar.edu.itba.paw.webapp.validation.constraint.reservation.ValidReviewRating;
 
 /**
- * Multipart review submission ({@code POST /reviews?reservationId=…}).
+ * Validated review fields submitted with multipart {@code reservationUri} to {@code POST /reviews}.
  */
 @ValidReviewRating
 @ValidReviewImagePayload

@@ -188,6 +188,7 @@ public class FavCarJpaDao implements FavCarDao {
                     .ratingAvg(c.getRatingAvg().orElse(null))
                     .modelPendingValidation(!modelValidated)
                     .minimumRentalDays(c.getMinimumRentalDays())
+                    .year(c.getYear().orElse(null))
                     .ownerId(c.getOwnerId())
                     .build());
         }

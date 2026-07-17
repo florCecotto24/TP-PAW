@@ -76,9 +76,10 @@ export default function AdminReservationsPage() {
                         <Link
                           to={adminReservationChat(reservationId)}
                           state={
-                            reservation.links.messages
-                              ? ({ messagesLink: reservation.links.messages } satisfies AdminReservationChatLocationState)
-                              : undefined
+                            {
+                              messagesLink: reservation.links.messages,
+                              reservationSelf: reservation.links.self,
+                            } satisfies AdminReservationChatLocationState
                           }
                           className="btn btn-outline-primary btn-sm"
                         >

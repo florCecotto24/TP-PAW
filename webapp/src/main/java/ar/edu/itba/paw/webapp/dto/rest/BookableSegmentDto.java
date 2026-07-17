@@ -3,7 +3,10 @@ package ar.edu.itba.paw.webapp.dto.rest;
 import java.math.BigDecimal;
 import java.time.LocalTime;
 
+import javax.ws.rs.core.UriInfo;
+
 import ar.edu.itba.paw.models.dto.car.BookableSegmentProjection;
+import ar.edu.itba.paw.webapp.util.RestUriUtils;
 
 /** Rider-facing bookable wall-day segment for car-detail date pickers. */
 public final class BookableSegmentDto {
@@ -14,12 +17,14 @@ public final class BookableSegmentDto {
     private String checkInTime;
     private String checkOutTime;
     private String location;
-    private Long neighborhoodId;
+    private LinksDto links;
 
     public BookableSegmentDto() {
     }
 
-    public static BookableSegmentDto from(final BookableSegmentProjection segment) {
+    public static BookableSegmentDto from(
+            final BookableSegmentProjection segment,
+            final UriInfo uriInfo) {
         final BookableSegmentDto dto = new BookableSegmentDto();
         dto.from = segment.getFrom().toString();
         dto.to = segment.getTo().toString();
@@ -27,7 +32,13 @@ public final class BookableSegmentDto {
         dto.checkInTime = formatTime(segment.getCheckInTime());
         dto.checkOutTime = formatTime(segment.getCheckOutTime());
         dto.location = segment.getPublicLocation();
-        dto.neighborhoodId = segment.getNeighborhoodId();
+        dto.links = new LinksDto();
+        final Long neighborhoodId = segment.getNeighborhoodId();
+        if (neighborhoodId != null) {
+            dto.links.withRelated(
+                    "neighborhood",
+                    RestUriUtils.neighborhoodUri(uriInfo, neighborhoodId).toString());
+        }
         return dto;
     }
 
@@ -86,11 +97,11 @@ public final class BookableSegmentDto {
         this.location = location;
     }
 
-    public Long getNeighborhoodId() {
-        return neighborhoodId;
+    public LinksDto getLinks() {
+        return links;
     }
 
-    public void setNeighborhoodId(final Long neighborhoodId) {
-        this.neighborhoodId = neighborhoodId;
+    public void setLinks(final LinksDto links) {
+        this.links = links;
     }
 }

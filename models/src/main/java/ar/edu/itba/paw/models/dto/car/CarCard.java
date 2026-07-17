@@ -21,6 +21,8 @@ public final class CarCard {
     /** True when the car's catalog model was created on the fly and has not yet been validated by an admin. */
     private final boolean modelPendingValidation;
     private final int minimumRentalDays;
+    /** Optional manufacture year; {@code null} when the owner did not set one. */
+    private final Integer year;
     /** Optional: the user that owns the car. Used by views to hide the favorite heart on own cars. */
     private final Long ownerId;
 
@@ -34,6 +36,7 @@ public final class CarCard {
         this.ratingAvg = b.ratingAvg;
         this.modelPendingValidation = b.modelPendingValidation;
         this.minimumRentalDays = b.minimumRentalDays;
+        this.year = b.year;
         this.ownerId = b.ownerId;
     }
 
@@ -59,6 +62,7 @@ public final class CarCard {
         private BigDecimal ratingAvg;
         private boolean modelPendingValidation;
         private int minimumRentalDays = 1;
+        private Integer year;
         private Long ownerId;
 
         public Builder carId(final long carId) {
@@ -103,6 +107,11 @@ public final class CarCard {
 
         public Builder minimumRentalDays(final int minimumRentalDays) {
             this.minimumRentalDays = minimumRentalDays;
+            return this;
+        }
+
+        public Builder year(final Integer year) {
+            this.year = year;
             return this;
         }
 
@@ -166,6 +175,11 @@ public final class CarCard {
 
     public int getMinimumRentalDays() {
         return minimumRentalDays;
+    }
+
+    /** Manufacture year when known; {@code null} when not provided. */
+    public Integer getYear() {
+        return year;
     }
 
     /** Owner user id when known; {@code null} when the producing DAO didn't surface it. */

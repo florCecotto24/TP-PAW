@@ -17,6 +17,7 @@ const OPENAPI_PATH = resolve(
   dirname(fileURLToPath(import.meta.url)),
   '../../../openapi.yaml',
 );
+const FRONTEND_SRC_PATH = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 function loadOpenApi(): string {
   return readFileSync(OPENAPI_PATH, 'utf8');
@@ -175,6 +176,7 @@ describe('openapi.yaml contract (frontend)', () => {
     const frontendShape = [
       'brandName',
       'modelName',
+      'year',
       'status',
       'minimumRentalDays',
       'ratingAvg',
@@ -328,8 +330,9 @@ describe('openapi.yaml contract (frontend)', () => {
       priceMarket: 'below_market',
       rating: 4,
       neighborhoodId: 7,
-      from: '2026-07-01',
-      until: '2026-07-10',
+      flexible: true,
+      flexMonth: '2026-07',
+      flexDays: 5,
       sort: 'price_asc',
     });
 
@@ -338,6 +341,26 @@ describe('openapi.yaml contract (frontend)', () => {
 
     // 3.Assert
     expect(unknown, `query params not in openapi GET /cars: ${unknown.join(', ')}`).toEqual([]);
+  });
+
+  it('testSprintBOpenApiDocumentsHypermediaAndCollectionSemantics', () => {
+    // 1.Arrange
+    const bookableFields = schemaProperties(yaml, 'BookableSegmentDto');
+    const publicUserFields = schemaProperties(yaml, 'UserDto');
+
+    // 2.Act
+    const reviewCreateUsesReservationUri =
+      yaml.includes('required: [reservationUri]') &&
+      yaml.includes('description: URN canónica de la reserva (`links.self`).');
+
+    // 3.Assert
+    expect(bookableFields).toContain('links');
+    expect(bookableFields).not.toContain('neighborhoodId');
+    expect(publicUserFields).not.toContain('licenseValidated');
+    expect(publicUserFields).not.toContain('identityUploaded');
+    expect(reviewCreateUsesReservationUri).toBe(true);
+    expect(yaml).toContain('El catálogo admin se solicita con `status=all`.');
+    expect(yaml).toContain('/neighborhoods/{id}:');
   });
 
   it('testClientConfigFallbackKeysMatchOpenApiSchema', () => {
@@ -479,13 +502,31 @@ describe('openapi.yaml contract (frontend)', () => {
     expect(path).not.toBe(API_COLLECTION_FALLBACK_PATHS.cars);
   });
 
-  it('testLinksSchemaDocumentsBlockedOverdueReservationRel', () => {
+  it('testLinksSchemaDocumentsTypedUserDocumentRels', () => {
     // 1.Arrange
     const linkProps = schemaProperties(yaml, 'Links');
 
     // 2.Act / 3.Assert
     expect(linkProps).toContain('self');
+    expect(linkProps).toContain('identityDocument');
+    expect(linkProps).toContain('licenseDocument');
     expect(linkProps).toContain('blocked-overdue-reservation');
+  });
+
+  it('testFeatureApisDoNotFabricateUserDocumentUrls', () => {
+    // 1.Arrange
+    const apiFiles = ['profile', 'owner', 'admin', 'reservations']
+      .map((feature) => resolve(FRONTEND_SRC_PATH, `features/${feature}/api.ts`));
+
+    // 2.Act
+    const sources = apiFiles.map((path) => readFileSync(path, 'utf8'));
+
+    // 3.Assert
+    for (const source of sources) {
+      expect(source).not.toMatch(/links\??\.documents/);
+      expect(source).not.toMatch(/\$\{[^}\n]+\}\/documents(?:\/|`)/);
+      expect(source).not.toMatch(/subResource\([^)\n]*['"]documents['"]\)/);
+    }
   });
 
   it('testClientConfigChatLimitsAreDocumentedInOpenApi', () => {

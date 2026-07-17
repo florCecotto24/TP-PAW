@@ -605,6 +605,14 @@ body.modal-open {
     flex: 0 1 auto;
 }
 
+.carcard-price .carcard-price-from {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--bs-secondary-color, #6c757d);
+    line-height: 1.2;
+    text-transform: lowercase;
+}
+
 /* Full-card hit target (Bootstrap stretched-link) */
 .carcard--clickable {
     cursor: pointer;
@@ -1791,6 +1799,13 @@ body.reservation-chat-body {
     line-height: inherit;
 }
 
+/* Image/video bubbles are edge-to-edge (padding:0); caption + ticks need their own inset. */
+.reservation-chat__bubble--media-only .reservation-chat__attachment-caption {
+    padding: 0.375rem 0.5rem 0.125rem;
+    box-sizing: border-box;
+    width: 100%;
+}
+
 .reservation-chat__bubble-footer .reservation-chat__meta {
     flex-shrink: 0;
     margin: 0;
@@ -1821,9 +1836,13 @@ body.reservation-chat-body {
 }
 
 .reservation-chat__receipt {
+    display: inline-block;
+    flex-shrink: 0;
     font-size: 0.75rem;
     line-height: 1;
     letter-spacing: -0.08em;
+    /* Bootstrap Icons check2-all is wider than the glyph box; avoid clipping at the bubble edge. */
+    padding-inline-end: 0.15rem;
     color: #8696a0;
 }
 
@@ -1973,6 +1992,36 @@ body.reservation-chat-body {
 
 .reservation-chat__bubble--visual-only .reservation-chat__receipt--seen {
     color: #8fd0ff;
+}
+
+/*
+ * When filename/meta caption sits under the media, don't overlay ticks on the caption
+ * (absolute bottom + overflow:hidden was clipping the double-check).
+ */
+.reservation-chat__bubble--media-only.reservation-chat__bubble--visual-only:has(.reservation-chat__attachment-caption) {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.reservation-chat__bubble--media-only.reservation-chat__bubble--visual-only:has(.reservation-chat__attachment-caption) .reservation-chat__meta {
+    position: static;
+    align-self: flex-end;
+    margin: 0;
+    padding: 0 0.5rem 0.3rem;
+}
+
+.reservation-chat__bubble--media-only.reservation-chat__bubble--visual-only:has(.reservation-chat__attachment-caption) .reservation-chat__time {
+    color: rgba(15, 23, 42, 0.45);
+    text-shadow: none;
+}
+
+.reservation-chat__bubble--media-only.reservation-chat__bubble--visual-only:has(.reservation-chat__attachment-caption) .reservation-chat__receipt {
+    text-shadow: none;
+}
+
+.reservation-chat__bubble--media-only.reservation-chat__bubble--visual-only:has(.reservation-chat__attachment-caption) .reservation-chat__receipt--seen {
+    color: #53bdeb;
 }
 
 .reservation-chat__bubble--media-only:not(.reservation-chat__bubble--visual-only) {

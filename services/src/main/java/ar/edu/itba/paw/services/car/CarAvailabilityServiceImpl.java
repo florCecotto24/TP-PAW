@@ -204,6 +204,13 @@ public class CarAvailabilityServiceImpl implements CarAvailabilityService {
         return slicePage(segments, page, pageSize);
     }
 
+    /**
+     * In-memory page slice for effective/calendar projections.
+     * Month-scoped lists are already bounded (typically tens of rows after merge).
+     * Pushing {@code computeEffectiveOffered} into SQL is intentionally deferred:
+     * effective rows are a JVM merge of overlapping OFFERED/WITHDRAWN intervals,
+     * not a simple OFFSET query.
+     */
     private static <T> Page<T> slicePage(final List<T> all, final int page, final int pageSize) {
         final int safePage = Math.max(0, page);
         final int safePageSize = Math.max(1, pageSize);
@@ -266,12 +273,6 @@ public class CarAvailabilityServiceImpl implements CarAvailabilityService {
             out.add(new AvailabilityPeriod(startDay, endDay));
         }
         return out;
-    }
-
-    @Override
-    @Transactional
-    public void deleteByCarId(final long carId) {
-        carAvailabilityDao.deleteByCarId(carId);
     }
 
     private CarAvailability applyOwnerEditByCar(

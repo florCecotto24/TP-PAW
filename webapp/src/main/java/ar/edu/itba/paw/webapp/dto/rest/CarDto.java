@@ -87,7 +87,7 @@ public final class CarDto {
             final ConsumerCarCardMarketContext marketContext) {
         final CarDto dto = new CarDto();
         dto.plate = null;
-        dto.year = null;
+        dto.year = card.getYear();
         dto.powertrain = null;
         dto.transmission = null;
         dto.type = null;

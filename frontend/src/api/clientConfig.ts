@@ -61,6 +61,7 @@ export interface ClientConfigListingLimits {
 export interface ClientConfigDto {
   cbuRequiredDigits: number;
   maxBillableDays: number;
+  pickupLeadHours: number;
   car: ClientConfigCarLimits;
   upload: ClientConfigUploadLimits;
   money: ClientConfigMoneyLimits;
@@ -74,6 +75,7 @@ export interface ClientConfigDto {
 export const CLIENT_CONFIG_FALLBACK: ClientConfigDto = {
   cbuRequiredDigits: 22,
   maxBillableDays: 30,
+  pickupLeadHours: 24,
   car: {
     brandMinLength: 2,
     brandMaxLength: 30,

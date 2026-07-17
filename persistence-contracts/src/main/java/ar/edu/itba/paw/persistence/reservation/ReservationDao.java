@@ -141,6 +141,18 @@ public interface ReservationDao {
     /** Finished reservations for the car (owner analytics). */
     List<Reservation> findCarFinishedReservations(long ownerId, long carId);
 
+    /**
+     * Start/end bounds of finished reservations for analytics (no entity graph).
+     * Each element is {@code [startDate, endDate]}.
+     */
+    List<OffsetDateTime[]> findCarFinishedReservationBounds(long ownerId, long carId);
+
+    /**
+     * Sum of wall-zone billable days across finished reservations for the car
+     * (same calendar math as pricing {@code BillableDays}).
+     */
+    long sumCarFinishedBillableDays(long ownerId, long carId);
+
     /** Sets {@code car_returned} and stamps {@code car_returned_at = now()}; transitions {@code status} to {@code finished} when the car is marked returned. */
     int markCarReturned(long reservationId, long ownerUserId);
 

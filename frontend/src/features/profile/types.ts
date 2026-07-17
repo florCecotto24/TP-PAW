@@ -9,7 +9,8 @@ export interface Links {
   cars?: string;
   reservations?: string;
   favorites?: string;
-  documents?: string;
+  identityDocument?: string;
+  licenseDocument?: string;
   reviews?: string;
   [rel: string]: string | undefined;
 }
@@ -72,7 +73,7 @@ export interface ProfileFormValues {
   cbu: string;
 }
 
-/** Tipos de documento subibles (sub-recurso /documents/{documentType}). */
+/** Tipos de documento expuestos mediante links tipados del usuario privado. */
 export type DocumentType = 'license' | 'identity';
 
 /** Enums de auto (subconjunto necesario para mostrar el CarDto). */
@@ -99,6 +100,7 @@ export type CarStatus =
 export interface CarSummaryDto {
   brandName: string;
   modelName: string;
+  year?: number | null;
   status: CarStatus;
   minimumRentalDays: number;
   ratingAvg?: number | null;

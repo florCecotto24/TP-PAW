@@ -78,6 +78,26 @@ public class UserProfileMediaServiceImplTest {
     }
 
     @Test
+    public void testUploadValidatedProfileDocumentReplacesExistingLicense() {
+        // 1. Arrange — slot already occupied (SPA "replace" path)
+        final byte[] pdfBytes = {0x25, 0x50, 0x44, 0x46, 0x2d};
+        final StoredFile previous = StoredFile.identified(9L,
+                User.identities(1L, "u@test.com", "U", "U"),
+                "old.pdf", "application/pdf", pdfBytes, null);
+        final User user = User.identities(1L, "u@mail.com", "A", "B");
+        user.setLicenseFile(previous);
+        Mockito.when(userService.getUserById(1L)).thenReturn(Optional.of(user));
+        Mockito.when(storedFileService.create(1L, "licencia.pdf", "application/pdf", pdfBytes))
+                .thenReturn(StoredFile.identified(10L,
+                        User.identities(1L, "u@test.com", "U", "U"),
+                        "licencia.pdf", "application/pdf", pdfBytes, null));
+
+        // 2. Act / 3. Assert — PUT must replace, not reject with alreadyUploaded
+        Assertions.assertDoesNotThrow(() -> profileMediaService.uploadValidatedProfileDocument(
+                1L, UserDocumentType.LICENSE, "licencia.pdf", "application/pdf", pdfBytes));
+    }
+
+    @Test
     public void testUploadValidatedProfileDocumentRejectsInvalidType() {
         final User user = User.identities(1L, "u@mail.com", "A", "B");
         Mockito.when(userService.getUserById(1L)).thenReturn(Optional.of(user));

@@ -3,7 +3,7 @@ package ar.edu.itba.paw.webapp.form.review;
 import javax.validation.constraints.NotNull;
 
 /**
- * Required query param for {@code POST /reviews?reservationId=…}.
+ * Internal validated reservation reference parsed from multipart {@code reservationUri}.
  */
 public final class ReviewSubmitQueryForm {
 

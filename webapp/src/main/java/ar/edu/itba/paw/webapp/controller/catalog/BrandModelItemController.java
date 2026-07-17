@@ -71,7 +71,9 @@ public class BrandModelItemController {
             @Valid final CatalogApprovalDto patch) {
         modelCatalogSupport.requireModelForBrand(brandId, modelId);
         final Locale locale = LocaleContextHolder.getLocale();
-        modelCatalogSupport.approveModel(modelId, locale);
+        if (Boolean.TRUE.equals(patch.getValidated())) {
+            modelCatalogSupport.approveModel(modelId, locale);
+        }
         final CarModel updated = modelCatalogSupport.requireModelForBrand(brandId, modelId);
         return Response.ok(modelCatalogSupport.toDto(updated, uriInfo)).build();
     }

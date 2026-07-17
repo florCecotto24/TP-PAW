@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useParams } from 'react-router-dom';
+import { useParams, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { fetchUser, fetchUserCars, getUserReviews, userCarsLink, userReviewsLink } from './api';
 import { formatDateLong, formatMonthYear } from '../../i18n/dateFormat';
@@ -9,6 +9,8 @@ import { apiAssetUrl, profilePictureAssetUrl } from '../../api/uri';
 import { useUserBrief } from '../browse/hooks';
 import type { ReviewDto, CarSummaryDto } from '../browse/types';
 import CarCard from './CarCard';
+import { resolveResourceUri } from '../../api/resourceUri';
+import type { PublicProfileLocationState } from '../../routes/navigationState';
 import type { UserDto } from './types';
 
 // =============================================================================
@@ -21,7 +23,13 @@ import type { UserDto } from './types';
 export default function PublicProfilePage() {
   const { t, i18n } = useTranslation();
   const { id } = useParams<{ id: string }>();
-  const userUri = id ? `/users/${id}` : null;
+  const location = useLocation();
+  const userSelfFromNav = (location.state as PublicProfileLocationState | null)?.userSelf;
+  const userUri = resolveResourceUri({
+    stateUri: userSelfFromNav,
+    routeId: id,
+    collection: 'users',
+  });
 
   const userQuery = useQuery({
     queryKey: ['profile', 'public', userUri],

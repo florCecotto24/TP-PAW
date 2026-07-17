@@ -322,7 +322,6 @@ public class CarServiceImpl implements CarService {
         final LocalDate minBookableWallDate = carSearchService.publicBrowseMinBookableWallDate();
         return BookableBrowseSupport.retainBookableCards(
                 carDao.findSimilarCarCards(carId, limit, minBookableWallDate, null),
-                minBookableWallDate,
                 carAvailabilityService);
     }
 
@@ -331,65 +330,25 @@ public class CarServiceImpl implements CarService {
     public Page<CarCard> getCheapestCarCards(final int page, final int pageSize) {
         // Home browse intentionally does not exclude the viewer's own cars: owners want to see
         // how their own listings render alongside the rest of the catalog.
+        // Bookable eligibility is the DAO SQL predicate (offered end_date >= browseWallDate):
+        // one COUNT + one ID page, memory O(pageSize) — no JVM catalogue materialisation.
         final LocalDate minBookableWallDate = carSearchService.publicBrowseMinBookableWallDate();
-        return BookableBrowseSupport.paginateBookableCards(
-                (p, ps) -> carDao.getCheapestCarCards(p, ps, minBookableWallDate, null),
-                page,
-                pageSize,
-                minBookableWallDate,
-                carAvailabilityService);
+        return carDao.getCheapestCarCards(page, pageSize, minBookableWallDate, null);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<CarCard> getMostRecentCarCards(final int page, final int pageSize) {
         final LocalDate minBookableWallDate = carSearchService.publicBrowseMinBookableWallDate();
-        return BookableBrowseSupport.paginateBookableCards(
-                (p, ps) -> carDao.getMostRecentCarCards(p, ps, minBookableWallDate, null),
-                page,
-                pageSize,
-                minBookableWallDate,
-                carAvailabilityService);
+        return carDao.getMostRecentCarCards(page, pageSize, minBookableWallDate, null);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<CarCard> searchCarCards(final CarSearchCriteria criteria) {
-        if (!BookableBrowseSupport.needsBookableDayFilter(criteria)) {
-            return carDao.searchCarCards(criteria);
-        }
-        final LocalDate minBookableWallDate = criteria.getBrowseWallDate();
-        return BookableBrowseSupport.paginateBookableCards(
-                (p, ps) -> carDao.searchCarCards(withPage(criteria, p, ps)),
-                criteria.getPage(),
-                criteria.getUiPageSize(),
-                minBookableWallDate,
-                carAvailabilityService);
-    }
-
-    private static CarSearchCriteria withPage(final CarSearchCriteria criteria, final int page, final int pageSize) {
-        return CarSearchCriteria.builder()
-                .query(criteria.getQuery())
-                .transmissions(criteria.getTransmissions())
-                .powertrains(criteria.getPowertrains())
-                .carTypes(criteria.getCarTypes())
-                .minPrice(criteria.getMinPrice())
-                .maxPrice(criteria.getMaxPrice())
-                .ratingBands(criteria.getRatingBands())
-                .page(page)
-                .uiPageSize(pageSize)
-                .sortBy(criteria.getSortBy())
-                .sortDirection(criteria.getSortDirection())
-                .browseWallDate(criteria.getBrowseWallDate())
-                .excludeOwnerUserId(criteria.getExcludeOwnerUserId())
-                .neighborhoodIds(criteria.getNeighborhoodIds())
-                .availabilityRange(
-                        criteria.getAvailabilityRangeStart(),
-                        criteria.getAvailabilityRangeEndExclusive())
-                .flexibleMonth(criteria.getFlexibleMonth())
-                .flexibleDays(criteria.getFlexibleDays())
-                .priceMarketPosition(criteria.getPriceMarketPosition())
-                .build();
+        // When browseWallDate is set (no explicit rider range), CarJpaDao applies the same
+        // EXISTS/JOIN bookable predicate on COUNT and the ID page — totals match the page.
+        return carDao.searchCarCards(criteria);
     }
 
     @Override

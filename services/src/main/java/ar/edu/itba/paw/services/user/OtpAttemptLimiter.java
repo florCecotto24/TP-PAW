@@ -27,15 +27,24 @@ public class OtpAttemptLimiter {
 
     @Autowired
     public OtpAttemptLimiter(final Environment environment) {
-        this.maxFailedAttempts = environment.getProperty(
-                "app.validation.otp-max-failed-attempts", Integer.class, DEFAULT_MAX_FAILED_ATTEMPTS);
-        final int lockoutMinutes = environment.getProperty(
-                "app.validation.otp-lockout-minutes", Integer.class, DEFAULT_LOCKOUT_MINUTES);
-        this.lockoutWindow = Duration.ofMinutes(Math.max(1, lockoutMinutes));
+        this(
+                environment.getProperty(
+                        "app.validation.otp-max-failed-attempts", Integer.class, DEFAULT_MAX_FAILED_ATTEMPTS),
+                Duration.ofMinutes(Math.max(
+                        1,
+                        environment.getProperty(
+                                "app.validation.otp-lockout-minutes", Integer.class, DEFAULT_LOCKOUT_MINUTES))));
     }
 
-    /** Test / explicit configuration constructor. */
-    public OtpAttemptLimiter(final int maxFailedAttempts, final Duration lockoutWindow) {
+    /**
+     * Test-only factory (same package). Keeps a single public constructor for Spring DI
+     * (Effective Java: prefer static factories over constructor overloading).
+     */
+    static OtpAttemptLimiter forTests(final int maxFailedAttempts, final Duration lockoutWindow) {
+        return new OtpAttemptLimiter(maxFailedAttempts, lockoutWindow);
+    }
+
+    private OtpAttemptLimiter(final int maxFailedAttempts, final Duration lockoutWindow) {
         this.maxFailedAttempts = Math.max(1, maxFailedAttempts);
         this.lockoutWindow = lockoutWindow == null || lockoutWindow.isNegative() || lockoutWindow.isZero()
                 ? Duration.ofMinutes(DEFAULT_LOCKOUT_MINUTES)

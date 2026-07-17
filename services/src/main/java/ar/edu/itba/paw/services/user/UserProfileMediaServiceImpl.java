@@ -92,7 +92,7 @@ public class UserProfileMediaServiceImpl implements UserProfileMediaService {
             final String originalFilename,
             final String contentType,
             final byte[] data) {
-        final User user = userService.getUserById(userId)
+        userService.getUserById(userId)
                 .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
         if (documentType == null
                 || originalFilename == null || originalFilename.isBlank()
@@ -111,9 +111,8 @@ public class UserProfileMediaServiceImpl implements UserProfileMediaService {
                     MessageKeys.USER_PROFILE_DOCUMENT_TOO_LARGE,
                     profileDocumentUploadPolicy.getMaxMegabytesRoundedUp());
         }
-        if (profileDocumentSlotOccupied(user, documentType)) {
-            throw new InvalidProfileDocumentException(MessageKeys.USER_PROFILE_DOCUMENT_ALREADY_UPLOADED);
-        }
+        // PUT is create-or-replace (OpenAPI: "Subir/reemplazar"). Overwrite the slot FK;
+        // previous StoredFile rows are orphaned the same way clearProfileDocument does.
         final StoredFile stored = storedFileService.create(userId, originalFilename, contentType, data);
         switch (documentType) {
             case LICENSE:
@@ -167,12 +166,5 @@ public class UserProfileMediaServiceImpl implements UserProfileMediaService {
             final long userId, final UserDocumentType documentType) {
         return findProfileDocument(userId, documentType)
                 .map(sf -> new BinaryContent(sf.getData(), sf.getContentType(), sf.getFileName()));
-    }
-
-    private static boolean profileDocumentSlotOccupied(final User user, final UserDocumentType documentType) {
-        return switch (documentType) {
-            case LICENSE -> user.getLicenseFileId().isPresent();
-            case IDENTITY -> user.getIdentityFileId().isPresent();
-        };
     }
 }

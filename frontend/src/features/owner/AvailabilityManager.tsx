@@ -10,7 +10,7 @@ import PriceMarketInsightCard from '../../components/ryden/car/PriceMarketInsigh
 import { formatDateRange, flatpickrLocale, formatMonthYear, shiftMonth } from '../../i18n/dateFormat';
 import { idFromUri } from '../../api/uri';
 import { getClientConfig } from '../../api/clientConfig';
-import { firstAvailabilityValidationError } from './availabilityValidation';
+import { firstAvailabilityValidationError, minAvailabilityStartDateYmd } from './availabilityValidation';
 import {
   createAvailability,
   deleteAvailability,
@@ -53,6 +53,7 @@ export default function AvailabilityManager({ car }: { car: CarDto }) {
   const { t, i18n } = useTranslation();
   const errorMessage = useApiErrorMessage();
   const listingLimits = getClientConfig().listing;
+  const pickupLeadHours = getClientConfig().pickupLeadHours;
 
   const [month, setMonth] = useState(currentMonth());
   const [periods, setPeriods] = useState<AvailabilityDto[]>([]);
@@ -87,6 +88,12 @@ export default function AvailabilityManager({ car }: { car: CarDto }) {
     return match?.id ?? null;
   }, [form.neighborhoodUri, neighborhoodOptions]);
 
+  const minStartDate = useMemo(
+    () => minAvailabilityStartDateYmd(form.checkInTime, pickupLeadHours),
+    [form.checkInTime, pickupLeadHours],
+  );
+  const pickerMinStartDate = editing && editing.startDate < minStartDate ? editing.startDate : minStartDate;
+
   useEffect(() => {
     let active = true;
     const modelUri = car.links.model;
@@ -99,7 +106,9 @@ export default function AvailabilityManager({ car }: { car: CarDto }) {
       .then((res) => {
         if (!active) return;
         const data = res.data;
-        if (data && data.sampleCount >= 2 && data.maxPrice > data.minPrice) {
+        // Basta 1 peer del mismo modelo (min===max es válido;
+        // PriceMarketInsightCard expande la barra a 0…2×mercado sin spread).
+        if (data != null && data.sampleCount >= 1) {
           setPriceInsight({
             minPrice: data.minPrice,
             maxPrice: data.maxPrice,
@@ -131,7 +140,7 @@ export default function AvailabilityManager({ car }: { car: CarDto }) {
       disableMobile: true,
       mode: 'range',
       inline: true,
-      minDate: 'today',
+      minDate: pickerMinStartDate,
       dateFormat: 'Y-m-d',
       defaultDate: defaultDates.length > 0 ? defaultDates : undefined,
       onChange: (dates) => {
@@ -145,7 +154,7 @@ export default function AvailabilityManager({ car }: { car: CarDto }) {
       rangeFpRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [i18n.language, editing]);
+  }, [i18n.language, editing, pickerMinStartDate]);
 
   useEffect(() => {
     const fp = rangeFpRef.current;
@@ -260,12 +269,15 @@ export default function AvailabilityManager({ car }: { car: CarDto }) {
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
-    const validationError = firstAvailabilityValidationError(form);
+    const leadMinStartDate = editing && form.startDate === editing.startDate ? undefined : minStartDate;
+    const validationError = firstAvailabilityValidationError(form, leadMinStartDate);
     if (validationError) {
       setError(t(`owner.availability.errors.${validationError}`, {
         min: getClientConfig().listing.pricePerDayMin,
         integer: getClientConfig().listing.pricePerDayIntegerDigits,
         fraction: getClientConfig().listing.pricePerDayFractionDigits,
+        minDate: minStartDate,
+        hours: pickupLeadHours,
       }));
       return;
     }

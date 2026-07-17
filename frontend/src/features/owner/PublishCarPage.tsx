@@ -600,8 +600,7 @@ function PublishCarForm({
       let car = res.data;
       if (!car) {
         const loc = res.location;
-        const newId = idFromUri(loc);
-        if (newId) car = (await fetchCar(newId)).data;
+        if (loc) car = (await fetchCar(loc)).data;
       }
       if (car) {
         onPublished(car, newCatalogEntry);

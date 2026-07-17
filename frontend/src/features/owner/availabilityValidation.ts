@@ -4,6 +4,7 @@ import type { AvailabilityCreateDto } from './types';
 export type AvailabilityValidationError =
   | 'datesRequired'
   | 'invalidDateRange'
+  | 'riderLeadTime'
   | 'priceInvalid'
   | 'priceBelowMin'
   | 'priceDigits'
@@ -34,14 +35,40 @@ function compareTimes(checkIn: string, checkOut: string): boolean {
   return checkOut > checkIn;
 }
 
+function parseTimeOrDefault(value: string | undefined, fallback: { hours: number; minutes: number }) {
+  const match = /^(\d{2}):(\d{2})$/.exec(value ?? '');
+  if (!match) return fallback;
+  return { hours: Number(match[1]), minutes: Number(match[2]) };
+}
+
+export function minAvailabilityStartDateYmd(
+  checkInTime: string | undefined,
+  pickupLeadHours: number,
+  now = new Date(),
+): string {
+  const pickup = parseTimeOrDefault(checkInTime, { hours: 10, minutes: 0 });
+  const leadBoundary = new Date(now.getTime() + Math.max(0, pickupLeadHours) * 60 * 60 * 1000);
+  const candidate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), pickup.hours, pickup.minutes, 0, 0);
+  while (candidate.getTime() < leadBoundary.getTime()) {
+    candidate.setDate(candidate.getDate() + 1);
+  }
+  return [
+    candidate.getFullYear(),
+    String(candidate.getMonth() + 1).padStart(2, '0'),
+    String(candidate.getDate()).padStart(2, '0'),
+  ].join('-');
+}
+
 /** Client-side mirror of {@code AvailabilityCreateForm} validators. */
 export function firstAvailabilityValidationError(
   form: AvailabilityCreateDto,
+  minStartDate?: string,
 ): AvailabilityValidationError | null {
   const limits = listingLimits();
 
   if (!form.startDate || !form.endDate) return 'datesRequired';
   if (form.endDate < form.startDate) return 'invalidDateRange';
+  if (minStartDate && form.startDate < minStartDate) return 'riderLeadTime';
 
   const price = form.dayPrice;
   if (!Number.isFinite(price) || price <= 0) return 'priceInvalid';

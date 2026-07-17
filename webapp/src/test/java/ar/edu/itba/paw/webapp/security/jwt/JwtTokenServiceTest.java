@@ -29,9 +29,7 @@ class JwtTokenServiceTest {
 
     private static RydenUserDetails principal(final boolean passwordResetOtp) {
         final Set<GrantedAuthority> authorities = passwordResetOtp
-                ? Set.of(
-                        new SimpleGrantedAuthority("ROLE_USER"),
-                        new SimpleGrantedAuthority(RydenAuthorities.PASSWORD_RESET_OTP))
+                ? Set.of(new SimpleGrantedAuthority(RydenAuthorities.PASSWORD_RESET_OTP))
                 : Set.of(
                         new SimpleGrantedAuthority("ROLE_USER"),
                         new SimpleGrantedAuthority("ROLE_ADMIN"));
@@ -100,19 +98,20 @@ class JwtTokenServiceTest {
     }
 
     @Test
-    void testPasswordResetOtpIsAccessOnlyNeverOnRefresh() {
+    void testPasswordResetOtpIsAccessOnlyNeverEmitsRefresh() {
         // 1.Arrange / 2.Act
         final JwtTokenService jwt = service(SECRET, 15, 30);
         final MockHttpServletResponse response = issue(jwt, principal(true));
         final TokenService.ParsedJwt access = jwt.parseToken(response.getHeader(JwtTokenService.ACCESS_TOKEN_HEADER));
-        final TokenService.ParsedJwt refresh = jwt.parseToken(response.getHeader(JwtTokenService.REFRESH_TOKEN_HEADER));
+        final String refreshHeader = response.getHeader(JwtTokenService.REFRESH_TOKEN_HEADER);
 
         // 3.Assert
         assertNotNull(access);
-        assertNotNull(refresh);
+        assertNull(refreshHeader);
         assertTrue(hasPasswordResetOtp(access.principal()));
-        assertFalse(hasPasswordResetOtp(refresh.principal()));
-        assertEquals(JwtTokenType.REFRESH, refresh.type());
+        assertTrue(access.principal().getAuthorities().stream()
+                .noneMatch(a -> "ROLE_USER".equals(a.getAuthority()) || "ROLE_ADMIN".equals(a.getAuthority())));
+        assertEquals(JwtTokenType.ACCESS, access.type());
     }
 
     @Test
@@ -142,15 +141,17 @@ class JwtTokenServiceTest {
     }
 
     @Test
-    void testAuthenticatedUserLinkIncludesApiUsersPath() {
+    void testAuthenticatedUserLinkIsHostRelativeApiUsersPath() {
         // 1.Arrange / 2.Act
         final MockHttpServletResponse response = issue(service(SECRET, 15, 30), principal());
         final String link = response.getHeader("Link");
 
-        // 3.Assert
+        // 3.Assert — relative to context; no scheme/host baked in (S-05)
         assertNotNull(link);
-        assertTrue(link.contains("/api/users/42"));
+        assertTrue(link.contains("</webapp/api/users/42>"));
         assertTrue(link.contains("rel=\"authenticated-user\""));
+        assertFalse(link.contains("http://"));
+        assertFalse(link.contains("https://"));
     }
 
     private static boolean hasPasswordResetOtp(final RydenUserDetails principal) {

@@ -28,7 +28,10 @@ export interface UserDto {
   role?: 'user' | 'admin';
   ratingAsRider?: number | null;
   ratingAsOwner?: number | null;
-  links: Links;
+  links: Links & {
+    identityDocument?: string;
+    licenseDocument?: string;
+  };
 }
 
 /** Cuerpo para registrar un usuario (POST /users). */

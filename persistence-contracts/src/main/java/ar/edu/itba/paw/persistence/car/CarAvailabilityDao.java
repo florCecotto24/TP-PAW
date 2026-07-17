@@ -66,9 +66,6 @@ public interface CarAvailabilityDao {
      */
     boolean existsAnyOfferedByCar(long carId);
 
-    /** Removes every availability row for {@code carId} (e.g. before replacing the whole wall). */
-    void deleteByCarId(long carId);
-
     /**
      * Minimum {@link CarAvailability.Kind#OFFERED OFFERED} day price for each given car. Cars
      * without any offered availability are absent from the returned map. Useful for "from" pricing

@@ -21,7 +21,7 @@ import ar.edu.itba.paw.webapp.util.LocaleMessages;
  * {@code CarService.uploadValidatedCarInsuranceDocument} with {@code getBytes()} extraction;
  * fan-out into typed flash / header messages for {@link RydenException} and {@link IOException}.
  * Callers are still responsible for the ownership check and for translating the outcome into the
- * exact HTTP shape they want (redirect + flash, or {@code 204 / 400 + X-Ryden-Error} header).
+ * exact HTTP shape they want (redirect + flash, or structured REST errors via exception mappers).
  */
 @Component
 public final class CarInsuranceUploadFacade {

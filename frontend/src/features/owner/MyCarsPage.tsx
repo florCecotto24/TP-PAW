@@ -1,9 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router-dom';
-import { apiAssetUrl } from '../../api/uri';
-import { Pagination, SortBar, LoadingBlock } from '../../components/ryden';
-import { paths, myCarDetail } from '../../routes/paths';
+import { Pagination, SortBar, LoadingBlock, AuthenticatedImg } from '../../components/ryden';
+import { paths } from '../../routes/paths';
+import { myCarDetailTo } from '../../routes/navigationState';
 import { idFromUri } from './api';
 import MyCarsFilterForm from './components/MyCarsFilterForm';
 import { myCarsPageCount, useApiErrorMessage, useCurrentUserId, useMyCarsPage } from './hooks';
@@ -15,24 +15,21 @@ import {
   showMyCarsFilterClear,
   type MyCarsFilters,
 } from './myCarsFilters';
-import { STATUS_BADGE } from './types';
+import { STATUS_BADGE, type CarSummaryDto } from './types';
 
 function OwnerCarCardMedia({ coverUri, alt }: { coverUri?: string; alt: string }) {
-  const [failed, setFailed] = useState(false);
-  const src = coverUri ? apiAssetUrl(coverUri) : null;
-  if (!src || failed) {
-    return (
-      <div className="reservation-card__media reservation-card__media--placeholder d-flex align-items-center justify-content-center text-secondary">
-        <i className="bi bi-car-front fs-1" aria-hidden="true" />
-      </div>
-    );
-  }
+  const placeholder = (
+    <div className="reservation-card__media reservation-card__media--placeholder d-flex align-items-center justify-content-center text-secondary">
+      <i className="bi bi-car-front fs-1" aria-hidden="true" />
+    </div>
+  );
+  if (!coverUri) return placeholder;
   return (
-    <img
-      src={src}
+    <AuthenticatedImg
+      src={coverUri}
       alt={alt}
       className="reservation-card__media"
-      onError={() => setFailed(true)}
+      fallback={placeholder}
     />
   );
 }
@@ -155,13 +152,13 @@ export default function MyCarsPage() {
       {items.length > 0 ? (
         <>
           <div className="d-flex flex-column gap-3 mb-4">
-            {items.map((car) => {
+            {items.map((car: CarSummaryDto) => {
               const id = idFromUri(car.links.self);
               if (!id) return null;
               return (
                 <Link
                   key={car.links.self}
-                  to={myCarDetail(id)}
+                  to={myCarDetailTo(id, car.links.self)}
                   className="reservation-card text-decoration-none text-reset"
                 >
                   <article className="card border-0 shadow-sm rounded-4 overflow-hidden reservation-card__surface position-relative">
@@ -172,7 +169,7 @@ export default function MyCarsPage() {
                       <div className="col-12 col-md-3 reservation-card__media-wrap">
                         <OwnerCarCardMedia
                           coverUri={car.links.cover}
-                          alt={`${car.brandName} ${car.modelName}`}
+                          alt={car.year != null ? `${car.brandName} ${car.modelName} (${car.year})` : `${car.brandName} ${car.modelName}`}
                         />
                       </div>
                       <div className="col-12 col-md-9 min-w-0">
@@ -180,6 +177,7 @@ export default function MyCarsPage() {
                           <div className="min-w-0" style={{ paddingRight: '8rem' }}>
                             <h3 className="h5 fw-semibold mb-1 ryden-text-clamp-2">
                               {car.brandName} {car.modelName}
+                              {car.year != null ? <span className="text-secondary fw-normal"> ({car.year})</span> : null}
                             </h3>
                           </div>
                           {!car.modelValidated && (

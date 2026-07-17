@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.webapp.controller.car;
 
 import javax.ws.rs.GET;
+import javax.ws.rs.NotFoundException;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.core.Context;
@@ -38,6 +39,6 @@ public final class ImageController {
     public Response getImage(@PathParam("id") final long id) {
         return imageService.getImageContent(id)
                 .map(content -> CacheableBinaryResponses.of(request, content))
-                .orElseGet(() -> Response.status(Response.Status.NOT_FOUND).build());
+                .orElseThrow(NotFoundException::new);
     }
 }

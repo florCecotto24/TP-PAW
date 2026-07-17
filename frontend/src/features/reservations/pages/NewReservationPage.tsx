@@ -20,7 +20,8 @@ import { reservationActionError } from '../reservationError';
 import { useCurrentUser } from '../useCurrentUser';
 import { useSessionStore } from '../../../session/sessionStore';
 import { paths, reservationConfirmation } from '../../../routes/paths';
-import { carDetailTo, type NewReservationLocationState } from '../../../routes/navigationState';
+import { resolveResourceUri } from '../../../api/resourceUri';
+import { carDetailTo, type NewReservationLocationState, type ReservationConfirmationLocationState } from '../../../routes/navigationState';
 
 function billableDays(startIso: string, endIso: string): number {
   const a = new Date(startIso).getTime();
@@ -46,7 +47,11 @@ export default function NewReservationPage() {
   const { id: myId, isAuthenticated } = useCurrentUser();
   const userUri = useSessionStore((s) => s.currentUserUri);
 
-  const carUri = carSelfFromNav ?? (carId ? `/cars/${carId}` : null);
+  const carUri = resolveResourceUri({
+    stateUri: carSelfFromNav,
+    routeId: carId,
+    collection: 'cars',
+  });
 
   const carQuery = useQuery({
     queryKey: ['reservations', 'new', 'car', carUri],
@@ -140,8 +145,15 @@ export default function NewReservationPage() {
         startDate: startIso,
         endDate: endIso,
       });
-      const reservationId = idFromUri(res.data?.links.self ?? res.location);
-      navigate(reservationId ? reservationConfirmation(reservationId) : paths.myReservations);
+      const reservationSelf = res.data?.links.self ?? res.location ?? null;
+      const reservationId = idFromUri(reservationSelf ?? '');
+      if (reservationId) {
+        navigate(reservationConfirmation(reservationId), {
+          state: { reservationSelf } satisfies ReservationConfirmationLocationState,
+        });
+      } else {
+        navigate(paths.myReservations);
+      }
     } catch (err) {
       setActionError(reservationActionError(t, err, 'new'));
     } finally {

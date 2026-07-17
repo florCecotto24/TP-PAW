@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useQuery } from '@tanstack/react-query';
 import { formatDateTime } from '../../../i18n/dateFormat';
 import { MediaTypes } from '../../../api/mediaTypes';
 import { pageIndexFromParams, withPageIndex } from '../../../api/pageParam';
@@ -9,6 +10,8 @@ import { Avatar, ChatAttachmentPreview, EmptyState, LoadingBlock } from '../../.
 import AdminPageHeader from '../components/AdminPageHeader';
 import { paths } from '../../../routes/paths';
 import type { AdminReservationChatLocationState } from '../../../routes/navigationState';
+import { resolveResourceUri } from '../../../api/resourceUri';
+import { getReservation } from '../../reservations/api';
 import AdminPagination from '../components/AdminPagination';
 import type { MessageDto } from '../types';
 import { useAdminErrorMessage } from '../useAdminErrorMessage';
@@ -28,10 +31,32 @@ export default function AdminReservationChatPage() {
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
   const messagesLinkFromNav = (location.state as AdminReservationChatLocationState | null)?.messagesLink;
+  const reservationSelfFromNav = (location.state as AdminReservationChatLocationState | null)?.reservationSelf;
   const errorMessage = useAdminErrorMessage();
 
+  const reservationSelf = resolveResourceUri({
+    stateUri: reservationSelfFromNav,
+    routeId: id,
+    collection: 'reservations',
+  });
+
+  const messagesLinkQuery = useQuery({
+    queryKey: ['admin', 'reservation-chat', 'messages-link', messagesLinkFromNav, reservationSelf],
+    queryFn: async () => {
+      if (messagesLinkFromNav) return messagesLinkFromNav;
+      if (!reservationSelf) return null;
+      const res = await getReservation(reservationSelf);
+      const link = res.data?.links?.messages;
+      if (!link) throw new Error('missing messages link');
+      return link;
+    },
+    enabled: Boolean(messagesLinkFromNav || reservationSelf),
+  });
+
+  const messagesPath = messagesLinkQuery.data ?? '';
+
   // La página del chat vive en la URL (?page=N, 0-based como SearchPage) -> bookmarkeable
-  // y resiste refresh (al recargar se pierde el link de nav y se cae al fallback por id).
+  // y resiste refresh: sin state se resuelve messages vía GET reserva (self canónico + links.messages).
   const [searchParams, setSearchParams] = useSearchParams();
   const pageIndex = pageIndexFromParams(searchParams);
   const goToPage = useCallback(
@@ -39,8 +64,9 @@ export default function AdminReservationChatPage() {
     [searchParams, setSearchParams],
   );
 
-  const messagesPath = messagesLinkFromNav ?? (id ? `/reservations/${id}/messages` : '');
-  const list = usePagedList<MessageDto>(messagesPath, MediaTypes.message, pageIndex + 1, [id]);
+  const list = usePagedList<MessageDto>(messagesPath, MediaTypes.message, pageIndex + 1, [
+    messagesPath,
+  ]);
 
   const [senderProfiles, setSenderProfiles] = useState<Record<string, SenderProfile>>({});
 
@@ -84,11 +110,14 @@ export default function AdminReservationChatPage() {
 
   const displayError = list.error ? errorMessage(list.error) : null;
 
+  const resolvingMessages = messagesLinkQuery.isLoading;
+  const messagesResolveFailed = messagesLinkQuery.isError;
+
   if (!id) {
     return <p className="text-secondary">{t('error.generic')}</p>;
   }
 
-  if (!messagesLinkFromNav && !list.loading && list.error) {
+  if (messagesResolveFailed && !resolvingMessages) {
     return (
       <>
         <AdminPageHeader
@@ -118,13 +147,13 @@ export default function AdminReservationChatPage() {
       />
 
       {displayError ? <div className="alert alert-danger" role="alert">{displayError}</div> : null}
-      {list.loading ? <LoadingBlock variant="page" className="py-4" /> : null}
+      {resolvingMessages || list.loading ? <LoadingBlock variant="page" className="py-4" /> : null}
 
-      {!list.loading && list.items.length === 0 ? (
+      {!resolvingMessages && !list.loading && list.items.length === 0 ? (
         <EmptyState icon="chat-dots" title={t('admin.reservationChat.noMessages')} inCard />
       ) : null}
 
-      {!list.loading && list.items.length > 0 ? (
+      {!resolvingMessages && !list.loading && list.items.length > 0 ? (
         <div className="card border-0 shadow-sm bg-white">
           <ul className="list-group list-group-flush">
             {list.items.map((message) => {

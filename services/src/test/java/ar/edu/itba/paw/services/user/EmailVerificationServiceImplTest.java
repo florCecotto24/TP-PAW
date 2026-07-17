@@ -47,7 +47,7 @@ class EmailVerificationServiceImplTest {
         emailService = new RecordingEmailService();
         service = new EmailVerificationServiceImpl(
                 dao, emailService, userService, VerificationCodePolicy.fromValidatedConfiguration(6, 5),
-                new OtpAttemptLimiter(8, Duration.ofMinutes(15)));
+                OtpAttemptLimiter.forTests(8, Duration.ofMinutes(15)));
     }
 
     @Test

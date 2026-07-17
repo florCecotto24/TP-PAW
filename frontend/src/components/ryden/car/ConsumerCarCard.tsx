@@ -8,6 +8,7 @@ export interface ConsumerCarCardData {
   model: string;
   brand: string;
   price: number;
+  year?: number | null;
   ratingAvg?: number | null;
   reviewCount?: number | null;
   priceMarketPositionModifier?: CarCardProps['priceMarketPositionModifier'];
@@ -43,6 +44,7 @@ export default function ConsumerCarCard({
       model={card.model}
       brand={card.brand}
       price={card.price}
+      year={card.year}
       image={image}
       pricePeriod="day"
       ratingAvg={card.ratingAvg}

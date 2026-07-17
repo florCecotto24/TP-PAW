@@ -1,10 +1,7 @@
 package ar.edu.itba.paw.webapp.controller.user;
 
 import java.net.URI;
-import java.time.LocalDate;
 import java.util.List;
-import java.util.Locale;
-import java.util.stream.Collectors;
 
 import javax.validation.Valid;
 import javax.ws.rs.Consumes;
@@ -25,11 +22,8 @@ import javax.ws.rs.core.UriInfo;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.i18n.LocaleContextHolder;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.method.P;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 import ar.edu.itba.paw.exception.MessageKeys;
@@ -38,23 +32,20 @@ import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.profile.UserPatchCommand;
 import ar.edu.itba.paw.services.user.AdminService;
-import ar.edu.itba.paw.services.user.PasswordResetService;
 import ar.edu.itba.paw.services.user.UserService;
 import ar.edu.itba.paw.webapp.api.common.PaginationLinks;
 import ar.edu.itba.paw.webapp.api.common.VndMediaType;
 import ar.edu.itba.paw.webapp.dto.rest.UserPrivateDto;
 import ar.edu.itba.paw.webapp.form.admin.CreateAdminUserForm;
-import ar.edu.itba.paw.webapp.form.user.ProfilePasswordChangeForm;
 import ar.edu.itba.paw.webapp.form.user.RegistrationAccountForm;
 import ar.edu.itba.paw.webapp.form.user.UserPatchForm;
-import ar.edu.itba.paw.webapp.security.auth.AuthenticationAuthorities;
 import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
 import ar.edu.itba.paw.webapp.support.CurrentUserResolver;
 import ar.edu.itba.paw.webapp.support.FormValidationSupport;
 import ar.edu.itba.paw.webapp.support.PaginationParams;
 import ar.edu.itba.paw.webapp.support.PaginationSupport;
+import ar.edu.itba.paw.webapp.support.UserPatchSupport;
 import ar.edu.itba.paw.webapp.support.UserRepresentationSupport;
-import ar.edu.itba.paw.webapp.support.UserResourceAccess;
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 import ar.edu.itba.paw.webapp.validation.constraint.user.ValidUserRole;
 
@@ -74,11 +65,10 @@ public class UserController {
 
     private final UserService userService;
     private final AdminService adminService;
-    private final PasswordResetService passwordResetService;
     private final FormValidationSupport formValidationSupport;
     private final CurrentUserResolver currentUserResolver;
     private final UserRepresentationSupport userRepresentationSupport;
-    private final UserResourceAccess userResourceAccess;
+    private final UserPatchSupport userPatchSupport;
     private final PaginationSupport paginationSupport;
 
     @Context
@@ -91,19 +81,17 @@ public class UserController {
     public UserController(
             final UserService userService,
             final AdminService adminService,
-            final PasswordResetService passwordResetService,
             final FormValidationSupport formValidationSupport,
             final CurrentUserResolver currentUserResolver,
             final UserRepresentationSupport userRepresentationSupport,
-            final UserResourceAccess userResourceAccess,
+            final UserPatchSupport userPatchSupport,
             final PaginationSupport paginationSupport) {
         this.userService = userService;
         this.adminService = adminService;
-        this.passwordResetService = passwordResetService;
         this.formValidationSupport = formValidationSupport;
         this.currentUserResolver = currentUserResolver;
         this.userRepresentationSupport = userRepresentationSupport;
-        this.userResourceAccess = userResourceAccess;
+        this.userPatchSupport = userPatchSupport;
         this.paginationSupport = paginationSupport;
     }
 
@@ -222,7 +210,7 @@ public class UserController {
         final User user = userService.getUserById(id)
                 .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
         final RydenUserDetails viewer = currentUserResolver.currentPrincipalOrNull();
-        final UserPatchCommand command = toPatchCommand(patch);
+        final UserPatchCommand command = userPatchSupport.toPatchCommand(patch);
 
         // Authorize profile/admin fields before any mutation so a password+admin body cannot
         // commit the password and then 403 on the admin facet.
@@ -234,7 +222,7 @@ public class UserController {
         }
 
         if (patch.getPassword() != null) {
-            applyPasswordPatch(user, patch, viewer);
+            userPatchSupport.applyPasswordPatch(user, patch, viewer);
         }
         if (command.hasProfileFields() || command.hasAdminFields()) {
             final long actingUserId = viewer != null
@@ -246,84 +234,5 @@ public class UserController {
         final User updated = userService.getUserById(id)
                 .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
         return userRepresentationSupport.buildUserResponse(updated, uriInfo, viewer, httpHeaders);
-    }
-
-    private static UserPatchCommand toPatchCommand(final UserPatchForm patch) {
-        final UserPatchCommand.Builder builder = UserPatchCommand.builder();
-        if (patch.getForename() != null) {
-            builder.forename(patch.getForename());
-        }
-        if (patch.getSurname() != null) {
-            builder.surname(patch.getSurname());
-        }
-        if (patch.getPhoneNumber() != null) {
-            builder.phoneNumber(patch.getPhoneNumber());
-        }
-        if (patch.getBirthDate() != null) {
-            builder.birthDate(toBirthDate(patch.getBirthDate()));
-        }
-        if (patch.getAbout() != null) {
-            builder.about(patch.getAbout());
-        }
-        if (patch.getCbu() != null) {
-            builder.cbu(patch.getCbu());
-        }
-        if (patch.getLatestLocale() != null) {
-            builder.latestLocale(patch.getLatestLocale());
-        }
-        if (patch.getRole() != null) {
-            builder.role(patch.getRole());
-        }
-        if (patch.getBlocked() != null) {
-            builder.blocked(patch.getBlocked());
-        }
-        if (patch.getIdentityValidated() != null) {
-            builder.identityValidated(patch.getIdentityValidated());
-        }
-        if (patch.getLicenseValidated() != null) {
-            builder.licenseValidated(patch.getLicenseValidated());
-        }
-        return builder.build();
-    }
-
-    private void applyPasswordPatch(
-            final User user,
-            final UserPatchForm patch,
-            final RydenUserDetails viewer) {
-        final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (AuthenticationAuthorities.hasPasswordResetOtp(authentication)) {
-            if (!(authentication.getPrincipal() instanceof RydenUserDetails principal)
-                    || principal.getUserId() != user.getId()) {
-                throw new AccessDeniedException("You do not have permission to perform this action.");
-            }
-            final String otp = authentication.getCredentials() != null
-                    ? authentication.getCredentials().toString()
-                    : "";
-            passwordResetService.completePasswordReset(
-                    user.getEmail(),
-                    otp,
-                    patch.getPassword(),
-                    patch.getPasswordConfirm());
-            return;
-        }
-
-        userResourceAccess.requireSelf(user.getId(), viewer);
-        final ProfilePasswordChangeForm passwordForm = new ProfilePasswordChangeForm();
-        passwordForm.setCurrentPassword(patch.getCurrentPassword());
-        passwordForm.setPassword(patch.getPassword());
-        passwordForm.setPasswordConfirm(patch.getPasswordConfirm());
-        formValidationSupport.validate(passwordForm, ValidationGroups.OnProfilePassword.class);
-        userService.changePassword(
-                user.getId(),
-                passwordForm.getCurrentPassword(),
-                passwordForm.getPassword(),
-                passwordForm.getPasswordConfirm());
-    }
-
-    private static LocalDate toBirthDate(final String raw) {
-        if (raw == null || raw.isBlank()) {
-            return null;
-        }
-        return LocalDate.parse(raw.trim());
     }
 }

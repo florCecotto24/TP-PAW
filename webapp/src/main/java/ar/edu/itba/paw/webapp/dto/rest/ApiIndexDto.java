@@ -38,8 +38,8 @@ public final class ApiIndexDto {
                 List.of("page", "pageSize", "blocked", "role", "q")));
         dto.resources.put("cars", ResourceDescriptor.of(href(uriInfo, "cars"),
                 List.of("page", "pageSize", "q", "ownerId", "category", "transmission", "powertrain",
-                        "priceMin", "priceMax", "rating", "neighborhoodId", "from", "until", "flexible",
-                        "flexMonth", "flexDays", "status", "sort")));
+                        "priceMin", "priceMax", "priceMarket", "rating", "neighborhoodId", "from", "until",
+                        "flexible", "flexMonth", "flexDays", "status", "sort")));
         dto.resources.put("reservations", ResourceDescriptor.of(href(uriInfo, "reservations"),
                 List.of("page", "pageSize", "riderId", "ownerId", "carId", "status", "riderStatus", "q",
                         "category", "transmission", "powertrain", "priceMin", "priceMax", "rating", "sort")));

@@ -29,6 +29,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.services.user.UserService;
 import ar.edu.itba.paw.webapp.api.common.VndMediaType;
+import ar.edu.itba.paw.webapp.security.auth.RydenAuthorities;
 import ar.edu.itba.paw.webapp.security.auth.exception.EmailNotValidatedException;
 import ar.edu.itba.paw.webapp.security.auth.exception.LegacyPasswordMailedException;
 import ar.edu.itba.paw.webapp.security.auth.exception.OtpRateLimitedAuthenticationException;
@@ -107,6 +108,11 @@ public final class JwtAuthenticationFilter extends OncePerRequestFilter {
             applyAuthentication(auth, request);
             if (auth.getPrincipal() instanceof RydenUserDetails principal) {
                 tokenService.attachTokenHeaders(response, principal, request);
+                // OTP Basic probe may hit GET / (permitAll) to discover authenticated-user.
+                // Do not leave a password-reset principal authenticated for business routes.
+                if (hasPasswordResetOtp(principal) && !isUserPasswordPatch(request)) {
+                    SecurityContextHolder.clearContext();
+                }
             }
             return true;
         } catch (final EmailNotValidatedException ex) {
@@ -145,6 +151,10 @@ public final class JwtAuthenticationFilter extends OncePerRequestFilter {
             principal = refreshed.get();
         } else {
             principal = parsed.principal();
+            // Access tokens issued for password-reset OTP must only authorize PATCH /users/{id}.
+            if (hasPasswordResetOtp(principal) && !isUserPasswordPatch(request)) {
+                return;
+            }
         }
 
         final UsernamePasswordAuthenticationToken authentication =
@@ -155,6 +165,24 @@ public final class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (parsed.type().isRefresh()) {
             tokenService.attachTokenHeaders(response, principal, request);
         }
+    }
+
+    private static boolean hasPasswordResetOtp(final RydenUserDetails principal) {
+        return principal.getAuthorities().stream()
+                .anyMatch(a -> RydenAuthorities.PASSWORD_RESET_OTP.equals(a.getAuthority()));
+    }
+
+    /** {@code PATCH …/api/users/{id}} — the only business operation allowed under OTP grant. */
+    private static boolean isUserPasswordPatch(final HttpServletRequest request) {
+        if (!"PATCH".equalsIgnoreCase(request.getMethod())) {
+            return false;
+        }
+        final String uri = request.getRequestURI();
+        if (uri == null) {
+            return false;
+        }
+        // Context path may be /webapp or /paw-2026a-08; match …/api/users/{numericId}
+        return uri.matches(".*/api/users/\\d+/?$");
     }
 
     /**

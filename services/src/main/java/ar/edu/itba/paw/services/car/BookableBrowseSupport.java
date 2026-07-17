@@ -2,43 +2,29 @@ package ar.edu.itba.paw.services.car;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.function.BiFunction;
 
 import ar.edu.itba.paw.models.domain.car.AvailabilityPeriod;
-import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.car.CarCard;
 
 /**
- * Public browse/search without explicit rider dates: hide cars that have no bookable wall day on or
- * after the pickup-lead-adjusted floor ({@link CarSearchService#publicBrowseMinBookableWallDate()}).
+ * Public browse/search without explicit rider dates relies on the DAO SQL predicate
+ * {@code offered availability end_date >= browseWallDate} (COUNT and ID page share it).
+ * This helper only applies a bounded in-memory bookable check for small result sets
+ * (e.g. similar cars), never materialising the full catalogue.
  */
 final class BookableBrowseSupport {
 
     private BookableBrowseSupport() {
     }
 
-    static Page<CarCard> paginateBookableCards(
-            final BiFunction<Integer, Integer, Page<CarCard>> fetchPage,
-            final int page,
-            final int pageSize,
-            final LocalDate minBookableWallDate,
-            final CarAvailabilityService carAvailabilityService) {
-        final int safePage = Math.max(0, page);
-        final int safePageSize = Math.max(1, pageSize);
-        final List<CarCard> allBookable = collectAllBookableCards(
-                fetchPage, minBookableWallDate, safePageSize, carAvailabilityService);
-        final int from = safePage * safePageSize;
-        final int to = Math.min(from + safePageSize, allBookable.size());
-        final List<CarCard> slice = from >= allBookable.size() ? List.of() : allBookable.subList(from, to);
-        return new Page<>(slice, safePage, safePageSize, allBookable.size());
-    }
-
+    /**
+     * Keeps cards that still have at least one rider-bookable segment. Callers must pass a
+     * bounded list (pageSize / similar limit) — never the full catalogue.
+     */
     static List<CarCard> retainBookableCards(
             final List<CarCard> cards,
-            final LocalDate minBookableWallDate,
             final CarAvailabilityService carAvailabilityService) {
         if (cards.isEmpty()) {
             return cards;
@@ -49,31 +35,6 @@ final class BookableBrowseSupport {
         return cards.stream()
                 .filter(card -> Boolean.TRUE.equals(riderBookableByCarId.get(card.getCarId())))
                 .toList();
-    }
-
-    static boolean needsBookableDayFilter(final ar.edu.itba.paw.models.util.search.CarSearchCriteria criteria) {
-        return criteria.getBrowseWallDate() != null && !criteria.hasAvailabilityRange();
-    }
-
-    private static List<CarCard> collectAllBookableCards(
-            final BiFunction<Integer, Integer, Page<CarCard>> fetchPage,
-            final LocalDate minBookableWallDate,
-            final int pageSize,
-            final CarAvailabilityService carAvailabilityService) {
-        final List<CarCard> allBookable = new ArrayList<>();
-        int sourcePage = 0;
-        final int batchSize = Math.max(pageSize * 3, 24);
-        while (true) {
-            final Page<CarCard> batch = fetchPage.apply(sourcePage++, batchSize);
-            if (batch.getContent().isEmpty()) {
-                break;
-            }
-            allBookable.addAll(retainBookableCards(batch.getContent(), minBookableWallDate, carAvailabilityService));
-            if (batch.getContent().size() < batchSize) {
-                break;
-            }
-        }
-        return allBookable;
     }
 
     static boolean hasBookableWallDayOnOrAfter(

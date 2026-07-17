@@ -9,10 +9,11 @@ import ar.edu.itba.paw.webapp.support.CacheableBinaryResponses;
 import ar.edu.itba.paw.webapp.support.CurrentUserResolver;
 import ar.edu.itba.paw.webapp.support.ReservationResourceAccess;
 
+import javax.ws.rs.core.Response;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
-import javax.ws.rs.core.Response;
+import javax.ws.rs.NotFoundException;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.method.P;
@@ -56,7 +57,7 @@ public class ReservationMessageAttachmentController {
                     viewer.getUserId(), reservationId, messageId);
         }
         return content.map(this::binaryResponse)
-                .orElseGet(() -> Response.status(Response.Status.NOT_FOUND).build());
+                .orElseThrow(NotFoundException::new);
     }
 
     private Response binaryResponse(final BinaryContent content) {

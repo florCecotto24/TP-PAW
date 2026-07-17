@@ -46,7 +46,7 @@ function mapSegments(raw: ReturnType<typeof useCarBookableSegments>['data']): Bo
     checkInTime: s.checkInTime,
     checkOutTime: s.checkOutTime,
     location: s.location ?? '',
-    neighborhoodId: s.neighborhoodId,
+    neighborhoodUri: s.links?.neighborhood,
   }));
 }
 

@@ -1,5 +1,6 @@
 import { ApiError, AUTH_PROBE_PATH, extractPageLinks, type ApiResponse } from '../../api/client';
 import { MediaTypes } from '../../api/mediaTypes';
+import { encodeMultipart, type MultipartPart } from '../../api/multipart';
 import { resolveApiUrl } from '../../api/uri';
 import { sessionClient, useSessionStore } from '../../session/sessionStore';
 import {
@@ -19,7 +20,8 @@ function absorbAuthHeaders(xhr: XMLHttpRequest): void {
 
 function xhrPostMessage(
   url: string,
-  formData: FormData,
+  body: Uint8Array,
+  contentType: string,
   opts: { timeoutMs: number; onProgress?: (percent: number | null) => void },
 ): Promise<ApiResponse<MessageDto>> {
   return new Promise((resolve, reject) => {
@@ -28,6 +30,9 @@ function xhrPostMessage(
     xhr.open('POST', absoluteUrl, true);
     xhr.timeout = opts.timeoutMs;
     xhr.setRequestHeader('Accept', MediaTypes.message);
+    // Boundary must be explicit — native FormData often arrives without it under Tomcat/Jersey
+    // (MIMEParsingException: Missing start boundary → bare 400).
+    xhr.setRequestHeader('Content-Type', contentType);
 
     const token = useSessionStore.getState().accessToken;
     if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
@@ -80,7 +85,10 @@ function xhrPostMessage(
     };
 
     opts.onProgress?.(0);
-    xhr.send(formData);
+    // Copy into a plain ArrayBuffer — Uint8Array.buffer may be SharedArrayBuffer under TS DOM libs.
+    const payload = new ArrayBuffer(body.byteLength);
+    new Uint8Array(payload).set(body);
+    xhr.send(payload);
   });
 }
 
@@ -97,16 +105,33 @@ async function refreshAccessToken(): Promise<void> {
 
 async function postWithRefreshRetry(
   url: string,
-  formData: FormData,
+  body: Uint8Array,
+  contentType: string,
   opts: { timeoutMs: number; onProgress?: (percent: number | null) => void },
 ): Promise<ApiResponse<MessageDto>> {
   try {
-    return await xhrPostMessage(url, formData, opts);
+    return await xhrPostMessage(url, body, contentType, opts);
   } catch (err) {
     if (!(err instanceof ApiError) || err.status !== 401) throw err;
     await refreshAccessToken();
-    return xhrPostMessage(url, formData, opts);
+    return xhrPostMessage(url, body, contentType, opts);
   }
+}
+
+async function encodeChatMessageBody(
+  text: string,
+  file: File | null,
+): Promise<{ body: Uint8Array; contentType: string }> {
+  const parts: MultipartPart[] = [{ name: 'body', value: text ?? '' }];
+  if (file) {
+    parts.push({
+      name: 'file',
+      value: file,
+      filename: file.name || 'attachment',
+      contentType: file.type || 'application/octet-stream',
+    });
+  }
+  return encodeMultipart(parts);
 }
 
 /** Envía un mensaje de chat con progreso de subida (multipart vía XHR). */
@@ -119,9 +144,7 @@ export async function sendChatMessage(
     maxAttachmentMb?: number;
   },
 ): Promise<ApiResponse<MessageDto>> {
-  const fd = new FormData();
-  fd.append('body', body);
-  if (file) fd.append('file', file);
+  const { body: payload, contentType } = await encodeChatMessageBody(body, file);
 
   const maxMb = options?.maxAttachmentMb ?? getChatMaxAttachmentMb();
   const timeoutMs = file ? computeUploadTimeoutMs(maxMb) : 60_000;
@@ -130,7 +153,7 @@ export async function sendChatMessage(
   let lastError: unknown;
   for (let attempt = 0; attempt <= UPLOAD_MAX_RETRIES; attempt++) {
     try {
-      return await postWithRefreshRetry(messagesUri, fd, uploadOpts);
+      return await postWithRefreshRetry(messagesUri, payload, contentType, uploadOpts);
     } catch (err) {
       lastError = err;
       const retriable =

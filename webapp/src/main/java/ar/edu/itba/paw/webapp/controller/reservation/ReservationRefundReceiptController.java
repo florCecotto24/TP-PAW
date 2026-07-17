@@ -13,6 +13,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.NotFoundException;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.method.P;
@@ -67,7 +68,7 @@ public class ReservationRefundReceiptController {
                     viewer.getUserId(), reservationId);
         }
         return content.map(this::binaryResponse)
-                .orElseGet(() -> Response.status(Response.Status.NOT_FOUND).build());
+                .orElseThrow(NotFoundException::new);
     }
 
     @PUT

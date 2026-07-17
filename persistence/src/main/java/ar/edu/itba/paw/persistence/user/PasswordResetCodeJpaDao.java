@@ -12,7 +12,8 @@ import ar.edu.itba.paw.models.domain.user.PasswordResetCode;
 import ar.edu.itba.paw.persistence.user.PasswordResetCodeDao;
 
 /**
- * OTP persistence for password reset.
+ * OTP persistence for password reset. The {@code code} column stores a SHA-256 hex digest
+ * of the mailed OTP (see {@code OtpCodeDigest}); callers must digest before insert/match.
  *
  * Bulk JPQL {@code DELETE} on {@code deleteForUser} / {@code deleteIfValid} is intentional:
  * codes are ephemeral credentials; atomic consume-and-delete must not race with dirty checking,

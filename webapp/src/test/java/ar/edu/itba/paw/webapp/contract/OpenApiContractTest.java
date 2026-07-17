@@ -21,6 +21,7 @@ import ar.edu.itba.paw.models.domain.reservation.Reservation;
 import ar.edu.itba.paw.webapp.api.common.VndMediaType;
 import ar.edu.itba.paw.webapp.config.JacksonConfig;
 import ar.edu.itba.paw.webapp.dto.rest.ApiIndexDto;
+import ar.edu.itba.paw.webapp.dto.rest.BookableSegmentDto;
 import ar.edu.itba.paw.webapp.dto.rest.CarSummaryDto;
 import ar.edu.itba.paw.webapp.dto.rest.CatalogApprovalDto;
 import ar.edu.itba.paw.webapp.dto.rest.ClientConfigDto;
@@ -31,6 +32,7 @@ import ar.edu.itba.paw.webapp.dto.rest.MessageAttachmentDto;
 import ar.edu.itba.paw.webapp.dto.rest.MessageDto;
 import ar.edu.itba.paw.webapp.dto.rest.ReservationDto;
 import ar.edu.itba.paw.webapp.dto.rest.ReservationSummaryDto;
+import ar.edu.itba.paw.webapp.dto.rest.UserDto;
 import ar.edu.itba.paw.webapp.dto.rest.ValidationErrorDto;
 import ar.edu.itba.paw.webapp.form.reservation.ReservationCreateForm;
 import ar.edu.itba.paw.webapp.form.reservation.ReservationPatchForm;
@@ -199,6 +201,53 @@ class OpenApiContractTest {
 
         // 3.Assert
         assertEquals(specProps, formProps);
+    }
+
+    @Test
+    void testPublicUserDtoFieldsMatchOpenApi() throws Exception {
+        // 1.Arrange
+        final Set<String> specProps = OpenApiContractSupport.schemaProperties(openapiYaml, "UserDto");
+
+        // 2.Act
+        final Set<String> dtoProps = beanPropertyNames(UserDto.class);
+
+        // 3.Assert
+        assertEquals(specProps, dtoProps);
+    }
+
+    @Test
+    void testBookableSegmentDtoFieldsMatchOpenApi() throws Exception {
+        // 1.Arrange
+        final Set<String> specProps = OpenApiContractSupport.schemaProperties(openapiYaml, "BookableSegmentDto");
+
+        // 2.Act
+        final Set<String> dtoProps = beanPropertyNames(BookableSegmentDto.class);
+
+        // 3.Assert
+        assertEquals(specProps, dtoProps);
+        assertTrue(dtoProps.contains("links"));
+        assertTrue(!dtoProps.contains("neighborhoodId"));
+    }
+
+    @Test
+    void testReviewCreateDocumentsReservationUriMultipart() {
+        // 1.Arrange — openapiYaml from @BeforeAll
+
+        // 2.Act / 3.Assert
+        assertTrue(openapiYaml.contains("required: [reservationUri]"));
+        assertTrue(openapiYaml.contains("description: URN canónica de la reserva (`links.self`)."));
+    }
+
+    @Test
+    void testAvailabilityRangeDeleteDocumentsNoContent() {
+        // 1.Arrange — openapiYaml from @BeforeAll
+
+        // 2.Act
+        final Set<String> statuses = OpenApiContractSupport.operationResponseStatusCodes(
+                openapiYaml, "/cars/{id}/availabilities", "delete");
+
+        // 3.Assert
+        assertTrue(statuses.contains("204"));
     }
 
     @Test
@@ -521,6 +570,7 @@ class OpenApiContractTest {
         final CarSummaryDto dto = new CarSummaryDto();
         dto.setBrandName("Toyota");
         dto.setModelName("Corolla");
+        dto.setYear(2019);
         dto.setStatus("active");
         dto.setMinimumRentalDays(2);
         dto.setRatingAvg(new BigDecimal("4.50"));

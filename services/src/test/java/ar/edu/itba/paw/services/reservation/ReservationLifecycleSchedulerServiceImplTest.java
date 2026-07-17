@@ -42,9 +42,6 @@ class ReservationLifecycleSchedulerServiceImplTest {
     private ReservationTimingPolicy reservationTimingPolicy;
 
     @Mock
-    private ReservationPricingService pricingService;
-
-    @Mock
     private ReviewService reviewService;
 
     @Mock

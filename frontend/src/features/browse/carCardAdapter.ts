@@ -23,6 +23,7 @@ export function carDtoToConsumerCard(car: CarSummaryDto) {
     carId: Number.isFinite(carId) ? carId : 0,
     model: car.modelName ?? '',
     brand: car.brandName ?? '',
+    year: car.year ?? null,
     price: car.dayPrice ?? 0,
     ratingAvg: car.ratingAvg,
     minimumRentalDays: car.minimumRentalDays,

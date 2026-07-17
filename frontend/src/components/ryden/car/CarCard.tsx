@@ -13,6 +13,7 @@ export interface CarCardProps {
   image?: string | null;
   pricePeriod?: 'hour' | 'day';
   href?: To | AppLinkTarget | null;
+  year?: number | null;
   ratingAvg?: number | null;
   reviewCount?: number | null;
   priceMarketPositionModifier?: PriceMarketPosition | null;
@@ -38,6 +39,7 @@ export default function CarCard({
   image,
   pricePeriod = 'hour',
   href,
+  year,
   ratingAvg,
   reviewCount,
   priceMarketPositionModifier,
@@ -54,6 +56,16 @@ export default function CarCard({
   const { t } = useTranslation();
   const trimmedModel = collapseCardLabel(model);
   const trimmedBrand = collapseCardLabel(brand);
+  const yearLabel = year != null && Number.isFinite(year) ? String(year) : null;
+  const modelWithYear = yearLabel ? `${trimmedModel} (${yearLabel})` : trimmedModel;
+  const modelTitleNode = yearLabel ? (
+    <>
+      {trimmedModel}{' '}
+      <span className="text-secondary fw-normal">({yearLabel})</span>
+    </>
+  ) : (
+    trimmedModel
+  );
   const hasFavoriteButton = showFavoriteButton && carId != null;
   const pricePeriodLabel = pricePeriod === 'day' ? t('common.day') : t('common.hour');
 
@@ -72,7 +84,7 @@ export default function CarCard({
       <div className="carcard-image">
         {imageSlot ??
           (image ? (
-            <img src={image} alt={`${trimmedBrand} ${trimmedModel}`} />
+            <img src={image} alt={`${trimmedBrand} ${modelWithYear}`} />
           ) : (
             <div className="no-image-badge">
               <i className="bi bi-car-front"></i>
@@ -107,8 +119,8 @@ export default function CarCard({
 
       <div className="carcard-info">
         <div className="carcard-info-text text">
-          <h4 className="carcard-model" title={`${trimmedBrand} ${trimmedModel}`}>
-            {trimmedModel}
+          <h4 className="carcard-model" title={`${trimmedBrand} ${modelWithYear}`}>
+            {modelTitleNode}
           </h4>
           <p className="carcard-brand" title={trimmedBrand}>
             {trimmedBrand}
@@ -141,6 +153,7 @@ export default function CarCard({
         <div className="carcard-price text">
           <div className="carcard-price-row">
             <div className="carcard-price-quote">
+              <p className="carcard-price-from">{t('carCard.priceFrom')}</p>
               <p className="carcard-price-amount">{formatCurrency(price)}</p>
               <p>/{pricePeriodLabel}</p>
             </div>
@@ -164,7 +177,7 @@ export default function CarCard({
           to={isAppLinkTarget(href) ? href.pathname : href}
           state={isAppLinkTarget(href) ? href.state : undefined}
           className="stretched-link carcard-stretched-link"
-          aria-label={t('carCard.viewAriaLabel', { brand: trimmedBrand, model: trimmedModel })}
+          aria-label={t('carCard.viewAriaLabel', { brand: trimmedBrand, model: modelWithYear })}
         />
       ) : null}
     </div>

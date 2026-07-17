@@ -1,5 +1,12 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+/** Closes an open Bootstrap dropdown via its toggle (data-api), without relying on {@code window.bootstrap}. */
+function closeDropdownToggle(toggle: HTMLButtonElement) {
+  if (toggle.getAttribute('aria-expanded') === 'true') {
+    toggle.click();
+  }
+}
 
 export interface NeighborhoodOption {
   id: number | string;
@@ -65,6 +72,7 @@ export default function NeighborhoodPicker({
 }: NeighborhoodPickerProps) {
   const { t } = useTranslation();
   const [filter, setFilter] = useState('');
+  const toggleRef = useRef<HTMLButtonElement>(null);
 
   const selectedSet = useMemo(() => {
     if (allowMultiple) return new Set(selectedNeighborhoodIds.map(String));
@@ -103,6 +111,7 @@ export default function NeighborhoodPicker({
     const s = String(id);
     if (!allowMultiple) {
       onSelectionChange?.([id]);
+      if (toggleRef.current) closeDropdownToggle(toggleRef.current);
       return;
     }
     const next = selectedSet.has(s)
@@ -132,6 +141,7 @@ export default function NeighborhoodPicker({
       >
         <button
           type="button"
+          ref={toggleRef}
           className={
             searchBarInline
               ? 'form-control form-control-sm border-0 shadow-none dropdown-toggle neighborhood-picker__toggle neighborhood-picker__toggle--search-bar d-flex align-items-center gap-2 w-100 text-start'

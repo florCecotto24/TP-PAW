@@ -37,6 +37,7 @@ import ar.edu.itba.paw.webapp.api.common.VndMediaType;
 import ar.edu.itba.paw.webapp.dto.rest.MessageDto;
 import ar.edu.itba.paw.webapp.form.reservation.ReservationMessageCreateForm;
 import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
+import ar.edu.itba.paw.webapp.support.BinaryPayloadSupport;
 import ar.edu.itba.paw.webapp.support.CurrentUserResolver;
 import ar.edu.itba.paw.webapp.support.FormValidationSupport;
 import ar.edu.itba.paw.webapp.support.PaginationParams;
@@ -57,6 +58,7 @@ public class ReservationMessageController {
     private final ReservationResourceAccess reservationResourceAccess;
     private final PaginationSupport paginationSupport;
     private final FormValidationSupport formValidationSupport;
+    private final BinaryPayloadSupport binaryPayloadSupport;
 
     @Context
     private UriInfo uriInfo;
@@ -68,13 +70,15 @@ public class ReservationMessageController {
             final CurrentUserResolver currentUserResolver,
             final ReservationResourceAccess reservationResourceAccess,
             final PaginationSupport paginationSupport,
-            final FormValidationSupport formValidationSupport) {
+            final FormValidationSupport formValidationSupport,
+            final BinaryPayloadSupport binaryPayloadSupport) {
         this.reservationMessageService = reservationMessageService;
         this.adminService = adminService;
         this.currentUserResolver = currentUserResolver;
         this.reservationResourceAccess = reservationResourceAccess;
         this.paginationSupport = paginationSupport;
         this.formValidationSupport = formValidationSupport;
+        this.binaryPayloadSupport = binaryPayloadSupport;
     }
 
     @GET
@@ -209,7 +213,7 @@ public class ReservationMessageController {
         return Response.ok(new GenericEntity<List<MessageDto>>(dtos) {}).build();
     }
 
-    private static byte[] readFileBytes(final FormDataBodyPart filePart) throws IOException {
+    private byte[] readFileBytes(final FormDataBodyPart filePart) throws IOException {
         if (filePart == null) {
             return null;
         }
@@ -217,7 +221,7 @@ public class ReservationMessageController {
         if (stream == null) {
             return null;
         }
-        final byte[] bytes = stream.readAllBytes();
+        final byte[] bytes = binaryPayloadSupport.readBounded(stream);
         return bytes.length == 0 ? null : bytes;
     }
 }

@@ -4,7 +4,9 @@ import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.UriInfo;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -24,6 +26,9 @@ public final class CarBookableSegmentController {
     private final BookableSegmentRepresentationSupport bookableSegmentRepresentationSupport;
     private final CurrentUserResolver currentUserResolver;
 
+    @Context
+    private UriInfo uriInfo;
+
     @Autowired
     public CarBookableSegmentController(
             final BookableSegmentRepresentationSupport bookableSegmentRepresentationSupport,
@@ -36,6 +41,6 @@ public final class CarBookableSegmentController {
     @Produces(VndMediaType.BOOKABLE_SEGMENT_V1_JSON)
     public Response listBookableSegments(@PathParam("id") final long carId) {
         return bookableSegmentRepresentationSupport.listBookableSegments(
-                carId, currentUserResolver.currentPrincipalOrNull());
+                carId, currentUserResolver.currentPrincipalOrNull(), uriInfo);
     }
 }

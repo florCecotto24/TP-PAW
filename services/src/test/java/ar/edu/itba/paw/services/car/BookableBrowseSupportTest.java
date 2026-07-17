@@ -25,7 +25,6 @@ class BookableBrowseSupportTest {
 
     @Test
     void testRetainBookableCardsHidesFullyReservedCars() {
-        final LocalDate min = LocalDate.of(2030, 6, 10);
         final CarCard bookable = CarCard.builder().carId(1L).brand("A").model("B").imageId(0L).build();
         final CarCard exhausted = CarCard.builder().carId(2L).brand("C").model("D").imageId(0L).build();
 
@@ -33,7 +32,7 @@ class BookableBrowseSupportTest {
                 .thenReturn(Map.of(1L, true, 2L, false));
 
         final List<CarCard> retained = BookableBrowseSupport.retainBookableCards(
-                List.of(bookable, exhausted), min, carAvailabilityService);
+                List.of(bookable, exhausted), carAvailabilityService);
 
         Assertions.assertEquals(List.of(bookable), retained);
     }

@@ -215,3 +215,18 @@ export function canonicalApiUserPath(uri: string): string {
   }
   return resolved.startsWith('/') ? resolved : `/${resolved}`;
 }
+
+/**
+ * Favorite membership URI (OpenAPI {@code GET|PUT|DELETE /users/{id}/favorites/{carId}}).
+ * Built from {@code user.links.favorites} + the car id segment of {@code car.links.self}
+ * — the collection link is followed; the membership path is the weak-entity key under that
+ * collection (not an invented `/users/{id}/…` root).
+ */
+export function favoriteMembershipUri(
+  favoritesCollectionUri: string,
+  carSelfUri: string,
+): string {
+  const carId = lastPathSegment(carSelfUri);
+  const base = favoritesCollectionUri.replace(/\/+$/, '');
+  return `${base}/${carId}`;
+}

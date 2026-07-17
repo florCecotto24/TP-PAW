@@ -611,6 +611,7 @@ public class CarJpaDao implements CarDao {
                         .dayPrice(priceMap.get(c.getId()))
                         .status(c.getStatus())
                         .ratingAvg(c.getRatingAvg().orElse(null))
+                        .year(c.getYear().orElse(null))
                         .build())
                 .collect(Collectors.toList());
     }
@@ -891,6 +892,7 @@ public class CarJpaDao implements CarDao {
                         .ratingAvg(c.getRatingAvg().orElse(null))
                         .modelPendingValidation(c.isModelPendingValidation())
                         .minimumRentalDays(c.getMinimumRentalDays())
+                        .year(c.getYear().orElse(null))
                         .ownerId(knownOwnerId != null ? knownOwnerId : c.getOwnerId())
                         .build())
                 .collect(Collectors.toList());
@@ -900,6 +902,10 @@ public class CarJpaDao implements CarDao {
             final StringBuilder sql, final Map<String, Object> params,
             final LocalDate browseWallDate, final Long excludeOwnerUserId) {
         if (browseWallDate != null) {
+            // Bookable predicate (COUNT + ID page share this): OFFERED period end_date on/after
+            // the pickup-lead floor. Equivalent to EXISTS (… la_book.end_date >= :browseWallDate).
+            // Applied on the joined availability row so MIN(day_price) only considers remaining
+            // periods. Fully reserved leftovers are paused by the exhaustion sweep.
             sql.append("AND la.end_date >= :browseWallDate ");
             params.put("browseWallDate", java.sql.Date.valueOf(browseWallDate));
         }

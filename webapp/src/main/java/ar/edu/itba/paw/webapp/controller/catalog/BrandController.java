@@ -140,7 +140,9 @@ public class BrandController {
         carBrandService.findById(id)
                 .orElseThrow(() -> new CarBrandNotFoundException(id));
 
-        adminService.validateCarBrand(id);
+        if (Boolean.TRUE.equals(patch.getValidated())) {
+            adminService.validateCarBrand(id);
+        }
 
         final CarBrand updated = carBrandService.findById(id)
                 .orElseThrow(() -> new CarBrandNotFoundException(id));

@@ -148,6 +148,11 @@ export default function CarDetailPage() {
     if (untilParam) q.until = untilParam;
     return q;
   }, [src, fromParam, untilParam]);
+  const reviewSlides = useMemo(() => chunk(reviewItems, 2), [reviewItems]);
+  const [reviewSlide, setReviewSlide] = useState(0);
+  useEffect(() => {
+    setReviewSlide(0);
+  }, [resolvedId, reviewsIsListView, reviewItems.length]);
 
   function detailHref(extra: Record<string, string | number | undefined>): string | null {
     if (!resolvedId) return null;
@@ -179,7 +184,17 @@ export default function CarDetailPage() {
     );
   }
 
-  const title = `${car.brandName} ${car.modelName}`.trim();
+  const title = [car.brandName, car.modelName].filter(Boolean).join(' ').trim();
+  const titleWithYear = car.year != null ? `${title} (${car.year})` : title;
+  const titleHeading =
+    car.year != null ? (
+      <>
+        {title}{' '}
+        <span className="text-secondary fw-normal">({car.year})</span>
+      </>
+    ) : (
+      title
+    );
   const ratingLabel = car.ratingAvg != null ? car.ratingAvg.toFixed(1) : undefined;
   const reviewCountLabel = reviewTotal ?? 0;
   const favoriteBusy = toggleFavorite.isPending;
@@ -195,11 +210,6 @@ export default function CarDetailPage() {
     reviewsView: reviewsToggleView,
     ...(reviewsIsListView ? { reviewPage: 0 } : {}),
   });
-  const reviewSlides = useMemo(() => chunk(reviewItems, 2), [reviewItems]);
-  const [reviewSlide, setReviewSlide] = useState(0);
-  useEffect(() => {
-    setReviewSlide(0);
-  }, [resolvedId, reviewsIsListView, reviewItems.length]);
   const reviewSlideSafe =
     reviewSlides.length === 0 ? 0 : Math.min(reviewSlide, reviewSlides.length - 1);
   const canPrevReviewSlide = reviewSlideSafe > 0;
@@ -211,16 +221,16 @@ export default function CarDetailPage() {
         <BreadcrumbTrail
           midLabel={t('nav.search')}
           midHref={paths.search}
-          currentLabel={title}
+          currentLabel={titleWithYear}
         />
       ) : (
-        <BreadcrumbTrail currentLabel={title} />
+        <BreadcrumbTrail currentLabel={titleWithYear} />
       )}
 
       <div className="d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3 mb-4">
         <div className="flex-grow-1 min-w-0">
           <div className="d-flex align-items-center gap-2 flex-wrap">
-            <h1 className="h2 fw-bold mb-0 ryden-text-break">{title}</h1>
+            <h1 className="h2 fw-bold mb-0 ryden-text-break">{titleHeading}</h1>
             {carIsFavoritable ? (
               <form className="mb-0 car-detail-favorite-form" onSubmit={(e) => e.preventDefault()}>
                 <button
@@ -253,7 +263,7 @@ export default function CarDetailPage() {
             <CarDetailGalleryGrid
               modalId={GALLERY_MODAL_ID}
               mediaItems={galleryMedia}
-              vehicleLabel={title}
+              vehicleLabel={titleWithYear}
             />
           )}
 
@@ -477,7 +487,7 @@ export default function CarDetailPage() {
                 bookableSegmentsLink={car.links['bookable-segments']}
                 carId={Number(resolvedId)}
                 carSelf={car.links.self}
-                carName={title}
+                carName={titleWithYear}
                 dailyPrice={minPrice ?? 0}
                 priceFrom={priceFrom}
                 isOwnerRequesting={isOwnerRequesting}
@@ -512,7 +522,7 @@ export default function CarDetailPage() {
           modalId={GALLERY_MODAL_ID}
           carouselId={GALLERY_CAROUSEL_ID}
           mediaItems={galleryMedia}
-          vehicleLabel={title}
+          vehicleLabel={titleWithYear}
         />
       ) : null}
     </main>

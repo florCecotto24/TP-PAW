@@ -1,9 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Alert, Button, Modal } from 'react-bootstrap';
 import { ApiError } from '../../api/client';
-import { apiAssetUrl } from '../../api/uri';
 import { useSessionStore } from '../../session/sessionStore';
 import {
   deactivateCar,
@@ -16,17 +15,26 @@ import {
   uploadInsurance,
 } from './api';
 import { hasCbu, useApiErrorMessage, useCarReservationPreview, useCurrentUserId } from './hooks';
-import { LoadingBlock, FieldView, ReceiptUploadPicker } from '../../components/ryden';
+import { LoadingBlock, FieldView, ReceiptUploadPicker, AuthenticatedImg } from '../../components/ryden';
 import ReservationListCard from '../reservations/components/ReservationListCard';
 import AvailabilityManager from './AvailabilityManager';
 import GalleryManager from './GalleryManager';
 import { STATUS_BADGE, type CarDto, type PictureDto } from './types';
 import { paths, carDetail, ownerReservationsCar } from '../../routes/paths';
+import { resolveResourceUri } from '../../api/resourceUri';
+import type { OwnerCarDetailLocationState } from '../../routes/navigationState';
 
 export default function OwnerCarDetailPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const { id } = useParams<{ id: string }>();
+  const carSelfFromNav = (location.state as OwnerCarDetailLocationState | null)?.carSelf;
+  const carSelfUri = resolveResourceUri({
+    stateUri: carSelfFromNav,
+    routeId: id,
+    collection: 'cars',
+  });
   const errorMessage = useApiErrorMessage();
   const currentUser = useSessionStore((s) => s.currentUser);
   const ownerId = useCurrentUserId();
@@ -52,14 +60,14 @@ export default function OwnerCarDetailPage() {
   const [minDays, setMinDays] = useState('1');
 
   useEffect(() => {
-    if (!id || !ownerId) return;
+    if (!carSelfUri || !ownerId) return;
     let active = true;
     setCar(null);
     setCoverImage(null);
     setError(null);
     setEditingAttributes(false);
     setAttributesSaved(false);
-    fetchCar(id)
+    fetchCar(carSelfUri)
       .then((res) => {
         if (!active) return;
         const carOwnerId = idFromUri(res.data.links.owner);
@@ -81,7 +89,7 @@ export default function OwnerCarDetailPage() {
       });
     return () => { active = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, ownerId]);
+  }, [carSelfUri, ownerId]);
 
   // Imagen de portada de la cabecera (reservation-detail-car-media del JSP):
   // la primera imagen de la galería, si hay alguna.
@@ -119,11 +127,12 @@ export default function OwnerCarDetailPage() {
   }
 
   async function applyPatch(patch: Parameters<typeof patchCar>[1], failKey?: string) {
-    if (!id) return;
+    const self = car?.links.self ?? carSelfUri;
+    if (!self) return;
     setError(null);
     setBusy(true);
     try {
-      const res = await patchCar(id, patch);
+      const res = await patchCar(self, patch);
       setCar(res.data);
       syncAttributesFromCar(res.data);
       return res.data;
@@ -164,12 +173,13 @@ export default function OwnerCarDetailPage() {
   }
 
   async function onDeactivate() {
-    if (!id || !car) return;
+    const self = car?.links.self ?? carSelfUri;
+    if (!self || !car) return;
     setShowDeactivate(false);
     setBusy(true);
     setError(null);
     try {
-      await deactivateCar(id);
+      await deactivateCar(self);
       navigate(paths.myCars);
     } catch (err) {
       setError(errorMessage(err, 'owner.detail.errors.deactivateFailed'));
@@ -179,14 +189,16 @@ export default function OwnerCarDetailPage() {
   }
 
   async function onInsuranceConfirm(file: File) {
-    if (!car || !id) return;
+    if (!car) return;
+    const self = car.links.self ?? carSelfUri;
     setBusy(true);
     setError(null);
     setInsuranceSuccess(false);
     setInsuranceRemoved(false);
     try {
       await uploadInsurance(car, file);
-      const refreshed = await fetchCar(id);
+      if (!self) return;
+      const refreshed = await fetchCar(self);
       setCar(refreshed.data);
       setInsuranceSuccess(true);
     } catch (err) {
@@ -198,7 +210,8 @@ export default function OwnerCarDetailPage() {
   }
 
   async function onDeleteInsurance() {
-    if (!car || !id) return;
+    if (!car) return;
+    const self = car.links.self ?? carSelfUri;
     setShowRemoveInsurance(false);
     setBusy(true);
     setError(null);
@@ -206,7 +219,8 @@ export default function OwnerCarDetailPage() {
     setInsuranceRemoved(false);
     try {
       await deleteInsurance(car);
-      const refreshed = await fetchCar(id);
+      if (!self) return;
+      const refreshed = await fetchCar(self);
       setCar(refreshed.data);
       setInsuranceRemoved(true);
     } catch (err) {
@@ -287,11 +301,16 @@ export default function OwnerCarDetailPage() {
               <div className="d-flex flex-column flex-md-row gap-3 align-items-start">
                 <div className="reservation-detail-car-media rounded-3 overflow-hidden border flex-shrink-0">
                   {coverImage ? (
-                    <img
-                      src={apiAssetUrl(coverImage.links.self)}
+                    <AuthenticatedImg
+                      src={coverImage.links.self}
                       alt={`${car.brandName} ${car.modelName}`}
                       className="w-100 h-100"
                       style={{ objectFit: 'cover' }}
+                      fallback={
+                        <div className="w-100 h-100 d-flex align-items-center justify-content-center text-secondary bg-body-tertiary">
+                          <i className="bi bi-car-front fs-1" aria-hidden="true" />
+                        </div>
+                      }
                     />
                   ) : (
                     <div className="w-100 h-100 d-flex align-items-center justify-content-center text-secondary bg-body-tertiary">

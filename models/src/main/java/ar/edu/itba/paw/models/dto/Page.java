@@ -1,6 +1,5 @@
 package ar.edu.itba.paw.models.dto;
 
-import java.util.Collections;
 import java.util.List;
 
 import ar.edu.itba.paw.models.pagination.UiPaging;
@@ -14,15 +13,15 @@ public final class Page<T> {
     private final long totalItems;
 
     public Page(final List<T> content, final int currentPage, final int pageSize, final long totalItems) {
-        this.content = content;
+        this.content = content == null ? List.of() : List.copyOf(content);
         this.currentPage = currentPage;
         this.pageSize = pageSize;
         this.totalItems = totalItems;
     }
 
-    /** Unmodifiable view of the current page items (the caller cannot mutate the window). */
+    /** Unmodifiable snapshot of the current page items (defensive copy taken at construction). */
     public List<T> getContent() {
-        return content == null ? null : Collections.unmodifiableList(content);
+        return content;
     }
 
     public int getCurrentPage() {

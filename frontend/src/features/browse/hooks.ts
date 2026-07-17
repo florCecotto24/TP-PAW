@@ -15,10 +15,11 @@ import {
 } from '@tanstack/react-query';
 import { sessionClient, useSessionStore } from '../../session/sessionStore';
 import { getCollectionPath } from '../../api/apiDiscovery';
+import { canonicalCarUri } from '../../api/resourceUri';
 import { MediaTypes } from '../../api/mediaTypes';
 import { ApiError, followAllPages, followLinkCollection, getLinkCollectionPage, type ApiResponse } from '../../api/client';
 import type { UserDto, Links } from '../../api/types';
-import { lastPathSegment } from '../../api/uri';
+import { lastPathSegment, favoriteMembershipUri } from '../../api/uri';
 import { filtersToApiParams, type SearchFilters } from './searchFilters';
 import { isCarFavoritable } from './carCardAdapter';
 import type {
@@ -31,10 +32,6 @@ import type {
 } from './types';
 
 const CARS_PATH = () => getCollectionPath('cars');
-
-function stripTrailingSlash(s: string): string {
-  return s.endsWith('/') ? s.slice(0, -1) : s;
-}
 
 export const HOME_CAROUSEL_PAGE_SIZE = 8;
 
@@ -127,13 +124,9 @@ export function useCar(id: string | undefined, carSelf?: string | undefined) {
     queryKey: ['browse', 'car', carSelf ?? id],
     enabled: !!(carSelf || id),
     queryFn: async () => {
-      if (carSelf) {
-        const res = await sessionClient.follow<CarDto>(carSelf, { accept: MediaTypes.car });
-        return res.data;
-      }
-      const res = await sessionClient.get<CarDto>(`${CARS_PATH()}/${id}`, {
-        accept: MediaTypes.car,
-      });
+      const uri = carSelf ?? (id ? canonicalCarUri(id) : null);
+      if (!uri) throw new Error('missing car uri');
+      const res = await sessionClient.follow<CarDto>(uri, { accept: MediaTypes.car });
       return res.data;
     },
   });
@@ -223,9 +216,8 @@ export function useNeighborhoods() {
 }
 
 // --- Favoritos (idempotente: PUT agrega, DELETE quita) -----------------------
-// La colección de favoritos del usuario es currentUser.links.favorites; un
-// favorito individual es `${favorites}/{carId}`. carId se obtiene del car.links.self
-// (último segmento de la URN del auto). Hipermedia: no se arma /users/{id}/...
+// Colección: currentUser.links.favorites. Membresía canónica (OpenAPI):
+// GET|PUT|DELETE {favorites}/{carId} vía favoriteMembershipUri (H-07).
 
 async function loadFavoritedCarIds(favoritesLink: string): Promise<Set<string>> {
   const ids = new Set<string>();
@@ -279,7 +271,7 @@ export function useIsFavorite(carSelf: string | undefined) {
     queryFn: async () => {
       const carId = lastPathSegment(carSelf as string);
       if (!carId) return false;
-      const target = `${stripTrailingSlash(favoritesLink as string)}/${carId}`;
+      const target = favoriteMembershipUri(favoritesLink as string, carSelf as string);
       try {
         await sessionClient.get(target);
         return true;
@@ -318,8 +310,8 @@ export function useToggleFavorite() {
     mutationFn: async ({ car, makeFavorite }: { car: CarSummaryDto; makeFavorite: boolean }) => {
       const favoritesLink = useSessionStore.getState().currentUser?.links?.favorites;
       if (!favoritesLink) throw new Error('browse.favorite.noSession');
-      const carId = lastPathSegment(car.links?.self ?? '');
-      const target = `${stripTrailingSlash(favoritesLink)}/${carId}`;
+      const carSelf = car.links?.self ?? '';
+      const target = favoriteMembershipUri(favoritesLink, carSelf);
       const res: ApiResponse<unknown> = makeFavorite
         ? await sessionClient.put(target)
         : await sessionClient.del(target);
@@ -417,7 +409,9 @@ export interface BookableSegmentDto {
   checkInTime: string | null;
   checkOutTime: string | null;
   location: string;
-  neighborhoodId: number | null;
+  links: {
+    neighborhood?: string;
+  };
 }
 
 /** Rider bookable wall-day segments for the car-detail reservation picker. */

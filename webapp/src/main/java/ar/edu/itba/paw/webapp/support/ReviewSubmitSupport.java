@@ -16,12 +16,15 @@ public final class ReviewSubmitSupport {
 
     private final FormValidationSupport formValidationSupport;
     private final ReviewService reviewService;
+    private final BinaryPayloadSupport binaryPayloadSupport;
 
     public ReviewSubmitSupport(
             final FormValidationSupport formValidationSupport,
-            final ReviewService reviewService) {
+            final ReviewService reviewService,
+            final BinaryPayloadSupport binaryPayloadSupport) {
         this.formValidationSupport = formValidationSupport;
         this.reviewService = reviewService;
+        this.binaryPayloadSupport = binaryPayloadSupport;
     }
 
     public ReservationReviewSubmitForm buildValidatedSubmitForm(
@@ -53,7 +56,7 @@ public final class ReviewSubmitSupport {
                 form.getImageBytes());
     }
 
-    private static OptionalReviewImage readOptionalImage(final FormDataBodyPart imagePart) throws IOException {
+    private OptionalReviewImage readOptionalImage(final FormDataBodyPart imagePart) throws IOException {
         if (imagePart == null) {
             return OptionalReviewImage.empty();
         }
@@ -61,7 +64,7 @@ public final class ReviewSubmitSupport {
         if (stream == null) {
             return OptionalReviewImage.empty();
         }
-        final byte[] bytes = stream.readAllBytes();
+        final byte[] bytes = binaryPayloadSupport.readBounded(stream);
         if (bytes.length == 0) {
             return OptionalReviewImage.empty();
         }

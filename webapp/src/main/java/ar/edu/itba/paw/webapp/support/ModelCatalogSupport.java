@@ -72,6 +72,12 @@ public final class ModelCatalogSupport {
         }
         final Car car = carService.getCarById(excludeCarId)
                 .orElseThrow(() -> new CarNotFoundException(excludeCarId));
+        final long carModelId = car.getCarModel()
+                .map(CarModel::getId)
+                .orElse(-1L);
+        if (carModelId != modelId) {
+            throw new CarNotFoundException(excludeCarId);
+        }
         return carService.getPriceMarketInsightForCar(car, excludeCarId)
                 .map(insight -> Response.ok(PriceMarketInsightDto.from(insight)).build())
                 .orElse(Response.noContent().build());

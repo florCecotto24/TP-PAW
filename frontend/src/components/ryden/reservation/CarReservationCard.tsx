@@ -1,5 +1,6 @@
-import { Link } from 'react-router-dom';
+import { Link, type To } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { isAppLinkTarget, type AppLinkTarget } from '../../../routes/navigationState';
 
 export interface CarReservationCardData {
   statusKey: string;
@@ -13,7 +14,8 @@ export interface CarReservationCardData {
 
 export interface CarReservationCardProps {
   reservation: CarReservationCardData;
-  href: string;
+  /** SPA path or {@link AppLinkTarget} with hypermedia state. */
+  to: To | AppLinkTarget;
   showRefundBadge?: boolean;
 }
 
@@ -28,10 +30,13 @@ function statusBadgeClass(statusKey: string): string {
 /** Espejo de {@code ryden:carReservationCard}. */
 export default function CarReservationCard({
   reservation,
-  href,
+  to,
   showRefundBadge = false,
 }: CarReservationCardProps) {
   const { t } = useTranslation();
+  const pathname: To = isAppLinkTarget(to) ? to.pathname : to;
+  const linkState = isAppLinkTarget(to) ? to.state : undefined;
+  const href = typeof pathname === 'string' ? pathname : pathname.pathname ?? '';
   const internal = href.startsWith('/') && !href.startsWith('//');
 
   const content = (
@@ -109,7 +114,7 @@ export default function CarReservationCard({
 
   if (internal) {
     return (
-      <Link to={href} className="reservation-card text-decoration-none text-reset">
+      <Link to={pathname} state={linkState} className="reservation-card text-decoration-none text-reset">
         {content}
       </Link>
     );

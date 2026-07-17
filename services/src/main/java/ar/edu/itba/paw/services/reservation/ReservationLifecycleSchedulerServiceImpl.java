@@ -22,6 +22,7 @@ import ar.edu.itba.paw.models.domain.reservation.Reservation;
 import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.models.email.reservation.RiderCarReturnEmailPayload;
 import ar.edu.itba.paw.models.email.reservation.RiderReviewInviteEmailPayload;
+import ar.edu.itba.paw.models.util.time.AppTimezone;
 import ar.edu.itba.paw.policy.ReservationTimingPolicy;
 import ar.edu.itba.paw.util.ReservationMailComposer;
 
@@ -42,7 +43,6 @@ public class ReservationLifecycleSchedulerServiceImpl implements ReservationLife
 
     private final ReservationService reservationService;
     private final ReservationTimingPolicy reservationTimingPolicy;
-    private final ReservationPricingService pricingService;
     private final ReviewService reviewService;
     private final ReservationMailComposer mailComposer;
     private final ReservationLifecycleRowProcessor lifecycleRowProcessor;
@@ -51,13 +51,11 @@ public class ReservationLifecycleSchedulerServiceImpl implements ReservationLife
     public ReservationLifecycleSchedulerServiceImpl(
             @Lazy final ReservationService reservationService,
             final ReservationTimingPolicy reservationTimingPolicy,
-            final ReservationPricingService pricingService,
             @Lazy final ReviewService reviewService,
             final ReservationMailComposer mailComposer,
             final ReservationLifecycleRowProcessor lifecycleRowProcessor) {
         this.reservationService = reservationService;
         this.reservationTimingPolicy = reservationTimingPolicy;
-        this.pricingService = pricingService;
         this.reviewService = reviewService;
         this.mailComposer = mailComposer;
         this.lifecycleRowProcessor = lifecycleRowProcessor;
@@ -279,18 +277,17 @@ public class ReservationLifecycleSchedulerServiceImpl implements ReservationLife
     @Override
     @Transactional(readOnly = true)
     public long getCarTotalDaysRented(final long ownerId, final long carId) {
-        return reservationService.findCarFinishedReservations(ownerId, carId)
-                .stream()
-                .mapToLong(r -> pricingService.calculateBillableDays(r.getStartDate(), r.getEndDate()))
-                .sum();
+        return reservationService.sumCarFinishedBillableDays(ownerId, carId);
     }
 
     @Override
     @Transactional(readOnly = true)
     public long getCarReservationsThisMonth(final long ownerId, final long carId) {
-        final YearMonth current = YearMonth.now(ZoneOffset.UTC);
-        final OffsetDateTime monthStart = current.atDay(1).atStartOfDay().atOffset(ZoneOffset.UTC);
-        final OffsetDateTime nextMonthStart = current.plusMonths(1).atDay(1).atStartOfDay().atOffset(ZoneOffset.UTC);
+        final YearMonth current = YearMonth.now(AppTimezone.WALL_ZONE);
+        final OffsetDateTime monthStart =
+                current.atDay(1).atStartOfDay(AppTimezone.WALL_ZONE).toOffsetDateTime();
+        final OffsetDateTime nextMonthStart =
+                current.plusMonths(1).atDay(1).atStartOfDay(AppTimezone.WALL_ZONE).toOffsetDateTime();
         return reservationService.countCarReservationsCreatedBetween(ownerId, carId, monthStart, nextMonthStart);
     }
 

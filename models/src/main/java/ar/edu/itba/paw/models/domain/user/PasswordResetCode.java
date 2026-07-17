@@ -23,7 +23,8 @@ public class PasswordResetCode {
     @Column(name = "user_id", nullable = false)
     private long userId;
 
-    @Column(nullable = false, length = 6)
+    /** SHA-256 hex digest of the mailed OTP (not the plaintext code). */
+    @Column(nullable = false, length = 64)
     private String code;
 
     @Column(name = "expires_at", nullable = false)

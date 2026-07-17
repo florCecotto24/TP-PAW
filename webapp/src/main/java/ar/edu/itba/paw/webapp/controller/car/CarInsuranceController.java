@@ -3,12 +3,15 @@ package ar.edu.itba.paw.webapp.controller.car;
 import java.io.IOException;
 import java.io.InputStream;
 
+import javax.ws.rs.BadRequestException;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
+import javax.ws.rs.NotFoundException;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
@@ -19,6 +22,7 @@ import org.springframework.security.access.method.P;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Component;
 
+import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.car.CarNotFoundException;
 import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.models.dto.file.BinaryContent;
@@ -63,13 +67,11 @@ public class CarInsuranceController {
     @PreAuthorize("@carResourceAccess.isOwnerOrAdminById(#id, @currentUserResolver.currentPrincipalOrNull())")
     public Response downloadInsurance(@P("id") @PathParam("id") final long carId) {
         final Car car = requireCarExists(carId);
-        final Long fileId = car.getInsuranceFileId().orElse(null);
-        if (fileId == null) {
-            return Response.status(Response.Status.NOT_FOUND).build();
-        }
+        final Long fileId = car.getInsuranceFileId()
+                .orElseThrow(NotFoundException::new);
         return storedFileService.findContentById(fileId)
                 .map(this::binaryResponse)
-                .orElseGet(() -> Response.status(Response.Status.NOT_FOUND).build());
+                .orElseThrow(NotFoundException::new);
     }
 
     @PUT
@@ -87,11 +89,10 @@ public class CarInsuranceController {
                 car.getOwnerId(), carId, filename, contentType, bytes);
         return switch (outcome.getStatus()) {
             case OK -> Response.noContent().build();
-            case TOO_LARGE, BUSINESS_ERROR ->
-                    Response.status(Response.Status.BAD_REQUEST)
-                            .header("X-Ryden-Error", outcome.getLocalizedMessage().orElse(""))
-                            .build();
-            default -> Response.status(Response.Status.BAD_REQUEST).build();
+            case TOO_LARGE -> throw new WebApplicationException(Response.Status.REQUEST_ENTITY_TOO_LARGE);
+            case MISSING_FILE -> throw new BadRequestException(MessageKeys.CAR_INSURANCE_INVALID);
+            case BUSINESS_ERROR, READ_ERROR -> throw new BadRequestException(
+                    outcome.getLocalizedMessage().orElse(MessageKeys.CAR_INSURANCE_INVALID));
         };
     }
 

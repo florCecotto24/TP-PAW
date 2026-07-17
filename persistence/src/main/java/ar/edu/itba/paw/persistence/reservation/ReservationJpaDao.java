@@ -31,6 +31,7 @@ import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.reservation.ReservationCard;
 import ar.edu.itba.paw.models.util.search.ReservationSearchCriteria;
+import ar.edu.itba.paw.models.util.time.BillableDays;
 import ar.edu.itba.paw.persistence.car.CarPictureDao;
 import static ar.edu.itba.paw.persistence.util.JpaQueryUtils.bindParams;
 
@@ -592,6 +593,31 @@ public class ReservationJpaDao implements ReservationDao {
                 .setParameter("carId", carId)
                 .setParameter("status", Reservation.Status.FINISHED)
                 .getResultList();
+    }
+
+    @Override
+    public List<OffsetDateTime[]> findCarFinishedReservationBounds(final long ownerId, final long carId) {
+        final List<Object[]> rows = em.createQuery(
+                        "SELECT r.startDate, r.endDate FROM Reservation r "
+                                + "WHERE r.car.owner.id = :ownerId AND r.car.id = :carId "
+                                + "AND r.status = :status",
+                        Object[].class)
+                .setParameter("ownerId", ownerId)
+                .setParameter("carId", carId)
+                .setParameter("status", Reservation.Status.FINISHED)
+                .getResultList();
+        return rows.stream()
+                .map(row -> new OffsetDateTime[] {(OffsetDateTime) row[0], (OffsetDateTime) row[1]})
+                .toList();
+    }
+
+    @Override
+    public long sumCarFinishedBillableDays(final long ownerId, final long carId) {
+        long total = 0L;
+        for (final OffsetDateTime[] bounds : findCarFinishedReservationBounds(ownerId, carId)) {
+            total += BillableDays.between(bounds[0], bounds[1]);
+        }
+        return total;
     }
 
     @Override

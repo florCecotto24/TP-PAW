@@ -51,7 +51,13 @@ public class CarModelJpaDao implements CarModelDao {
 
     @Override
     public Optional<CarModel> findById(final long modelId) {
-        return Optional.ofNullable(em.find(CarModel.class, modelId));
+        return em.createQuery(
+                        "FROM CarModel m JOIN FETCH m.brand WHERE m.id = :modelId",
+                        CarModel.class)
+                .setParameter("modelId", modelId)
+                .getResultList()
+                .stream()
+                .findFirst();
     }
 
     @Override

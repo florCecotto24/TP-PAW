@@ -6,6 +6,7 @@ import java.io.InputStream;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
+import javax.ws.rs.NotFoundException;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -68,13 +69,11 @@ public class UserProfilePictureController {
     public Response getProfilePicture(@PathParam("id") final long id) {
         final User user = userService.getUserById(id)
                 .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
-        final Long imageId = user.getProfilePictureId().orElse(null);
-        if (imageId == null) {
-            return Response.status(Response.Status.NOT_FOUND).build();
-        }
+        final Long imageId = user.getProfilePictureId()
+                .orElseThrow(NotFoundException::new);
         return imageService.getImageContent(imageId)
                 .map(content -> CacheableBinaryResponses.of(request, content))
-                .orElseGet(() -> Response.status(Response.Status.NOT_FOUND).build());
+                .orElseThrow(NotFoundException::new);
     }
 
     @PUT

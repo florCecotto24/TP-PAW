@@ -358,8 +358,9 @@ public class ReservationServiceImpl implements ReservationService {
         paymentService.cancelExpiredPendingPaymentReservations();
     }
 
+    // Deliberately NOT @Transactional: same pattern as payment sweeps — each row commits in
+    // ReservationLifecycleRowProcessor (REQUIRES_NEW); an outer TX would nest connections.
     @Override
-    @Transactional
     public void transitionAcceptedReservationsToStarted() {
         schedulerService.transitionAcceptedReservationsToStarted();
     }
@@ -437,20 +438,19 @@ public class ReservationServiceImpl implements ReservationService {
     // Scheduled lifecycle jobs + per-car analytics → scheduler service
     // ---------------------------------------------------------------------------------------
 
+    // Deliberately NOT @Transactional: claim-then-mail-after-commit per row in the lifecycle
+    // processor (REQUIRES_NEW), matching payment-proof reminder sweeps.
     @Override
-    @Transactional
     public void dispatchReturnReminderEmails() {
         schedulerService.dispatchReturnReminderEmails();
     }
 
     @Override
-    @Transactional
     public void dispatchReturnCheckoutEmails() {
         schedulerService.dispatchReturnCheckoutEmails();
     }
 
     @Override
-    @Transactional
     public void dispatchRiderReviewInviteEmails() {
         schedulerService.dispatchRiderReviewInviteEmails();
     }
@@ -740,5 +740,17 @@ public class ReservationServiceImpl implements ReservationService {
     @Transactional(readOnly = true)
     public List<Reservation> findCarFinishedReservations(final long ownerId, final long carId) {
         return reservationDao.findCarFinishedReservations(ownerId, carId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<OffsetDateTime[]> findCarFinishedReservationBounds(final long ownerId, final long carId) {
+        return reservationDao.findCarFinishedReservationBounds(ownerId, carId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public long sumCarFinishedBillableDays(final long ownerId, final long carId) {
+        return reservationDao.sumCarFinishedBillableDays(ownerId, carId);
     }
 }

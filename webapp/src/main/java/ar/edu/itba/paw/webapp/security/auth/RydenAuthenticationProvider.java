@@ -84,10 +84,12 @@ public final class RydenAuthenticationProvider implements AuthenticationProvider
 
         try {
             if (passwordResetService.matchesResetCode(email, rawSecret)) {
-                final Set<GrantedAuthority> authorities = new java.util.LinkedHashSet<>(
-                        UserRoleAuthorities.fromUserRoles(userService.findRolesForUser(user.getId())));
-                authorities.add(new SimpleGrantedAuthority(RydenAuthorities.PASSWORD_RESET_OTP));
-                return buildAuthentication(user, rawSecret, authorities);
+                // OTP grant must not include ROLE_USER/ADMIN — otherwise the probe issues a
+                // usable business session. Only PATCH password is allowed (see Jwt filter).
+                return buildAuthentication(
+                        user,
+                        rawSecret,
+                        Set.of(new SimpleGrantedAuthority(RydenAuthorities.PASSWORD_RESET_OTP)));
             }
         } catch (final OtpAttemptsExceededException ex) {
             throw new OtpRateLimitedAuthenticationException(ex);

@@ -32,19 +32,9 @@ import type {
 // los call sites que lo importan desde aquí.
 export { idFromUri };
 
-export function carUri(id: string): string {
-  return `/cars/${id}`;
-}
-
 // ---- Publisher / prerequisitos (identidad + CBU) ----
 // El viejo flujo exigía, ANTES de publicar, tener (a) identidad cargada y (b) CBU.
 // Replicamos esos dos prerequisitos contra el recurso user.
-
-/** Deriva un sub-recurso del usuario a partir de su URN canónica ("/users/{id}"). */
-function userSubResource(userUri: string, suffix: string): string {
-  const base = userUri.endsWith('/') ? userUri.slice(0, -1) : userUri;
-  return `${base}/${suffix}`;
-}
 
 /** GET /users/{id} → UserDto (para releer identidad/cbu tras cargarlos). Es el usuario propio
  *  (publisher), así que pide la vista PRIVADA: necesita el cbu, que no viaja en la vista pública. */
@@ -61,7 +51,7 @@ export function patchCbu(userUri: string, cbu: string): Promise<ApiResponse<User
 }
 
 /**
- * PUT /users/{id}/documents/identity (octet-stream): sube el documento de identidad.
+ * Sigue `user.links.identityDocument` para subir el documento de identidad.
  * Mismo mecanismo que usa el área PROFILE y reservas. Tras subirlo, la identidad
  * queda "en revisión" (identityValidated lo fija el admin), pero el documento ya
  * está en el sistema y el prerequisito de publicación se considera cumplido.
@@ -70,9 +60,9 @@ export function uploadIdentityDocument(
   user: UserDto,
   file: File,
 ): Promise<ApiResponse<unknown>> {
-  const base = user.links.documents ?? userSubResource(user.links.self, 'documents');
-  const normalized = base.endsWith('/') ? base.slice(0, -1) : base;
-  return sessionClient.request(`${normalized}/identity`, {
+  const identityDocument = user.links.identityDocument;
+  if (!identityDocument) throw new Error('owner.user.missingIdentityDocumentLink');
+  return sessionClient.request(identityDocument, {
     method: 'PUT',
     body: file,
     contentType: file.type || 'application/octet-stream',
@@ -166,8 +156,8 @@ export function fetchOwnerCars(
   });
 }
 
-export function fetchCar(id: string): Promise<ApiResponse<CarDto>> {
-  return sessionClient.get<CarDto>(carUri(id), { accept: MediaTypes.car });
+export function fetchCar(carSelf: string): Promise<ApiResponse<CarDto>> {
+  return sessionClient.follow<CarDto>(carSelf, { accept: MediaTypes.car });
 }
 
 /**
@@ -221,15 +211,15 @@ export function fetchPriceMarketInsight(
   });
 }
 
-export function patchCar(id: string, patch: CarPatchDto): Promise<ApiResponse<CarDto>> {
-  return sessionClient.patch<CarDto>(carUri(id), patch, {
+export function patchCar(carSelf: string, patch: CarPatchDto): Promise<ApiResponse<CarDto>> {
+  return sessionClient.patch<CarDto>(carSelf, patch, {
     accept: MediaTypes.car,
     contentType: MediaTypes.car,
   });
 }
 
-export function deactivateCar(id: string): Promise<ApiResponse<unknown>> {
-  return sessionClient.del(carUri(id), { accept: MediaTypes.car });
+export function deactivateCar(carSelf: string): Promise<ApiResponse<unknown>> {
+  return sessionClient.del(carSelf, { accept: MediaTypes.car });
 }
 
 // ---- Availabilities (sub-recurso) ----

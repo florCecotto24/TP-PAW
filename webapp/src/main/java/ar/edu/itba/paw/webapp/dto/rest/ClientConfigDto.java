@@ -17,6 +17,7 @@ public final class ClientConfigDto {
 
     private int cbuRequiredDigits;
     private int maxBillableDays;
+    private int pickupLeadHours;
     private CarLimits car;
     private UploadLimits upload;
     private MoneyLimits money;
@@ -38,6 +39,7 @@ public final class ClientConfigDto {
         final ClientConfigDto dto = new ClientConfigDto();
         dto.cbuRequiredDigits = CbuRules.REQUIRED_DIGIT_LENGTH;
         dto.maxBillableDays = reservationTiming.getMaxBillableDaysPerReservation();
+        dto.pickupLeadHours = reservationTiming.getPickupLeadHours();
         dto.car = CarLimits.from(validation, galleryUploadPolicy);
         dto.upload = UploadLimits.from(galleryUploadPolicy, environment);
         dto.money = MoneyLimits.from(moneyProps);
@@ -62,6 +64,14 @@ public final class ClientConfigDto {
 
     public void setMaxBillableDays(final int maxBillableDays) {
         this.maxBillableDays = maxBillableDays;
+    }
+
+    public int getPickupLeadHours() {
+        return pickupLeadHours;
+    }
+
+    public void setPickupLeadHours(final int pickupLeadHours) {
+        this.pickupLeadHours = pickupLeadHours;
     }
 
     public CarLimits getCar() {

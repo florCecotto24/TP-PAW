@@ -7,6 +7,7 @@ import javax.ws.rs.core.UriInfo;
 
 import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.models.security.UserRole;
+import ar.edu.itba.paw.webapp.util.RestUriUtils;
 
 /**
  * Private REST representation ({@code application/vnd.paw.user.private.v1+json}).
@@ -92,7 +93,11 @@ public final class UserPrivateDto {
                     : user.getUserRole().name().toLowerCase(Locale.ROOT);
             dto.ratingAsOwner = ratingAsOwner;
             dto.ratingAsRider = ratingAsRider;
-            dto.links = UserLinks.build(user, uriInfo);
+            dto.links = UserLinks.build(user, uriInfo)
+                    .withRelated("identityDocument",
+                            RestUriUtils.userDocumentUri(uriInfo, user.getId(), "identity").toString())
+                    .withRelated("licenseDocument",
+                            RestUriUtils.userDocumentUri(uriInfo, user.getId(), "license").toString());
             if (user.isBlocked() && blockedOverdueReservationUri != null) {
                 dto.links = dto.links.withRelated("blocked-overdue-reservation", blockedOverdueReservationUri);
             }

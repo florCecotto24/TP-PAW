@@ -504,4 +504,13 @@ public interface ReservationService {
 
     /** Finished reservations for the car (owner analytics). */
     List<Reservation> findCarFinishedReservations(long ownerId, long carId);
+
+    /**
+     * Start/end bounds of finished reservations for the car (owner analytics).
+     * Each element is {@code [startDate, endDate]} — no full entity graph.
+     */
+    List<OffsetDateTime[]> findCarFinishedReservationBounds(long ownerId, long carId);
+
+    /** Sum of wall-zone billable days across finished reservations for the car. */
+    long sumCarFinishedBillableDays(long ownerId, long carId);
 }

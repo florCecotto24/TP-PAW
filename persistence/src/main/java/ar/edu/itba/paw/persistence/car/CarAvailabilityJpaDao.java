@@ -151,19 +151,6 @@ public class CarAvailabilityJpaDao implements CarAvailabilityDao {
     }
 
     @Override
-    @Transactional
-    public void deleteByCarId(final long carId) {
-        final List<CarAvailability> toRemove = em.createQuery(
-                        "FROM CarAvailability la WHERE la.car.id = :carId",
-                        CarAvailability.class)
-                .setParameter("carId", carId)
-                .getResultList();
-        for (final CarAvailability la : toRemove) {
-            em.remove(la);
-        }
-    }
-
-    @Override
     public Map<Long, BigDecimal> findMinOfferedDayPriceByCarIds(final Collection<Long> carIds) {
         if (carIds == null || carIds.isEmpty()) {
             return Map.of();

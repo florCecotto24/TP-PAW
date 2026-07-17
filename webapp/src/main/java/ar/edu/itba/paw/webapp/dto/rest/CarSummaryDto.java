@@ -21,6 +21,7 @@ public final class CarSummaryDto {
 
     private String brandName;
     private String modelName;
+    private Integer year;
     private String status;
     private int minimumRentalDays;
     private BigDecimal ratingAvg;
@@ -39,6 +40,7 @@ public final class CarSummaryDto {
         final CarSummaryDto dto = new CarSummaryDto();
         dto.brandName = car.getBrand();
         dto.modelName = car.getModel();
+        dto.year = car.getYear().orElse(null);
         dto.status = CarRestEnums.toRestName(car.getStatus());
         dto.minimumRentalDays = car.getMinimumRentalDays();
         dto.ratingAvg = car.getRatingAvg().orElse(null);
@@ -55,6 +57,7 @@ public final class CarSummaryDto {
         final CarSummaryDto dto = new CarSummaryDto();
         dto.brandName = card.getBrand();
         dto.modelName = card.getModel();
+        dto.year = card.getYear();
         dto.status = card.getStatus() == null
                 ? null
                 : CarRestEnums.toRestName(card.getStatus());
@@ -101,6 +104,14 @@ public final class CarSummaryDto {
 
     public void setModelName(final String modelName) {
         this.modelName = modelName;
+    }
+
+    public Integer getYear() {
+        return year;
+    }
+
+    public void setYear(final Integer year) {
+        this.year = year;
     }
 
     public String getStatus() {

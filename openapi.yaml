@@ -422,7 +422,9 @@ paths:
       tags: [users]
       summary: Comprobar membresía en favoritos (self, sin mutación)
       description: >
-        204 cuando el auto está en favoritos; 404 cuando no lo está o el auto no existe.
+        Membresía canónica de la entidad débil FavCar. URI = `{user.links.favorites}/{carId}`
+        donde `carId` es el último segmento de `car.links.self` (no se inventa `/users/{id}/…`
+        desde cero). 204 cuando el auto está en favoritos; 404 cuando no lo está o el auto no existe.
       responses:
         "204": { description: Es favorito. }
         "403": { $ref: "#/components/responses/Forbidden" }
@@ -500,6 +502,9 @@ paths:
         Requiere exactamente un filtro de ámbito: `carId` (públicas del auto),
         `recipientUserId` (recibidas por el usuario en su perfil) o
         `reservationId` (reseñas de esa reserva; 0–2 ítems, sin paginación).
+        Esos filtros de colección se publican ya completos en `links.reviews`
+        del auto, usuario o reserva padre; el cliente sigue el link y no extrae
+        ids de una URN para reconstruir la query.
         Visibilidad por ítem: las reseñas que el llamante no puede ver se omiten
         de la colección (no se responde 403). Un GET a `/reviews/{id}` sí responde
         403 si el ítem no es visible.
@@ -537,22 +542,23 @@ paths:
       tags: [reviews, reservations]
       summary: Dejar una reseña (rider→owner u owner→rider)
       description: >
-        Misma URI de colección que el GET. Requiere `reservationId` en query.
+        Misma URI de colección que el GET. La reserva se referencia mediante
+        `reservationUri` en el body multipart, nunca mediante un id suelto.
         El lado (made_by_rider) se deriva del rol del llamante en la reserva.
         Solo si la reserva está FINISHED y no existe ya una reseña de ese lado
         (UNIQUE(reservation_id, made_by_rider)).
-      parameters:
-        - name: reservationId
-          in: query
-          required: true
-          schema: { type: integer, format: int64 }
       requestBody:
         required: true
         content:
           multipart/form-data:
             schema:
               type: object
+              required: [reservationUri]
               properties:
+                reservationUri:
+                  type: string
+                  format: uri
+                  description: URN canónica de la reserva (`links.self`).
                 rating: { type: integer, minimum: 1, maximum: 5 }
                 comment: { type: string }
                 image: { type: string, format: binary }
@@ -602,15 +608,14 @@ paths:
         distintas pantallas del MVC (home cheapest/recent, búsqueda pública,
         "mis autos", listado admin) colapsan acá variando query params +
         autorización. Paginación por header `Link`. Semántica según query
-        (decisión documentada, ver auditoría A14): (1) admin con
-        `Accept: application/vnd.paw.car.v1+json` → TODO el catálogo sin filtro
-        de estado; (2) `ownerId` → "autos de este usuario": si el llamante es ese
+        (decisión documentada, ver auditoría A14): (1) `status=all`, sin
+        `ownerId` y con autenticación admin → TODO el catálogo; (2) `ownerId` →
+        "autos de este usuario": si el llamante es ese
         usuario o admin, ve cualquier estado (o el filtro `status` explícito que
         mande); cualquier otro llamante ve solo `active` y no puede pasar
-        `status` (403); (3) browse público (`Accept: car.summary`) → siempre
-        `active` únicamente. Es un filtro de colección legítimo (no una operación
-        distinta por rol), pero al ser 3 ramas con autorización propia se documenta
-        acá en vez de separarlo en 3 endpoints distintos.
+        `status` (403); (3) browse público → siempre `active` únicamente.
+        `Accept` solo selecciona la representación (`car.summary` o `car`) y
+        nunca modifica la membresía de la colección.
 
         **Representación embebida (patrón B):** esta URI es la colección
         *principal* de autos (browse, home, mis autos, admin). LINEAMIENTOS
@@ -626,8 +631,8 @@ paths:
             type: string
             example: application/vnd.paw.car.summary.v1+json
           description: >
-            Colecciones usan `car.summary.v1+json` (teaser). Solo admin puede pedir
-            `car.v1+json` en el listado sin `ownerId` para ver el catálogo completo.
+            Selecciona `car.summary.v1+json` (teaser) o `car.v1+json`; no cambia
+            filtros ni membresía. El catálogo admin se solicita con `status=all`.
         - name: q
           in: query
           schema: { type: string }
@@ -683,14 +688,33 @@ paths:
         - name: until
           in: query
           schema: { type: string, format: date }
+        - name: flexible
+          in: query
+          schema: { type: boolean, default: false }
+          description: Activa búsqueda por ventana flexible; ignora `from`/`until`.
+        - name: flexMonth
+          in: query
+          schema: { type: string, pattern: '^\d{4}-\d{2}$' }
+          description: Mes de búsqueda flexible. Requerido cuando `flexible=true`.
+        - name: flexDays
+          in: query
+          schema: { type: integer, minimum: 1, nullable: true }
+          description: Duración deseada dentro de `flexMonth`; omitido significa cualquier duración válida.
         - name: status
           in: query
           style: form
           explode: true
-          schema: { type: array, items: { $ref: "#/components/schemas/CarStatus" } }
+          schema:
+            type: array
+            items:
+              oneOf:
+                - $ref: "#/components/schemas/CarStatus"
+                - type: string
+                  enum: [all]
           description: >
             Repetible. Filtro por estado. Solo el dueño (vía ownerId propio) o un admin pueden
-            filtrar por estados no públicos.
+            filtrar por estados no públicos. El valor especial único `all`, sin `ownerId`,
+            selecciona el catálogo completo y requiere admin.
         - name: sort
           in: query
           schema: { type: string, enum: [price_asc, price_desc, rating_desc, recent, name] }
@@ -698,7 +722,7 @@ paths:
       responses:
         "403":
           description: >
-            `Accept: car.v1+json` sin ser admin, o status explícito en ownerId de otro usuario sin ser admin.
+            `status=all` sin ser admin, o status explícito en ownerId de otro usuario sin ser admin.
           content:
             application/vnd.paw.error.v1+json:
               schema: { $ref: "#/components/schemas/ErrorDto" }
@@ -876,9 +900,10 @@ paths:
 
         **Representación embebida (patrón B):** sub-colección de
         `/cars/{id}/availabilities`; la lista *es* la vista de calendario y
-        necesita fechas/precios en un round-trip. Cada ítem tiene
-        `links.self` → `GET /cars/{id}/availabilities/{availabilityId}`.
-        No es una colección de *otros* autos/recursos canónicos (cf. patrón A).
+        necesita fechas/precios en un round-trip. Las filas normales tienen
+        `links.self` → `GET /cars/{id}/availabilities/{availabilityId}`; los
+        segmentos calculados de la vista mensual no tienen `self`, porque no son
+        recursos individuales dereferenciables.
       parameters:
         - name: month
           in: query
@@ -1058,9 +1083,12 @@ paths:
                 displayOrder: { type: integer }
       responses:
         "201":
-          description: Item agregado.
+          description: Item agregado (PictureDto + Location).
           headers:
             Location: { $ref: "#/components/headers/Location" }
+          content:
+            application/vnd.paw.picture.v1+json:
+              schema: { $ref: "#/components/schemas/PictureDto" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
   /cars/{id}/pictures/primary:
@@ -1105,7 +1133,8 @@ paths:
     get:
       tags: [cars, files]
       summary: Descargar el seguro (owner/admin)
-      security: []
+      security:
+        - bearerAuth: []
       responses:
         "200": { $ref: "#/components/responses/BinaryFile" }
         "403": { $ref: "#/components/responses/Forbidden" }
@@ -1113,6 +1142,8 @@ paths:
     put:
       tags: [cars, files]
       summary: Subir/reemplazar el seguro (owner)
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -1122,9 +1153,12 @@ paths:
         "204": { description: Subido. }
         "400": { $ref: "#/components/responses/ValidationError" }
         "403": { $ref: "#/components/responses/Forbidden" }
+        "413": { description: Payload demasiado grande. }
     delete:
       tags: [cars, files]
       summary: Quitar el seguro (owner)
+      security:
+        - bearerAuth: []
       responses:
         "204": { description: Quitado. }
         "403": { $ref: "#/components/responses/Forbidden" }
@@ -1182,7 +1216,44 @@ paths:
           schema: { type: integer, format: int64 }
         - name: status
           in: query
-          schema: { $ref: "#/components/schemas/ReservationStatus" }
+          style: form
+          explode: true
+          schema: { type: array, items: { $ref: "#/components/schemas/ReservationStatus" } }
+        - name: riderStatus
+          in: query
+          style: form
+          explode: true
+          schema: { type: array, items: { $ref: "#/components/schemas/ReservationStatus" } }
+          description: Estados adicionales de la vista rider; se combinan con `status`.
+        - name: q
+          in: query
+          schema: { type: string }
+        - name: category
+          in: query
+          style: form
+          explode: true
+          schema: { type: array, items: { $ref: "#/components/schemas/CarType" } }
+        - name: transmission
+          in: query
+          style: form
+          explode: true
+          schema: { type: array, items: { $ref: "#/components/schemas/Transmission" } }
+        - name: powertrain
+          in: query
+          style: form
+          explode: true
+          schema: { type: array, items: { $ref: "#/components/schemas/Powertrain" } }
+        - name: priceMin
+          in: query
+          schema: { type: number }
+        - name: priceMax
+          in: query
+          schema: { type: number }
+        - name: rating
+          in: query
+          style: form
+          explode: true
+          schema: { type: array, items: { type: number, minimum: 0, maximum: 5 } }
         - name: sort
           in: query
           schema: { type: string, enum: [recent, start_date, price_asc, price_desc] }
@@ -1699,11 +1770,29 @@ paths:
       responses:
         "200":
           description: Barrios.
+          headers:
+            X-Total-Count: { $ref: "#/components/headers/X-Total-Count" }
           content:
             application/vnd.paw.neighborhood.v1+json:
               schema:
                 type: array
                 items: { $ref: "#/components/schemas/NeighborhoodDto" }
+        "204": { description: Catálogo vacío. }
+
+  /neighborhoods/{id}:
+    parameters:
+      - $ref: "#/components/parameters/idPath"
+    get:
+      tags: [locations]
+      summary: Obtener un barrio por su URN canónica
+      security: []
+      responses:
+        "200":
+          description: Barrio.
+          content:
+            application/vnd.paw.neighborhood.v1+json:
+              schema: { $ref: "#/components/schemas/NeighborhoodDto" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
 #############################################################################
 # COMPONENTS
@@ -1858,6 +1947,14 @@ components:
       additionalProperties: { type: string, format: uri }
       properties:
         self: { type: string, format: uri }
+        identityDocument:
+          type: string
+          format: uri
+          description: Document endpoint emitted on private user representations for authenticated GET, PUT, and DELETE.
+        licenseDocument:
+          type: string
+          format: uri
+          description: License endpoint emitted on private user representations for authenticated GET, PUT, and DELETE.
         blocked-overdue-reservation:
           type: string
           format: uri
@@ -1892,6 +1989,7 @@ components:
       properties:
         cbuRequiredDigits: { type: integer, minimum: 1 }
         maxBillableDays: { type: integer, minimum: 1 }
+        pickupLeadHours: { type: integer, minimum: 0 }
         car:
           type: object
           properties:
@@ -1973,29 +2071,26 @@ components:
             - addressNumberMaxLength
             - pricePerDayIntegerDigits
             - pricePerDayFractionDigits
-      required: [cbuRequiredDigits, maxBillableDays, car, upload, money, user, chat, review, listing]
+      required: [cbuRequiredDigits, maxBillableDays, pickupLeadHours, car, upload, money, user, chat, review, listing]
 
     # ----- USER -----
     UserDto:
       type: object
       description: >
         Representación pública fija (`Accept: application/vnd.paw.user.v1+json`).
-        NO incluye email, CBU, teléfono, role ni blocked — usar UserPrivateDto para eso.
+        NO incluye email, CBU, teléfono, role, blocked ni estado KYC/documental;
+        usar UserPrivateDto para esos datos.
       properties:
         forename: { type: string }
         surname: { type: string }
         memberSince: { type: string, format: date }
         emailVerified: { type: boolean }
-        licenseValidated: { type: boolean }
-        identityValidated: { type: boolean }
-        licenseUploaded: { type: boolean }
-        identityUploaded: { type: boolean }
         ratingAsRider: { type: number, nullable: true }
         ratingAsOwner: { type: number, nullable: true }
         links:
           allOf:
             - $ref: "#/components/schemas/Links"
-          description: self, profilePicture, cars, reservations, favorites, documents, reviews, blocked-overdue-reservation (when blocked and exactly one overdue refund proof).
+          description: self, profilePicture, cars, reservations, favorites, reviews.
 
     UserPrivateDto:
       type: object
@@ -2024,7 +2119,7 @@ components:
         links:
           allOf:
             - $ref: "#/components/schemas/Links"
-          description: self, profilePicture, cars, reservations, favorites, documents, reviews, blocked-overdue-reservation (when blocked and exactly one overdue refund proof).
+          description: self, profilePicture, cars, reservations, favorites, reviews, identityDocument, licenseDocument, blocked-overdue-reservation (when blocked and exactly one overdue refund proof).
 
     UserCreateDto:
       type: object
@@ -2096,6 +2191,7 @@ components:
       properties:
         brandName: { type: string }
         modelName: { type: string }
+        year: { type: integer, nullable: true }
         status: { $ref: "#/components/schemas/CarStatus" }
         minimumRentalDays: { type: integer }
         ratingAvg: { type: number, nullable: true }
@@ -2118,7 +2214,7 @@ components:
     CarDto:
       type: object
       properties:
-        plate: { type: string }
+        plate: { type: string, nullable: true }
         year: { type: integer, nullable: true }
         powertrain: { $ref: "#/components/schemas/Powertrain" }
         transmission: { $ref: "#/components/schemas/Transmission" }
@@ -2236,7 +2332,10 @@ components:
         checkInTime: { type: string, nullable: true, example: "10:00" }
         checkOutTime: { type: string, nullable: true, example: "10:00" }
         location: { type: string }
-        neighborhoodId: { type: integer, format: int64, nullable: true }
+        links:
+          allOf:
+            - $ref: "#/components/schemas/Links"
+          description: neighborhood (cuando el segmento tiene barrio).
 
     # ----- RESERVATION -----
     ReservationStatus:

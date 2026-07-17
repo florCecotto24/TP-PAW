@@ -27,6 +27,7 @@ import ar.edu.itba.paw.exception.reservation.RiderReservationException;
 import ar.edu.itba.paw.models.domain.car.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.car.CarAvailability;
 import ar.edu.itba.paw.models.util.time.AppTimezone;
+import ar.edu.itba.paw.models.util.time.BillableDays;
 import ar.edu.itba.paw.policy.ReservationTimingPolicy;
 import ar.edu.itba.paw.util.format.MoneyFormat;
 
@@ -203,12 +204,7 @@ public class ReservationPricingServiceImpl implements ReservationPricingService 
     @Override
     @Transactional(readOnly = true)
     public long calculateBillableDays(final OffsetDateTime startDate, final OffsetDateTime endDate) {
-        if (startDate == null || endDate == null || !endDate.isAfter(startDate)) {
-            return 0;
-        }
-        final LocalDate pickupDay = startDate.atZoneSameInstant(AppTimezone.WALL_ZONE).toLocalDate();
-        final LocalDate returnDay = endDate.atZoneSameInstant(AppTimezone.WALL_ZONE).toLocalDate();
-        return Math.max(1L, ChronoUnit.DAYS.between(pickupDay, returnDay.plusDays(1)));
+        return BillableDays.between(startDate, endDate);
     }
 
     @Override

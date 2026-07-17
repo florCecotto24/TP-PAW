@@ -114,9 +114,6 @@ public interface CarAvailabilityService {
      */
     List<AvailabilityPeriod> findReservationBlockedWallRangesByCar(long carId);
 
-    /** Removes every availability row for {@code carId} (e.g. before replacing the whole wall). */
-    void deleteByCarId(long carId);
-
     /**
      * Soft-deletes an availability period from the owner's calendar by inserting a brand new
      * {@link CarAvailability.Kind#WITHDRAWN} row covering the target's full window. The target row is

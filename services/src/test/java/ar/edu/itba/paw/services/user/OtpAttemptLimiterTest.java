@@ -12,7 +12,7 @@ class OtpAttemptLimiterTest {
     @Test
     void testAllowsUntilMaxFailuresThenLocks() {
         // 1.Arrange
-        final OtpAttemptLimiter limiter = new OtpAttemptLimiter(3, Duration.ofMinutes(15));
+        final OtpAttemptLimiter limiter = OtpAttemptLimiter.forTests(3, Duration.ofMinutes(15));
         final String email = "user@example.com";
 
         // 2.Act
@@ -28,7 +28,7 @@ class OtpAttemptLimiterTest {
     @Test
     void testClearResetsWindow() {
         // 1.Arrange
-        final OtpAttemptLimiter limiter = new OtpAttemptLimiter(2, Duration.ofMinutes(15));
+        final OtpAttemptLimiter limiter = OtpAttemptLimiter.forTests(2, Duration.ofMinutes(15));
         final String email = "user@example.com";
         limiter.recordFailure(email);
         limiter.recordFailure(email);

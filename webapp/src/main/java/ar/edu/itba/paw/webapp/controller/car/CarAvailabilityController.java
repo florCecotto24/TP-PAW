@@ -219,7 +219,7 @@ public class CarAvailabilityController {
                 RestUriUtils.parseNeighborhoodId(form.getNeighborhoodUri()).orElse(null),
                 form.getCheckInTime(),
                 form.getCheckOutTime(),
-                List.of(new AvailabilityPeriod(form.getStartDate(), form.getEndDate())),
+                List.of(AvailabilityPeriod.of(form.getStartDate(), form.getEndDate())),
                 List.of(form.getDayPrice()),
                 1);
     }

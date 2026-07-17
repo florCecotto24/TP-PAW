@@ -4,10 +4,8 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
-import java.util.List;
 import java.util.stream.Collectors;
 
 import javax.crypto.SecretKey;
@@ -67,13 +65,13 @@ public final class JwtTokenService implements TokenService {
                 : properties.accessTokenMinutes();
         response.setHeader(ACCESS_TOKEN_HEADER,
                 generateToken(principal, JwtTokenType.ACCESS, accessMinutes, principal.getAuthorities()));
-        // Refresh must not carry ROLE_PASSWORD_RESET_OTP — otherwise rotation renews the grant for days.
-        final Collection<? extends GrantedAuthority> refreshAuthorities = passwordResetGrant
-                ? stripPasswordResetOtp(principal.getAuthorities())
-                : principal.getAuthorities();
-        response.setHeader(REFRESH_TOKEN_HEADER,
-                generateToken(principal, JwtTokenType.REFRESH, properties.refreshTokenDays() * 24 * 60,
-                        refreshAuthorities));
+        // Password-reset OTP: never emit refresh. Refresh reloads roles from the DB and would
+        // turn a one-time code into a full multi-day session.
+        if (!passwordResetGrant) {
+            response.setHeader(REFRESH_TOKEN_HEADER,
+                    generateToken(principal, JwtTokenType.REFRESH, properties.refreshTokenDays() * 24 * 60,
+                            principal.getAuthorities()));
+        }
         final String userUri = buildUserUri(request, principal.getUserId());
         response.addHeader("Link", String.format("<%s>; rel=\"%s\"", userUri, AUTHENTICATED_USER_REL));
     }
@@ -141,32 +139,20 @@ public final class JwtTokenService implements TokenService {
                 .anyMatch(a -> RydenAuthorities.PASSWORD_RESET_OTP.equals(a.getAuthority()));
     }
 
-    private static List<GrantedAuthority> stripPasswordResetOtp(
-            final Collection<? extends GrantedAuthority> authorities) {
-        return authorities.stream()
-                .filter(a -> !RydenAuthorities.PASSWORD_RESET_OTP.equals(a.getAuthority()))
-                .collect(Collectors.toCollection(ArrayList::new));
-    }
-
     private static String encodeAuthorities(final Collection<? extends GrantedAuthority> authorities) {
         return authorities.stream()
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.joining(","));
     }
 
+    /**
+     * Relative user URN for {@code Link: rel=authenticated-user}. Host-relative so reverse proxies
+     * / Vite do not bake a wrong absolute origin; clients resolve against the current API base.
+     */
     private static String buildUserUri(final HttpServletRequest request, final long userId) {
-        final StringBuilder uri = new StringBuilder();
-        uri.append(request.getScheme()).append("://").append(request.getServerName());
-        final int port = request.getServerPort();
-        if (port != 80 && port != 443) {
-            uri.append(':').append(port);
-        }
-        uri.append(request.getContextPath());
-        if (!request.getContextPath().endsWith("/")) {
-            uri.append('/');
-        }
-        uri.append("api/users/").append(userId);
-        return uri.toString();
+        final String context = request.getContextPath() == null ? "" : request.getContextPath();
+        final String base = context.endsWith("/") ? context.substring(0, context.length() - 1) : context;
+        return base + "/api/users/" + userId;
     }
 
     private static SecretKey resolveSigningKey(final String configuredSecret, final Environment environment) {

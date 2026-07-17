@@ -97,7 +97,10 @@ export interface RiderUserView {
   identityValidated: boolean;
   licenseUploaded?: boolean;
   identityUploaded?: boolean;
-  links: Record<string, string>;
+  links: Record<string, string> & {
+    identityDocument?: string;
+    licenseDocument?: string;
+  };
 }
 
 export interface CarSummaryView {
@@ -167,12 +170,11 @@ export function uploadUserDocument(
   type: 'license' | 'identity',
   file: File,
 ): Promise<ApiResponse<unknown>> {
-  const documentsLink = user.links.documents;
-  if (!documentsLink) {
-    throw new Error('reservation.user.missingDocumentsLink');
-  }
-  const base = documentsLink.endsWith('/') ? documentsLink.slice(0, -1) : documentsLink;
-  return sessionClient.request(`${base}/${type}`, {
+  const documentLink = type === 'identity'
+    ? user.links.identityDocument
+    : user.links.licenseDocument;
+  if (!documentLink) throw new Error('reservation.user.missingDocumentLink');
+  return sessionClient.request(documentLink, {
     method: 'PUT',
     body: file,
     contentType: file.type || 'application/octet-stream',
@@ -305,15 +307,23 @@ export async function listMessagesLatestPage(
 }
 
 /** Envía un mensaje (multipart: body + file opcional). */
-export function sendMessage(
+export async function sendMessage(
   messagesUri: string,
   body: string,
   file?: File | null,
 ): Promise<ApiResponse<MessageDto>> {
-  const fd = new FormData();
-  fd.append('body', body);
-  if (file) fd.append('file', file);
-  return sessionClient.post<MessageDto>(messagesUri, fd, {
+  const parts: MultipartPart[] = [{ name: 'body', value: body ?? '' }];
+  if (file) {
+    parts.push({
+      name: 'file',
+      value: file,
+      filename: file.name || 'attachment',
+      contentType: file.type || 'application/octet-stream',
+    });
+  }
+  const { body: payload, contentType } = await encodeMultipart(parts);
+  return sessionClient.post<MessageDto>(messagesUri, payload, {
     accept: MediaTypes.message,
+    contentType,
   });
 }
