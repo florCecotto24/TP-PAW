@@ -37,32 +37,21 @@ function hasMarketSpread(min: number, max: number): boolean {
   return Number.isFinite(min) && Number.isFinite(max) && max > min;
 }
 
-/** Misma lógica que el JSP: con spread → min/max; sin spread → 0…2×mercado. */
-function barRange(min: number, max: number): { min: number; max: number } {
-  if (hasMarketSpread(min, max)) return { min, max };
-  const center = Number.isFinite(min) ? min : Number.isFinite(max) ? max : 0;
-  const safe = center >= 0 && Number.isFinite(center) ? center : 0;
-  return { min: 0, max: Math.max(safe * 2, safe + 100, 200) };
-}
-
 function clampPrice(price: number): number {
   return Math.round(Math.max(0, Math.min(99_999_999.99, price)) * 100) / 100;
 }
 
 function pctOnBar(value: number, min: number, max: number): number {
-  const range = barRange(min, max);
-  const span = range.max - range.min;
+  const span = max - min;
   if (!(span > 0)) return 50;
-  return Math.min(100, Math.max(0, ((value - range.min) / span) * 100));
+  return Math.min(100, Math.max(0, ((value - min) / span) * 100));
 }
 
 function valueFromPct(pct: number, min: number, max: number): number {
-  const range = barRange(min, max);
-  return clampPrice(range.min + (range.max - range.min) * (pct / 100));
+  return clampPrice(min + (max - min) * (pct / 100));
 }
 
 function zoneLayout(min: number, max: number, avg: number) {
-  const spread = hasMarketSpread(min, max);
   const avgPct = pctOnBar(Number.isFinite(avg) ? avg : min, min, max);
   const fadeWidth = Math.min(22, Math.max(10, 18));
   const greenHalf = Math.max(4, fadeWidth * 0.35);
@@ -73,9 +62,6 @@ function zoneLayout(min: number, max: number, avg: number) {
     redOuterRight: avgPct + fadeWidth,
     greenLeft: avgPct - greenHalf,
     greenRight: avgPct + greenHalf,
-    minMarkerPct: spread ? 0 : avgPct,
-    maxMarkerPct: spread ? 100 : avgPct,
-    showBoundMarkers: spread,
   };
 }
 
@@ -121,19 +107,16 @@ export default function PriceMarketInsightCard({
   const [dragging, setDragging] = useState(false);
 
   const userPrice = value ?? initialUserPrice ?? null;
+  const showPicker =
+    insight != null && hasMarketSpread(insight.minPrice, insight.maxPrice);
 
   const layout = useMemo(() => {
-    if (!insight) return null;
+    if (!showPicker || !insight) return null;
     return zoneLayout(insight.minPrice, insight.maxPrice, insight.averagePrice);
-  }, [insight]);
-
-  const range = useMemo(() => {
-    if (!insight) return null;
-    return barRange(insight.minPrice, insight.maxPrice);
-  }, [insight]);
+  }, [insight, showPicker]);
 
   const userPct =
-    insight && userPrice != null && userPrice > 0
+    showPicker && insight && userPrice != null && userPrice > 0
       ? pctOnBar(userPrice, insight.minPrice, insight.maxPrice)
       : null;
 
@@ -195,8 +178,10 @@ export default function PriceMarketInsightCard({
   };
 
   const applyBound = (price: number) => {
-    if (!onPriceChange || !range) return;
-    onPriceChange(clampPrice(Math.max(range.min, Math.min(range.max, price))));
+    if (!onPriceChange || !insight) return;
+    onPriceChange(
+      clampPrice(Math.max(insight.minPrice, Math.min(insight.maxPrice, price))),
+    );
   };
 
   const onBoundKeyDown = (price: number) => (e: KeyboardEvent) => {
@@ -206,14 +191,21 @@ export default function PriceMarketInsightCard({
     }
   };
 
-  if (!insight) {
+  if (!showPicker) {
     return (
       <div>
         <label htmlFor={priceInputId} className="form-label required-label mb-2">
           {t('publishCar.form.pricePerDay')}
         </label>
         {children}
-        <small className="text-muted d-block mt-2">{t('car.price.insight.noMarket')}</small>
+        {insight ? (
+          <div className="text-success fw-semibold small mt-2">
+            {t('car.price.insight.reference')}
+            <div className="text-body fw-normal">{avgFmt}</div>
+          </div>
+        ) : (
+          <small className="text-muted d-block mt-2">{t('car.price.insight.noMarket')}</small>
+        )}
       </div>
     );
   }
@@ -252,20 +244,18 @@ export default function PriceMarketInsightCard({
                   onPointerDown={startDrag}
                 />
                 <div className="ryden-price-insight__bar-gradient" />
-                {layout.showBoundMarkers ? (
-                  <div
-                    className="ryden-price-insight__marker ryden-price-insight__marker--min ryden-price-insight__marker--bound"
-                    role="button"
-                    tabIndex={0}
-                    title={minFmt}
-                    aria-label={minFmt}
-                    style={{ left: `${layout.minMarkerPct}%` }}
-                    onClick={() => applyBound(insight.minPrice)}
-                    onKeyDown={onBoundKeyDown(insight.minPrice)}
-                  >
-                    <span className="ryden-price-insight__marker-dot" />
-                  </div>
-                ) : null}
+                <div
+                  className="ryden-price-insight__marker ryden-price-insight__marker--min ryden-price-insight__marker--bound"
+                  role="button"
+                  tabIndex={0}
+                  title={minFmt}
+                  aria-label={minFmt}
+                  style={{ left: '0%' }}
+                  onClick={() => applyBound(insight.minPrice)}
+                  onKeyDown={onBoundKeyDown(insight.minPrice)}
+                >
+                  <span className="ryden-price-insight__marker-dot" />
+                </div>
                 <div
                   className="ryden-price-insight__marker ryden-price-insight__marker--avg"
                   title={avgFmt}
@@ -273,20 +263,18 @@ export default function PriceMarketInsightCard({
                 >
                   <span className="ryden-price-insight__marker-dot" />
                 </div>
-                {layout.showBoundMarkers ? (
-                  <div
-                    className="ryden-price-insight__marker ryden-price-insight__marker--max ryden-price-insight__marker--bound"
-                    role="button"
-                    tabIndex={0}
-                    title={maxFmt}
-                    aria-label={maxFmt}
-                    style={{ left: `${layout.maxMarkerPct}%` }}
-                    onClick={() => applyBound(insight.maxPrice)}
-                    onKeyDown={onBoundKeyDown(insight.maxPrice)}
-                  >
-                    <span className="ryden-price-insight__marker-dot" />
-                  </div>
-                ) : null}
+                <div
+                  className="ryden-price-insight__marker ryden-price-insight__marker--max ryden-price-insight__marker--bound"
+                  role="button"
+                  tabIndex={0}
+                  title={maxFmt}
+                  aria-label={maxFmt}
+                  style={{ left: '100%' }}
+                  onClick={() => applyBound(insight.maxPrice)}
+                  onKeyDown={onBoundKeyDown(insight.maxPrice)}
+                >
+                  <span className="ryden-price-insight__marker-dot" />
+                </div>
                 {userPct != null ? (
                   <div
                     className={`ryden-price-insight__marker ryden-price-insight__marker--user${
@@ -294,8 +282,8 @@ export default function PriceMarketInsightCard({
                     }`}
                     role="slider"
                     tabIndex={0}
-                    aria-valuemin={range?.min ?? 0}
-                    aria-valuemax={range?.max ?? 0}
+                    aria-valuemin={insight.minPrice}
+                    aria-valuemax={insight.maxPrice}
                     aria-valuenow={userPrice ?? 0}
                     title={userLabel}
                     aria-label={userLabel}

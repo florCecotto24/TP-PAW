@@ -212,6 +212,7 @@ export const rydenI18n = {
     'publishCar.form.pricePerDay': 'Precio por día',
     'car.price.insight.min': 'Mínimo',
     'car.price.insight.avg': 'Promedio',
+    'car.price.insight.reference': 'Valor de referencia',
     'car.price.insight.max': 'Máximo',
     'car.price.insight.noMarket':
       'No hay otros autos del mismo modelo publicados; ingresá el precio manualmente.',
@@ -425,6 +426,7 @@ export const rydenI18n = {
     'publishCar.form.pricePerDay': 'Price per day',
     'car.price.insight.min': 'Minimum',
     'car.price.insight.avg': 'Average',
+    'car.price.insight.reference': 'Reference value',
     'car.price.insight.max': 'Maximum',
     'car.price.insight.noMarket':
       'No other cars of the same model are published; enter the price manually.',
