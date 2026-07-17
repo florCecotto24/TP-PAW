@@ -405,8 +405,6 @@ class ReservationMessageServiceImplTest {
         Mockito.when(message.getSender()).thenReturn(rider);
         Mockito.when(message.getBody()).thenReturn("When can I pick up?");
         Mockito.when(message.getCreatedAt()).thenReturn(OffsetDateTime.now(ZoneOffset.UTC));
-        Mockito.when(message.getAttachment()).thenReturn(null);
-        Mockito.when(message.getAttachmentFileId()).thenReturn(null);
         Mockito.when(message.isSeen()).thenReturn(false);
 
         Mockito.when(reservationMessageDao.findPendingEmailNotification(200)).thenReturn(List.of(message));

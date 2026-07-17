@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.services.user;
 
 import java.time.LocalDate;
+import java.util.Locale;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Assertions;
@@ -327,6 +328,8 @@ public class UserServiceImplTest {
                 .build();
         Mockito.when(userDao.getUserById(10L)).thenReturn(Optional.of(granting));
         Mockito.when(userDao.getUserById(20L)).thenReturn(Optional.of(target));
+        Mockito.when(userLocaleService.resolveMailLocaleOrElse(20L, Locale.ENGLISH))
+                .thenReturn(Locale.ENGLISH);
 
         // 2. Execute and 3. Assert
         Assertions.assertDoesNotThrow(() -> userService.promoteToAdmin(20L, 10L));
