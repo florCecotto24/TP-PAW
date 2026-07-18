@@ -203,7 +203,8 @@ paths:
         Mismo endpoint de colección, dos variantes discriminadas por Content-Type:
         - `application/vnd.paw.user.v1+json` (anónimo): "registrarse" = crear el
           recurso usuario. NO existe /register. Queda con emailVerified=false y
-          dispara un OTP por email. Reenviar OTP: POST /users/{id}/credentials.
+          dispara un OTP por email. Reenviar OTP: seguir `links.credentials` del
+          UserDto (201) hacia POST /users/{id}/credentials — no inventar el path.
           Verificar: Basic auth email:otp (ver securitySchemes.basicAuth).
         - `application/vnd.paw.admincreateuser.v1+json` (solo admin, Bearer): crea
           una cuenta ya pre-verificada con `role=admin`; dispara un email de
@@ -422,9 +423,10 @@ paths:
       tags: [users]
       summary: Comprobar membresía en favoritos (self, sin mutación)
       description: >
-        Membresía canónica de la entidad débil FavCar. URI = `{user.links.favorites}/{carId}`
-        donde `carId` es el último segmento de `car.links.self` (no se inventa `/users/{id}/…`
-        desde cero). 204 cuando el auto está en favoritos; 404 cuando no lo está o el auto no existe.
+        Membresía canónica de la entidad débil FavCar. Descubrir la URN expandiendo
+        `user.links.favorites-item-template` (RFC 6570 `{carId}`) con el último segmento
+        de `car.links.self` — no concatenar `{favorites}/{carId}` a mano.
+        204 cuando el auto está en favoritos; 404 cuando no lo está o el auto no existe.
       responses:
         "204": { description: Es favorito. }
         "403": { $ref: "#/components/responses/Forbidden" }
@@ -459,16 +461,16 @@ paths:
       description: >
         Tras POST /users el servidor envía un OTP por mail. Este endpoint
         reemite el código si aplica (200 OK con cuerpo vacío, siempre uniforme).
-        La verificación en sí es Basic auth email:otp — el OTP actúa como
+        Descubrir la URN vía `links.credentials` del user no verificado (no hardcodear
+        el path). La verificación en sí es Basic auth email:otp — el OTP actúa como
         password, se consume al autenticar y devuelve JWT en headers (D3).
         Anti-enumeración: la respuesta es indistinguible si el usuario no existe,
-        ya está verificado o ya tiene un código activo.
+        ya está verificado, ya tiene un código activo, o se excedió el cupo de emisión.
 
-        **Rate limit (S7):** la *emisión* (este POST) no aplica cupo por IP ni por
-        email — la respuesta uniforme y el coste de entrega del mail son la
-        mitigación anti-spam/abuso. El *intento de verificación* (Basic OTP)
-        sí está rate-limited (`OtpAttemptLimiter`: fallos por email, ventana
-        configurable, tipicamente 8/15 min) y responde 429 `otp_rate_limited`.
+        **Rate limit:** la *emisión* (este POST) aplica cupo por email
+        (`OtpAttemptLimiter` key space `issue:…`, misma tabla `otp_attempt_windows`).
+        Sobre cupo → 200 silencioso (anti-enumeración). El *intento de verificación*
+        (Basic OTP) sí está rate-limited por fallos y responde 429 `otp_rate_limited`.
       security:
         - {}
       responses:
@@ -643,7 +645,8 @@ paths:
             type: string
             example: application/vnd.paw.car.summary.v1+json
           description: >
-            Selecciona `car.summary.v1+json` (teaser) o `car.v1+json`; no cambia
+            Selecciona `car.summary.v1+json` (teaser), `car.v1+json` o
+            `car.private.v1+json` (catálogo admin con patente); no cambia
             filtros ni membresía. El catálogo admin se solicita con `status=all`.
         - name: q
           in: query
@@ -755,6 +758,10 @@ paths:
               schema:
                 type: array
                 items: { $ref: "#/components/schemas/CarDto" }
+            application/vnd.paw.car.private.v1+json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/CarPrivateDto" }
         "204": { description: Sin resultados. }
     post:
       tags: [cars]
@@ -785,8 +792,8 @@ paths:
           headers:
             Location: { $ref: "#/components/headers/Location" }
           content:
-            application/vnd.paw.car.v1+json:
-              schema: { $ref: "#/components/schemas/CarDto" }
+            application/vnd.paw.car.private.v1+json:
+              schema: { $ref: "#/components/schemas/CarPrivateDto" }
         "400": { $ref: "#/components/responses/ValidationError" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403":
@@ -799,12 +806,12 @@ paths:
       tags: [cars]
       summary: Detalle o teaser de un auto (misma URI, MIME distinto)
       description: >
-        `Accept: application/vnd.paw.car.v1+json` → representación completa (`CarDto`).
-        `Accept: application/vnd.paw.car.summary.v1+json` → teaser (`CarSummaryDto`),
-        la misma forma que en colecciones. Sin un Accept de summary explícito se
-        responde el detalle completo. Respuestas incluyen `ETag` derivado de
-        `updatedAt` y el MIME negociado; revalidar con `If-None-Match` para
-        `304 Not Modified` sin cuerpo.
+        `Accept: application/vnd.paw.car.v1+json` → detalle público (`CarDto`, sin patente).
+        `Accept: application/vnd.paw.car.private.v1+json` → detalle owner/admin (`CarPrivateDto`,
+        con patente); 403 si no sos owner/admin.
+        `Accept: application/vnd.paw.car.summary.v1+json` → teaser (`CarSummaryDto`).
+        Sin Accept de summary/private explícito se responde el detalle público.
+        Respuestas incluyen `ETag` derivado de `updatedAt` y el MIME negociado.
       parameters:
         - name: Accept
           in: header
@@ -812,14 +819,15 @@ paths:
             type: string
             example: application/vnd.paw.car.v1+json
           description: >
-            `car.v1+json` (detalle) o `car.summary.v1+json` (teaser). Misma URN.
+            `car.v1+json` (público), `car.private.v1+json` (owner/admin + plate) o
+            `car.summary.v1+json` (teaser). Misma URN.
       security: []
       responses:
         "200":
           description: Auto.
           headers:
             ETag:
-              description: Versión de la representación (`car-{id}-{summary|detail}-{updatedAtMillis}`).
+              description: Versión de la representación (`car-{id}-{summary|detail|private}-{updatedAtMillis}`).
               schema: { type: string }
             Vary:
               description: Negociación por `Accept`.
@@ -827,10 +835,17 @@ paths:
           content:
             application/vnd.paw.car.v1+json:
               schema: { $ref: "#/components/schemas/CarDto" }
+            application/vnd.paw.car.private.v1+json:
+              schema: { $ref: "#/components/schemas/CarPrivateDto" }
             application/vnd.paw.car.summary.v1+json:
               schema: { $ref: "#/components/schemas/CarSummaryDto" }
         "304":
           $ref: "#/components/responses/NotModified"
+        "403":
+          description: Se pidió `car.private` sin ser owner/admin.
+          content:
+            application/vnd.paw.error.v1+json:
+              schema: { $ref: "#/components/schemas/ErrorDto" }
         "404": { $ref: "#/components/responses/NotFound" }
     patch:
       tags: [cars]
@@ -853,8 +868,8 @@ paths:
         "200":
           description: Auto actualizado.
           content:
-            application/vnd.paw.car.v1+json:
-              schema: { $ref: "#/components/schemas/CarDto" }
+            application/vnd.paw.car.private.v1+json:
+              schema: { $ref: "#/components/schemas/CarPrivateDto" }
         "400": { $ref: "#/components/responses/ValidationError" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
@@ -1744,9 +1759,10 @@ paths:
       summary: Listar modelos pendientes (admin)
       description: >
         Listado admin de modelos pendientes de aprobación. Sólo soporta la proyección
-        pendiente (validated=false u omitido): devuelve TODOS los modelos pendientes, incluidos
-        los de marcas ya validadas (que de otro modo quedarían invisibles para el admin).
-        Sin paginación (cola de moderación acotada). `validated=true` → 400.
+        pendiente (validated=false u omitido): incluye modelos pendientes de marcas ya
+        validadas (que de otro modo quedarían invisibles para el admin).
+        Paginado con `page` / `pageSize`, headers `Link` + `X-Total-Count`.
+        `validated=true` → 400.
 
         **Representación embebida (patrón B):** catálogo admin; cada `ModelDto`
         incluye `links.self`.
@@ -1756,11 +1772,16 @@ paths:
           required: false
           schema: { type: boolean, enum: [false] }
           description: Omitido o false = cola pendiente. true → 400.
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/pageSize"
       security:
         - bearerAuth: []
       responses:
         "200":
           description: Modelos pendientes.
+          headers:
+            Link: { $ref: "#/components/headers/Link" }
+            X-Total-Count: { $ref: "#/components/headers/X-Total-Count" }
           content:
             application/vnd.paw.model.v1+json:
               schema:
@@ -2116,7 +2137,7 @@ components:
         links:
           allOf:
             - $ref: "#/components/schemas/Links"
-          description: self, profilePicture, cars, reservations (riderId), owned-reservations (ownerId), favorites, reviews.
+          description: self, profilePicture (siempre — presencia de bytes vía hasProfilePicture / GET), cars, reviews, credentials (solo mientras emailVerified=false).
 
     UserPrivateDto:
       type: object
@@ -2138,6 +2159,7 @@ components:
         identityValidated: { type: boolean }
         licenseUploaded: { type: boolean }
         identityUploaded: { type: boolean }
+        hasProfilePicture: { type: boolean, description: True cuando hay bytes de foto; links.profilePicture se anuncia siempre. }
         blocked: { type: boolean }
         role: { type: string, enum: [user, admin] }
         ratingAsRider: { type: number, nullable: true }
@@ -2145,7 +2167,11 @@ components:
         links:
           allOf:
             - $ref: "#/components/schemas/Links"
-          description: self, profilePicture, cars, reservations (riderId), owned-reservations (ownerId), favorites, reviews, identityDocument, licenseDocument, blocked-overdue-reservation (when blocked and exactly one overdue refund proof).
+          description: >
+            self, profilePicture (siempre), cars, reservations, owned-reservations, favorites,
+            favorites-item-template (RFC 6570 …/favorites/{carId}), reviews, identityDocument,
+            licenseDocument, credentials (solo mientras emailVerified=false),
+            blocked-overdue-reservation (cuando aplica).
 
     UserCreateDto:
       type: object
@@ -2242,8 +2268,11 @@ components:
 
     CarDto:
       type: object
+      description: >
+        Detalle público (`Accept: application/vnd.paw.car.v1+json`). El campo `plate`
+        es siempre null / omitible — la patente solo viaja en `CarPrivateDto`.
       properties:
-        plate: { type: string, nullable: true }
+        plate: { type: string, nullable: true, description: Siempre null en la representación pública. }
         year: { type: integer, nullable: true }
         powertrain: { $ref: "#/components/schemas/Powertrain" }
         transmission: { $ref: "#/components/schemas/Transmission" }
@@ -2278,7 +2307,17 @@ components:
         links:
           allOf:
             - $ref: "#/components/schemas/Links"
-          description: self, owner, model, brand, cover, pictures, availabilities, bookable-segments, insurance, reviews, similar, price-insight.
+
+    CarPrivateDto:
+      allOf:
+        - $ref: "#/components/schemas/CarDto"
+        - type: object
+          required: [plate]
+          description: >
+            Detalle owner/admin (`Accept: application/vnd.paw.car.private.v1+json`).
+            Misma URN que CarDto; 403 si se pide sin permiso.
+          properties:
+            plate: { type: string, description: Patente del vehículo (solo owner/admin). }
 
     CarCreateDto:
       type: object
@@ -2370,7 +2409,7 @@ components:
         links:
           allOf:
             - $ref: "#/components/schemas/Links"
-          description: neighborhood (cuando el segmento tiene barrio).
+          description: neighborhood, availability (URN del período), car (opcional).
 
     # ----- RESERVATION -----
     ReservationStatus:
@@ -2555,6 +2594,10 @@ components:
         maxPrice: { type: number }
         averagePrice: { type: number }
         sampleCount: { type: integer, format: int64 }
+        links:
+          allOf:
+            - $ref: "#/components/schemas/Links"
+          description: self (URI canónica del insight bajo el modelo).
 
     ModelCreateDto:
       type: object

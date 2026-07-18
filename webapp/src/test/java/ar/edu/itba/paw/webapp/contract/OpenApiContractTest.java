@@ -312,6 +312,7 @@ class OpenApiContractTest {
                 VndMediaType.CAR_SUMMARY_V1_JSON,
                 VndMediaType.CAR_SIMILAR_V1_JSON,
                 VndMediaType.CAR_V1_JSON,
+                VndMediaType.CAR_PRIVATE_V1_JSON,
                 VndMediaType.AVAILABILITY_V1_JSON,
                 VndMediaType.BRAND_V1_JSON,
                 VndMediaType.MODEL_V1_JSON,

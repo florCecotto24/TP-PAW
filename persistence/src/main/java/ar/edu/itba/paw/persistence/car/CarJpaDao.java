@@ -412,7 +412,7 @@ public class CarJpaDao implements CarDao {
     @Override
     @Transactional
     public void setCarStatus(final long carId, final Car.Status newStatus) {
-        final Car car = em.find(Car.class, carId);
+        final Car car = em.find(Car.class, carId, LockModeType.PESSIMISTIC_WRITE);
         if (car != null) {
             car.setStatus(newStatus);
             car.setUpdatedAt(OffsetDateTime.now());
@@ -509,7 +509,7 @@ public class CarJpaDao implements CarDao {
     @Transactional
     public boolean updateCarStatusIfCurrent(
             final long carId, final Car.Status newStatus, final Car.Status expected) {
-        final Car car = em.find(Car.class, carId);
+        final Car car = em.find(Car.class, carId, LockModeType.PESSIMISTIC_WRITE);
         if (car == null || car.getStatus() != expected) {
             return false;
         }

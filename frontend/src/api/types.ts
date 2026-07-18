@@ -23,6 +23,7 @@ export interface UserDto {
   identityValidated: boolean;
   licenseUploaded?: boolean;
   identityUploaded?: boolean;
+  hasProfilePicture?: boolean;
   blocked?: boolean;
   /** Deep-link a la reserva con comprobante de reembolso vencido (links.blocked-overdue-reservation). */
   role?: 'user' | 'admin';
@@ -35,8 +36,12 @@ export interface UserDto {
     reservations?: string;
     'owned-reservations'?: string;
     favorites?: string;
+    /** RFC 6570 …/favorites/{carId} on user.private. */
+    'favorites-item-template'?: string;
     reviews?: string;
     profilePicture?: string;
+    /** Present while email is unverified — POST re-issues the verification OTP. */
+    credentials?: string;
   };
 }
 

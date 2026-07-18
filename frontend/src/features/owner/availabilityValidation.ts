@@ -64,13 +64,28 @@ export function firstAvailabilityValidationError(
   form: AvailabilityCreateDto,
   minStartDate?: string,
 ): AvailabilityValidationError | null {
-  const limits = listingLimits();
+  return (
+    availabilityDatesError(form, minStartDate)
+    ?? availabilityPriceError(form.dayPrice)
+    ?? availabilityStreetError(form.startPointStreet)
+    ?? availabilityNumberError(form.startPointNumber)
+    ?? availabilityNeighborhoodError(form.neighborhoodUri)
+    ?? availabilityCheckTimesError(form.checkInTime, form.checkOutTime)
+  );
+}
 
+export function availabilityDatesError(
+  form: Pick<AvailabilityCreateDto, 'startDate' | 'endDate'>,
+  minStartDate?: string,
+): AvailabilityValidationError | null {
   if (!form.startDate || !form.endDate) return 'datesRequired';
   if (form.endDate < form.startDate) return 'invalidDateRange';
   if (minStartDate && form.startDate < minStartDate) return 'riderLeadTime';
+  return null;
+}
 
-  const price = form.dayPrice;
+export function availabilityPriceError(price: number): AvailabilityValidationError | null {
+  const limits = listingLimits();
   if (!Number.isFinite(price) || price <= 0) return 'priceInvalid';
   if (price < limits.pricePerDayMin) return 'priceBelowMin';
   if (
@@ -82,20 +97,36 @@ export function firstAvailabilityValidationError(
   ) {
     return 'priceDigits';
   }
+  return null;
+}
 
-  const street = form.startPointStreet?.trim() ?? '';
+export function availabilityStreetError(streetRaw: string | undefined): AvailabilityValidationError | null {
+  const limits = listingLimits();
+  const street = streetRaw?.trim() ?? '';
   if (!street) return 'streetRequired';
   if (street.length > limits.addressStreetMaxLength) return 'streetTooLong';
+  return null;
+}
 
-  const number = form.startPointNumber?.trim() ?? '';
+export function availabilityNumberError(numberRaw: string | undefined): AvailabilityValidationError | null {
+  const limits = listingLimits();
+  const number = numberRaw?.trim() ?? '';
   if (number && !/^[0-9]*$/.test(number)) return 'numberNotDigits';
   if (number.length > limits.addressNumberMaxLength) return 'numberTooLong';
+  return null;
+}
 
-  if (!form.neighborhoodUri?.trim()) return 'neighborhoodRequired';
+export function availabilityNeighborhoodError(uri: string | undefined): AvailabilityValidationError | null {
+  if (!uri?.trim()) return 'neighborhoodRequired';
+  return null;
+}
 
-  if (form.checkInTime && form.checkOutTime && !compareTimes(form.checkInTime, form.checkOutTime)) {
+export function availabilityCheckTimesError(
+  checkIn: string | undefined,
+  checkOut: string | undefined,
+): AvailabilityValidationError | null {
+  if (checkIn && checkOut && !compareTimes(checkIn, checkOut)) {
     return 'checkOutNotAfterCheckIn';
   }
-
   return null;
 }

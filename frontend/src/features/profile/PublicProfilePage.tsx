@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useParams, useLocation } from 'react-router-dom';
+import { useParams, useLocation, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { fetchUser, fetchUserCars, getUserReviews, userCarsLink, userReviewsLink } from './api';
 import { formatDateLong, formatMonthYear } from '../../i18n/dateFormat';
@@ -25,8 +25,10 @@ export default function PublicProfilePage() {
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
   const userSelfFromNav = (location.state as PublicProfileLocationState | null)?.userSelf;
+  const [searchParams] = useSearchParams();
   const userUri = resolveResourceUri({
     stateUri: userSelfFromNav,
+    querySelf: searchParams.get('self'),
     routeId: id,
     collection: 'users',
   });

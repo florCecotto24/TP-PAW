@@ -141,7 +141,7 @@ public class ReservationWorkflowServiceImpl implements ReservationWorkflowServic
                 Instant.now().plus(pricingService.getConfiguredPaymentProofDeadlineHours(), ChronoUnit.HOURS),
                 ZoneOffset.UTC);
         return createReservationForCar(
-                rider.getId(), carId, car, startDate, endDate,
+                rider.getId(), carId, startDate, endDate,
                 Reservation.Status.PENDING, proofDeadline, cbu);
     }
 
@@ -175,6 +175,12 @@ public class ReservationWorkflowServiceImpl implements ReservationWorkflowServic
         pricingService.validateRiderReservationPricingInterval(
                 carId, null, startDate, endDate, car.getMinimumRentalDays());
         carService.lockForReservationWrite(carId);
+        // Re-check under the booking lock (TOCTOU vs pause / exhaustion / LACK_DOC).
+        final Car lockedCar = carService.getCarById(carId)
+                .orElseThrow(() -> new RiderReservationException(MessageKeys.RESERVATION_RIDER_LISTING_NOT_FOUND));
+        if (lockedCar.getStatus() != Car.Status.ACTIVE) {
+            throw new RiderReservationException(MessageKeys.RESERVATION_CAR_NOT_ACTIVE);
+        }
         if (reservationService.hasActiveOverlapByCarExcluding(carId, startDate, endDate, reservationId)) {
             throw new ReservationConflictException(MessageKeys.RESERVATION_CONFLICT_OVERLAP);
         }
@@ -231,13 +237,18 @@ public class ReservationWorkflowServiceImpl implements ReservationWorkflowServic
     private Reservation createReservationForCar(
             final long riderId,
             final long carId,
-            final Car car,
             final OffsetDateTime startDate,
             final OffsetDateTime endDate,
             final Reservation.Status status,
             final OffsetDateTime paymentProofDeadlineAt,
             final String ownerCbu) {
         carService.lockForReservationWrite(carId);
+        // Re-check under the booking lock (TOCTOU vs pause / exhaustion / LACK_DOC).
+        final Car lockedCar = carService.getCarById(carId)
+                .orElseThrow(() -> new RiderReservationException(MessageKeys.RESERVATION_RIDER_LISTING_NOT_FOUND));
+        if (lockedCar.getStatus() != Car.Status.ACTIVE) {
+            throw new RiderReservationException(MessageKeys.RESERVATION_CAR_NOT_ACTIVE);
+        }
         if (reservationService.hasActiveOverlapByCar(carId, startDate, endDate)) {
             throw new ReservationConflictException(MessageKeys.RESERVATION_CONFLICT_OVERLAP);
         }
@@ -249,7 +260,7 @@ public class ReservationWorkflowServiceImpl implements ReservationWorkflowServic
         final Reservation reservation = reservationService.createReservationForCar(
                 riderId, carId, startDate, endDate, status, plan.total(), paymentProofDeadlineAt);
         reservationAvailabilityService.insertCoveringAvailabilities(reservation.getId(), plan.coveringAvailabilityIds());
-        mailComposer.sendReservationCreatedEmail(riderId, carId, reservation, car, plan.firstDayAvailability(), ownerCbu);
+        mailComposer.sendReservationCreatedEmail(riderId, carId, reservation, lockedCar, plan.firstDayAvailability(), ownerCbu);
         LOGGER.atInfo()
                 .addArgument(reservation.getId()).addArgument(carId).addArgument(riderId).addArgument(status)
                 .log("Created car-based reservation id={} carId={} riderId={} status={}");

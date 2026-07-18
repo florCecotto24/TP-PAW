@@ -22,6 +22,7 @@ import ar.edu.itba.paw.dto.PublishCarRequest;
 import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.services.car.CarPublishingService;
 import ar.edu.itba.paw.services.car.CarService;
+import ar.edu.itba.paw.webapp.api.common.VndMediaType;
 import ar.edu.itba.paw.webapp.dto.rest.CarDto;
 import ar.edu.itba.paw.webapp.form.car.CarCreateForm;
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
@@ -100,8 +101,10 @@ public final class CarPublishSupport {
                 .path(String.valueOf(car.getId()))
                 .build();
         final Car refreshed = carService.getCarById(car.getId()).orElse(car);
-        // Owner just created this car: plate is visible on their own detail view.
-        return Response.created(location).entity(CarDto.from(refreshed, uriInfo, true)).build();
+        return Response.created(location)
+                .entity(CarDto.fromPrivate(refreshed, uriInfo))
+                .type(VndMediaType.CAR_PRIVATE_V1_JSON)
+                .build();
     }
 
     private CarCreateForm readCarCreateForm(final InputStream carPart) throws IOException {

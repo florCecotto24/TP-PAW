@@ -67,6 +67,9 @@ public class CarServiceImplTest {
     @Mock
     private CarGalleryMediaService carGalleryMediaService;
 
+    @Mock
+    private CarExhaustionRowProcessor carExhaustionRowProcessor;
+
     @InjectMocks
     private CarServiceImpl carService;
 

@@ -10,6 +10,7 @@ import javax.ws.rs.core.UriInfo;
 
 import org.springframework.stereotype.Component;
 
+import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.models.dto.car.BookableSegmentProjection;
 import ar.edu.itba.paw.services.car.CarAvailabilityService;
 import ar.edu.itba.paw.webapp.dto.rest.BookableSegmentDto;
@@ -33,7 +34,12 @@ public final class BookableSegmentRepresentationSupport {
             final long carId,
             final RydenUserDetails viewer,
             final UriInfo uriInfo) {
-        carResourceAccess.requireViewableCar(carId, viewer);
+        final Car car = carResourceAccess.requireViewableCar(carId, viewer);
+        // Bookable calendar must match POST /reservations: only ACTIVE listings are bookable.
+        // Owner/admin still use availabilities / effective calendar endpoints for management.
+        if (car.getStatus() != Car.Status.ACTIVE) {
+            return Response.noContent().build();
+        }
         final List<BookableSegmentProjection> segments =
                 carAvailabilityService.getBookableSegmentsForRiderDatePickerByCar(carId, Instant.now());
         final List<BookableSegmentDto> dtos = segments.stream()

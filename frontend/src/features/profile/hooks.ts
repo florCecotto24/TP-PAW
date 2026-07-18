@@ -14,13 +14,6 @@ export function useMyUserUri(): string | null {
   return userUri ?? self ?? null;
 }
 
-/** Id numérico propio extraído de la URN, o null. Útil para comparaciones. */
-export function useMyUserId(): string | null {
-  const uri = useMyUserUri();
-  if (!uri) return null;
-  return uri.split('/').filter(Boolean).pop() ?? null;
-}
-
 /**
  * Id numérico extraído de cualquier URN (".../users/5" → "5").
  *

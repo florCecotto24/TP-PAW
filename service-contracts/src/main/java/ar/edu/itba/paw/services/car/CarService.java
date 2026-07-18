@@ -227,9 +227,6 @@ public interface CarService {
     /** Clears the insurance file reference for the car, optionally moving the car back to {@link Car.Status#LACK_DOC}. */
     void clearCarInsuranceDocument(long ownerId, long carId);
 
-    /** Returns true when the car has an insurance document on file. */
-    boolean hasUploadedInsurance(long carId);
-
     /**
      * Returns {@code true} when the car's linked catalog model exists but has not yet been
      * validated by an admin (i.e. was created through the "Other" free-text path during publish).

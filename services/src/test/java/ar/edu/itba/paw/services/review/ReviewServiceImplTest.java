@@ -3,12 +3,7 @@ package ar.edu.itba.paw.services.review;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-import java.util.Collections;
-import java.util.List;
 import java.util.Optional;
-
-import ar.edu.itba.paw.models.dto.car.CarPublicReview;
-import ar.edu.itba.paw.models.dto.Page;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -99,13 +94,6 @@ class ReviewServiceImplTest {
                 .carReturned(carReturned)
                 .carReturnedAt(carReturnedAt)
                 .build();
-    }
-
-    @Test
-    void testGetReviewCommentMaxLengthReflectsPolicy() {
-        final int max = service.getReviewCommentMaxLength();
-
-        Assertions.assertEquals(500, max);
     }
 
     @Test
@@ -308,33 +296,6 @@ class ReviewServiceImplTest {
 
         // 2.Act / 3.Assert
         Assertions.assertDoesNotThrow(() -> service.submitRiderReviewOfOwner(RIDER_ID, RESERVATION_ID, null, null));
-    }
-
-    @Test
-    void testGetCarPublicReviewsReturnsWhateverTheDaoProvides() {
-        final CarPublicReview oneReview = new CarPublicReview(
-                "Ada", "Lovelace",
-                OffsetDateTime.of(2026, 5, 1, 12, 0, 0, 0, ZoneOffset.UTC),
-                5, "Loved the car", null);
-        final Page<CarPublicReview> daoPage = new Page<>(List.of(oneReview), 0, 6, 1L);
-        reviewDao.stubCarPublicReviews(CAR_ID, 0, 6, daoPage);
-
-        final Page<CarPublicReview> actual = service.getCarPublicReviews(CAR_ID, 0, 6);
-
-        Assertions.assertSame(daoPage, actual);
-        Assertions.assertEquals(1, actual.getContent().size());
-        Assertions.assertEquals(1L, actual.getTotalItems());
-    }
-
-    @Test
-    void testGetCarPublicReviewsReturnsEmptyPageWhenCarHasNoReviews() {
-        final Page<CarPublicReview> emptyPage = new Page<>(Collections.emptyList(), 0, 6, 0L);
-        reviewDao.stubCarPublicReviews(CAR_ID, 0, 6, emptyPage);
-
-        final Page<CarPublicReview> actual = service.getCarPublicReviews(CAR_ID, 0, 6);
-
-        Assertions.assertTrue(actual.getContent().isEmpty());
-        Assertions.assertEquals(0L, actual.getTotalItems());
     }
 
     @Test

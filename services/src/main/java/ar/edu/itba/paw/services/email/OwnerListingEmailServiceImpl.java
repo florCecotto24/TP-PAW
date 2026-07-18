@@ -111,7 +111,10 @@ public class OwnerListingEmailServiceImpl implements OwnerListingEmailService {
                 riderCtx.setVariable("hasDeliveryLocation", hasDelivery);
                 riderCtx.setVariable("deliveryLocation", hasDelivery ? delivery : "");
                 riderCtx.setVariable("ctaUrl",
-                        mailPublicUrls.absolutePath("/my-reservations/" + reservationPayload.getReservationId()));
+                        mailPublicUrls.absolutePathWithSelf(
+                                "/my-reservations/" + reservationPayload.getReservationId(),
+                                "reservations",
+                                reservationPayload.getReservationId()));
                 riderCtx.setVariable("cancellationIntroRider",
                         emailMessageSource.getMessage(
                                 "mail.reservationCancelled.intro.generic", null, riderLocale));
@@ -133,7 +136,8 @@ public class OwnerListingEmailServiceImpl implements OwnerListingEmailService {
             ownerCtx.setVariable("vehicleLabel", ownerPayload.getVehicleLabel());
             ownerCtx.setVariable("ownerFullName", ownerPayload.getOwnerFullName());
             ownerCtx.setVariable("pricePerDay", ownerPayload.getReservationTotal());
-            ownerCtx.setVariable("ctaUrl", mailPublicUrls.absolutePath("/my-cars/car/" + ownerPayload.getCarId()));
+            ownerCtx.setVariable("ctaUrl", mailPublicUrls.absolutePathWithSelf(
+                    "/my-cars/car/" + ownerPayload.getCarId(), "cars", ownerPayload.getCarId()));
             sendListingDeletionToOwner(ownerPayload, ownerCtx);
             LOGGER.atInfo().addArgument(ownerPayload.getOwnerEmail()).addArgument(ownerPayload.getCarId())
                     .log("Listing deletion owner email sent to {} (car id={})");
@@ -188,7 +192,10 @@ public class OwnerListingEmailServiceImpl implements OwnerListingEmailService {
         ctx.setVariable("startDateFormatted", mailDispatch.formatWallDateTime(payload.getStartDate(), mailLocale));
         ctx.setVariable("endDateFormatted", mailDispatch.formatWallDateTime(payload.getEndDate(), mailLocale));
         ctx.setVariable("ctaUrl",
-                mailPublicUrls.absolutePath("/my-reservations/" + payload.getReservationId() + "?role=owner"));
+                mailPublicUrls.absolutePathWithSelf(
+                        "/my-reservations/" + payload.getReservationId() + "?role=owner",
+                        "reservations",
+                        payload.getReservationId()));
         final String to = payload.getRecipientEmail();
         try {
             mailDispatch.runMail(() -> {
@@ -226,7 +233,10 @@ public class OwnerListingEmailServiceImpl implements OwnerListingEmailService {
         ctx.setVariable("dueReminder", payload.isDueReminder());
         ctx.setVariable("dueRefundReminderHours", reservationTimingPolicy.getPaymentProofReminderLeadHours());
         ctx.setVariable("ctaUrl",
-                mailPublicUrls.absolutePath("/my-reservations/" + payload.getReservationId() + "?role=owner"));
+                mailPublicUrls.absolutePathWithSelf(
+                        "/my-reservations/" + payload.getReservationId() + "?role=owner",
+                        "reservations",
+                        payload.getReservationId()));
         final String to = payload.getRecipientEmail();
         try {
             mailDispatch.runMail(() -> {
@@ -319,7 +329,8 @@ public class OwnerListingEmailServiceImpl implements OwnerListingEmailService {
         ctx.setVariable("ownerFullName", payload.getOwnerFullName());
         ctx.setVariable("vehicleLabel", vehicleLabel);
         ctx.setVariable("cbuRequiredDigits", CbuRules.REQUIRED_DIGIT_LENGTH);
-        ctx.setVariable("ctaUrl", mailPublicUrls.absolutePath("/my-cars/car/" + carId));
+        ctx.setVariable("ctaUrl", mailPublicUrls.absolutePathWithSelf(
+                "/my-cars/car/" + carId, "cars", carId));
         ctx.setVariable("profileUrl", mailPublicUrls.absolutePath("/profile"));
         try {
             mailDispatch.runMail(() -> {
@@ -351,7 +362,8 @@ public class OwnerListingEmailServiceImpl implements OwnerListingEmailService {
         mailDispatch.setHtmlLangFromLocale(ctx, locale);
         ctx.setVariable("ownerFullName", payload.getOwnerFullName());
         ctx.setVariable("vehicleLabel", vehicleLabel);
-        ctx.setVariable("ctaUrl", mailPublicUrls.absolutePath("/my-cars/car/" + carId));
+        ctx.setVariable("ctaUrl", mailPublicUrls.absolutePathWithSelf(
+                "/my-cars/car/" + carId, "cars", carId));
         try {
             mailDispatch.runMail(() -> {
                 final String htmlContent = htmlTemplateEngine.process(LISTING_PAUSED_BY_ADMIN_TEMPLATE, ctx);

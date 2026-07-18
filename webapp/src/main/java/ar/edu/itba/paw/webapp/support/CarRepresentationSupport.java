@@ -10,7 +10,8 @@ import org.springframework.stereotype.Component;
 import ar.edu.itba.paw.webapp.api.common.VndMediaType;
 
 /**
- * Vendor MIME negotiation for car collections and item teasers (summary vs full detail).
+ * Vendor MIME negotiation for car collections and item teasers
+ * (summary vs public detail vs private detail with plate).
  */
 @Component
 public final class CarRepresentationSupport {
@@ -24,11 +25,12 @@ public final class CarRepresentationSupport {
             return false;
         }
         final MediaType full = MediaType.valueOf(VndMediaType.CAR_V1_JSON);
+        final MediaType privateFull = MediaType.valueOf(VndMediaType.CAR_PRIVATE_V1_JSON);
         final MediaType summary = MediaType.valueOf(VndMediaType.CAR_SUMMARY_V1_JSON);
         boolean wantsFull = false;
         boolean wantsSummary = false;
         for (final MediaType candidate : acceptable) {
-            if (candidate.isCompatible(full)) {
+            if (candidate.isCompatible(full) || candidate.isCompatible(privateFull)) {
                 wantsFull = true;
             }
             if (candidate.isCompatible(summary)) {
@@ -56,6 +58,30 @@ public final class CarRepresentationSupport {
                 continue;
             }
             if (candidate.isCompatible(summary)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Explicit {@code Accept: car.private.v1} opts into the plate-bearing representation.
+     * Wildcards resolve to the public {@code car.v1} (no plate), same policy as user private.
+     */
+    public boolean acceptsPrivateCar(final HttpHeaders headers) {
+        if (headers == null) {
+            return false;
+        }
+        final List<MediaType> acceptable = headers.getAcceptableMediaTypes();
+        if (acceptable == null || acceptable.isEmpty()) {
+            return false;
+        }
+        final MediaType privateType = MediaType.valueOf(VndMediaType.CAR_PRIVATE_V1_JSON);
+        for (final MediaType candidate : acceptable) {
+            if (isWildcard(candidate)) {
+                continue;
+            }
+            if (candidate.isCompatible(privateType)) {
                 return true;
             }
         }

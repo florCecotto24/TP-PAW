@@ -94,10 +94,12 @@ public class EmailServiceImplTest {
     public void testSendReservationConfirmationEmail() {
         Mockito.when(mailPublicUrls.absolutePath(Mockito.eq("/")))
                 .thenReturn("http://localhost/");
-        Mockito.when(mailPublicUrls.absolutePath(Mockito.eq("/my-reservations/1")))
-                .thenReturn("http://localhost/my-reservations/1");
-        Mockito.when(mailPublicUrls.absolutePath(Mockito.eq("/my-cars/car/10")))
-                .thenReturn("http://localhost/my-cars/car/10");
+        Mockito.when(mailPublicUrls.absolutePathWithSelf(
+                        Mockito.eq("/my-reservations/1"), Mockito.eq("reservations"), Mockito.eq(1L)))
+                .thenReturn("http://localhost/my-reservations/1?self=%2Freservations%2F1");
+        Mockito.when(mailPublicUrls.absolutePathWithSelf(
+                        Mockito.eq("/my-cars/car/10"), Mockito.eq("cars"), Mockito.eq(10L)))
+                .thenReturn("http://localhost/my-cars/car/10?self=%2Fcars%2F10");
 
         final Locale locale = Locale.ENGLISH;
         final String riderEmail = "rider@test.com";

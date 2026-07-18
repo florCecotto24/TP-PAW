@@ -16,6 +16,17 @@
     width: 100%;
 }
 
+.publish-gallery-media--video {
+    background-color: #212529;
+    display: block;
+}
+
+.publish-gallery-video-badge {
+    pointer-events: none;
+    text-shadow: 0 0 0.35rem rgba(0, 0, 0, 0.65);
+    z-index: 1;
+}
+
 .publish-gallery-cover-badge {
     position: absolute;
     top: 0.35rem;

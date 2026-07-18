@@ -31,8 +31,10 @@ export function carDetail(id: string | number, query?: Record<string, string>): 
   return `${base}?${new URLSearchParams(query)}`;
 }
 
-export function myCarDetail(id: string | number): string {
-  return `/my-cars/car/${id}`;
+export function myCarDetail(id: string | number, query?: Record<string, string>): string {
+  const base = `/my-cars/car/${id}`;
+  if (!query || Object.keys(query).length === 0) return base;
+  return `${base}?${new URLSearchParams(query)}`;
 }
 
 export function ownerReservationsCar(carId: string | number): string {
@@ -49,16 +51,22 @@ export function myReservationDetail(id: string | number, query?: Record<string, 
   return `${base}?${new URLSearchParams(query)}`;
 }
 
-export function reservationConfirmation(id: string | number): string {
-  return `/my-reservations/${id}/confirmation`;
+export function publicProfile(userId: string | number, query?: Record<string, string>): string {
+  const base = `/users/${userId}/profile`;
+  if (!query || Object.keys(query).length === 0) return base;
+  return `${base}?${new URLSearchParams(query)}`;
 }
 
-export function publicProfile(userId: string | number): string {
-  return `/users/${userId}/profile`;
+export function adminReservationChat(id: string | number, query?: Record<string, string>): string {
+  const base = `/admin/reservations/${id}/chat`;
+  if (!query || Object.keys(query).length === 0) return base;
+  return `${base}?${new URLSearchParams(query)}`;
 }
 
-export function adminReservationChat(id: string | number): string {
-  return `/admin/reservations/${id}/chat`;
+export function reservationConfirmation(id: string | number, query?: Record<string, string>): string {
+  const base = `/my-reservations/${id}/confirmation`;
+  if (!query || Object.keys(query).length === 0) return base;
+  return `${base}?${new URLSearchParams(query)}`;
 }
 
 export function withQuery(basePath: string, params: URLSearchParams): string {

@@ -18,7 +18,7 @@ public interface CarBrandDao {
     /**
      * SQL-paginated brand listing for {@code GET /brands}: {@code validated=null} keeps the
      * validated-first/alphabetical ordering of {@link #findAllOrdered()}, {@code true}/{@code false}
-     * filter the same way as {@link #findValidatedOrdered()}/{@link #findPendingOrdered()}. Counts
+     * filter the same way as {@link #findValidatedOrdered()}. Counts
      * via {@code SELECT COUNT} rather than sizing an already-loaded list.
      */
     Page<CarBrand> findPage(Boolean validated, int page, int pageSize);
@@ -34,9 +34,6 @@ public interface CarBrandDao {
 
     /** Inserts a new brand with the given validation flag. */
     CarBrand create(String name, boolean validated);
-
-    /** All unvalidated brands ordered alphabetically. */
-    List<CarBrand> findPendingOrdered();
 
     /** Removes a brand row by id; cascades to car_models via FK. */
     void deleteById(long brandId);

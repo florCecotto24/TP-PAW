@@ -53,37 +53,33 @@ function toQueryArray(value?: string | string[]): string[] | undefined {
 
 export async function listReservations(
   q: ReservationListQuery,
-  reservationsLink?: string,
+  reservationsLink: string,
 ): Promise<ApiResponse<ReservationSummaryDto[]>> {
-  // When the call starts from a user link that already encodes riderId/ownerId,
-  // do not re-send those keys (would duplicate query params).
-  const roleEncodedInLink = Boolean(reservationsLink);
-  const collectionRes = await getLinkCollectionPage<ReservationSummaryDto>(
-    sessionClient,
-    reservationsLink ?? getCollectionPath('reservations'),
-    {
-      collectionAccept: MediaTypes.reservationLinks,
-      itemAccept: MediaTypes.reservationSummary,
-      query: {
-        riderId: roleEncodedInLink ? undefined : q.riderId,
-        ownerId: roleEncodedInLink ? undefined : q.ownerId,
-        carId: q.carId,
-        status: toQueryArray(q.status),
-        riderStatus: toQueryArray(q.riderStatus),
-        q: q.q,
-        category: toQueryArray(q.category),
-        transmission: toQueryArray(q.transmission),
-        powertrain: toQueryArray(q.powertrain),
-        priceMin: q.priceMin,
-        priceMax: q.priceMax,
-        rating: toQueryArray(q.rating),
-        sort: q.sort,
-        page: q.page,
-        pageSize: q.pageSize,
-      },
+  // Always start from a user (or owned) reservations link — never invent the
+  // global `/reservations` collection path from bare riderId/ownerId.
+  if (!reservationsLink.trim()) {
+    throw new Error('reservations.list.missingLink');
+  }
+  return getLinkCollectionPage<ReservationSummaryDto>(sessionClient, reservationsLink, {
+    collectionAccept: MediaTypes.reservationLinks,
+    itemAccept: MediaTypes.reservationSummary,
+    query: {
+      // riderId/ownerId are already encoded in the user link; only filters remain.
+      carId: q.carId,
+      status: toQueryArray(q.status),
+      riderStatus: toQueryArray(q.riderStatus),
+      q: q.q,
+      category: toQueryArray(q.category),
+      transmission: toQueryArray(q.transmission),
+      powertrain: toQueryArray(q.powertrain),
+      priceMin: q.priceMin,
+      priceMax: q.priceMax,
+      rating: toQueryArray(q.rating),
+      sort: q.sort,
+      page: q.page,
+      pageSize: q.pageSize,
     },
-  );
-  return collectionRes;
+  });
 }
 
 export function getReservation(uri: string): Promise<ApiResponse<ReservationDto>> {
@@ -164,10 +160,6 @@ export function getCounterparty(counterpartyUri: string): Promise<ApiResponse<Co
   });
 }
 
-export function getAvailability(uri: string): Promise<ApiResponse<AvailabilityView>> {
-  return sessionClient.follow<AvailabilityView>(uri, { accept: MediaTypes.availability });
-}
-
 /** Sube un documento del rider (licencia/identidad) — PUT octet-stream. */
 export function uploadUserDocument(
   user: Pick<RiderUserView, 'links'>,
@@ -245,9 +237,8 @@ export interface ReviewInput {
   image?: File | null;
 }
 
-/** POST review (multipart) a `/reviews` con URN de reserva en el body. */
+/** POST review (multipart) a la colección discovery {@code reviews}; URN de reserva en el body. */
 export async function postReview(
-  reviewsUri: string,
   reservationUri: string,
   input: ReviewInput,
 ): Promise<ApiResponse<ReviewDto>> {
@@ -265,9 +256,7 @@ export async function postReview(
     });
   }
   const { body, contentType } = await encodeMultipart(parts);
-  // POST to the reviews collection (strip filter query from the list link).
-  const collectionPath = reviewsUri.split('?')[0];
-  return sessionClient.post<ReviewDto>(collectionPath, body, {
+  return sessionClient.post<ReviewDto>(getCollectionPath('reviews'), body, {
     accept: MediaTypes.review,
     contentType,
   });

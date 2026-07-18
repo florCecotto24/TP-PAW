@@ -6,8 +6,6 @@ import java.util.Locale;
 import java.util.Optional;
 
 import ar.edu.itba.paw.models.domain.car.Car;
-import ar.edu.itba.paw.models.domain.car.CarBrand;
-import ar.edu.itba.paw.models.domain.car.CarModel;
 import ar.edu.itba.paw.models.domain.reservation.Reservation;
 import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.models.dto.Page;
@@ -46,10 +44,6 @@ public interface AdminService {
 
     void rejectCarBrand(long brandId);
 
-    void validateCarModel(long modelId);
-
-    void rejectCarModel(long modelId);
-
     /**
      * Validates a pending catalog entry: validates the model and, if its brand is also pending, validates the brand.
      * Notifies by email each affected car owner indicating whether only the model or both brand and model were validated.
@@ -65,10 +59,6 @@ public interface AdminService {
     void rejectCatalogEntry(long modelId, Locale locale);
 
     Page<User> listUsers(int page, int pageSize, Boolean blocked, String role, String query);
-
-    List<CarBrand> findPendingBrands();
-
-    List<CarModel> findPendingModels();
 
     Page<Car> listCars(int page, int pageSize);
 

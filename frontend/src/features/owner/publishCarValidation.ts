@@ -36,18 +36,75 @@ export function validatePublishCarYear(year: string): string | null {
   return null;
 }
 
+/** Licence plate — {@code validation.plate.notBlank} / {@code validation.plate.size}. */
+export function validatePublishPlate(plate: string): string | null {
+  const limits = carLimits();
+  const normalized = normalizePlate(plate);
+  if (!normalized) return 'owner.publish.errors.plateRequired';
+  if (normalized.length < limits.plateMinLength || normalized.length > limits.plateMaxLength) {
+    return 'owner.publish.errors.plateSize';
+  }
+  return null;
+}
+
+export function validatePublishNewBrandName(name: string): string | null {
+  const limits = carLimits();
+  const brand = name.trim();
+  if (!brand) return 'owner.publish.errors.brandRequired';
+  if (brand.length < limits.brandMinLength || brand.length > limits.brandMaxLength) {
+    return 'owner.publish.errors.brandSize';
+  }
+  return null;
+}
+
+export function validatePublishNewModelName(name: string): string | null {
+  const limits = carLimits();
+  const model = name.trim();
+  if (!model) return 'owner.publish.errors.modelRequired';
+  if (model.length > limits.modelMaxLength) return 'owner.publish.errors.modelSize';
+  return null;
+}
+
+export function validatePublishDescription(description: string): string | null {
+  const limits = carLimits();
+  if (description.trim().length > limits.descriptionMaxLength) {
+    return 'owner.publish.errors.descriptionSize';
+  }
+  return null;
+}
+
+export function validatePublishMinimumRentalDays(raw: string): string | null {
+  const minDays = raw ? Number(raw) : 0;
+  if (!Number.isFinite(minDays) || minDays < 1) {
+    return 'owner.publish.errors.minimumRentalDaysInvalid';
+  }
+  return null;
+}
+
 function isAllowedGalleryMedia(file: File): boolean {
   const type = (file.type || '').toLowerCase();
-  return (
+  if (
     type.startsWith('image/')
     || type === 'video/mp4'
     || type === 'video/webm'
     || type === 'video/quicktime'
-  );
+  ) {
+    return true;
+  }
+  const name = (file.name || '').toLowerCase();
+  return /\.(jpe?g|png|gif|webp|mp4|webm|mov)$/.test(name);
+}
+
+/** True for gallery still images (not videos). Exported for cover-selection UI. */
+export function isGalleryImageFile(file: File): boolean {
+  const type = (file.type || '').toLowerCase();
+  if (type.startsWith('image/')) return true;
+  if (type.startsWith('video/')) return false;
+  return /\.(jpe?g|png|gif|webp)$/.test((file.name || '').toLowerCase());
 }
 
 function isImageFile(file: File): boolean {
-  return (file.type || '').toLowerCase().startsWith('image/');
+  return isGalleryImageFile(file);
 }
 
 export type PublishCarValidationInput = {
@@ -64,7 +121,6 @@ export type PublishCarValidationInput = {
 
 /** Devuelve la clave i18n (`owner.publish.errors.*`) del primer error encontrado, o null si OK. */
 export function firstPublishCarValidationError(input: PublishCarValidationInput): string | null {
-  const limits = carLimits();
   const upload = uploadLimits();
   const maxImageBytes = megabytesToBytes(upload.maxImageMegabytes);
   const maxVideoBytes = megabytesToBytes(upload.maxCarGalleryVideoMegabytes);
@@ -74,12 +130,9 @@ export function firstPublishCarValidationError(input: PublishCarValidationInput)
   if (!input.brandSel) return 'owner.publish.errors.brandRequired';
 
   if (input.brandSel === OTHER) {
-    const brand = input.newBrandName.trim();
-    if (!brand) return 'owner.publish.errors.brandRequired';
-    if (brand.length < limits.brandMinLength || brand.length > limits.brandMaxLength) {
-      return 'owner.publish.errors.brandSize';
-    }
-    if (input.modelSel !== OTHER || !input.newModelName.trim()) {
+    const brandError = validatePublishNewBrandName(input.newBrandName);
+    if (brandError) return brandError;
+    if (input.modelSel !== OTHER) {
       return 'owner.publish.errors.modelRequired';
     }
   } else if (!input.modelSel) {
@@ -87,20 +140,19 @@ export function firstPublishCarValidationError(input: PublishCarValidationInput)
   }
 
   if (input.modelSel === OTHER) {
-    const model = input.newModelName.trim();
-    if (!model) return 'owner.publish.errors.modelRequired';
-    if (model.length > limits.modelMaxLength) return 'owner.publish.errors.modelSize';
+    const modelError = validatePublishNewModelName(input.newModelName);
+    if (modelError) return modelError;
   }
 
-  const plate = normalizePlate(input.plate);
-  if (!plate) return 'owner.publish.errors.plateRequired';
-  if (plate.length < limits.plateMinLength || plate.length > limits.plateMaxLength) {
-    return 'owner.publish.errors.plateSize';
-  }
+  const plateError = validatePublishPlate(input.plate);
+  if (plateError) return plateError;
 
-  if (input.description.trim().length > limits.descriptionMaxLength) {
-    return 'owner.publish.errors.descriptionSize';
-  }
+  const yearError = validatePublishCarYear(input.year);
+  if (yearError) return yearError;
+
+  const descriptionError = validatePublishDescription(input.description);
+  if (descriptionError) return descriptionError;
+
 
   const galleryError = validateGalleryFiles(input.pictures, maxImageBytes, maxVideoBytes);
   if (galleryError) return galleryError;
@@ -111,11 +163,25 @@ export function firstPublishCarValidationError(input: PublishCarValidationInput)
   return null;
 }
 
+export type ValidateGalleryOptions = {
+  /**
+   * When false, skips the “at least one photo” rule so the picker can accept
+   * videos first and only warn until a still is added. Submit keeps the default.
+   */
+  requirePhoto?: boolean;
+};
+
+/**
+ * Gallery rules for publish. By default requires ≥1 still (submit / full form).
+ * Pass {@code requirePhoto: false} while accumulating files in the picker.
+ */
 export function validateGalleryFiles(
   files: File[],
   maxImageBytes = megabytesToBytes(uploadLimits().maxImageMegabytes),
   maxVideoBytes = megabytesToBytes(uploadLimits().maxCarGalleryVideoMegabytes),
+  options: ValidateGalleryOptions = {},
 ): string | null {
+  const requirePhoto = options.requirePhoto !== false;
   const galleryMaxItems = carLimits().galleryMaxItems;
   if (files.length === 0) return 'owner.publish.errors.picturesRequired';
   if (files.length > galleryMaxItems) return 'owner.publish.errors.picturesMax';
@@ -128,7 +194,14 @@ export function validateGalleryFiles(
       return 'owner.publish.errors.videoTooLarge';
     }
   }
+
+  if (requirePhoto && !files.some(isImageFile)) return 'owner.publish.errors.photoRequired';
   return null;
+}
+
+/** True when the selection has media but no still photo (soft field hint). */
+export function galleryNeedsPhoto(files: File[]): boolean {
+  return files.length > 0 && !files.some(isImageFile);
 }
 
 export function validateInsuranceFile(

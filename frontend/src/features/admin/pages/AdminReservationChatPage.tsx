@@ -34,10 +34,12 @@ export default function AdminReservationChatPage() {
   const location = useLocation();
   const messagesLinkFromNav = (location.state as AdminReservationChatLocationState | null)?.messagesLink;
   const reservationSelfFromNav = (location.state as AdminReservationChatLocationState | null)?.reservationSelf;
+  const [searchParams, setSearchParams] = useSearchParams();
   const errorMessage = useAdminErrorMessage();
 
   const reservationSelf = resolveResourceUri({
     stateUri: reservationSelfFromNav,
+    querySelf: searchParams.get('self'),
     routeId: id,
     collection: 'reservations',
   });
@@ -59,7 +61,6 @@ export default function AdminReservationChatPage() {
 
   // La página del chat vive en la URL (?page=N, 0-based como SearchPage) -> bookmarkeable
   // y resiste refresh: sin state se resuelve messages vía GET reserva (self canónico + links.messages).
-  const [searchParams, setSearchParams] = useSearchParams();
   const pageIndex = pageIndexFromParams(searchParams);
   const goToPage = useCallback(
     (next: number) => setSearchParams(withPageIndex(searchParams, next)),

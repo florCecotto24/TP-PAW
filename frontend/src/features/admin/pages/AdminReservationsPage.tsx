@@ -12,8 +12,7 @@ import { idFromSelf, type ReservationSummaryDto } from '../types';
 import { useAdminErrorMessage } from '../useAdminErrorMessage';
 import { useAdminGuard } from '../useAdminGuard';
 import { usePagedList } from '../usePagedList';
-import { adminReservationChat } from '../../../routes/paths';
-import type { AdminReservationChatLocationState } from '../../../routes/navigationState';
+import { adminReservationChatTo } from '../../../routes/navigationState';
 
 export default function AdminReservationsPage() {
   const { t, i18n } = useTranslation();
@@ -73,18 +72,22 @@ export default function AdminReservationsPage() {
                       <td>{t(`admin.reservations.statuses.${reservation.status}`)}</td>
                       <td>{reservation.totalPrice}</td>
                       <td className="text-end admin-table__cell--wrap">
-                        <Link
-                          to={adminReservationChat(reservationId)}
-                          state={
-                            {
-                              messagesLink: reservation.links.messages,
-                              reservationSelf: reservation.links.self,
-                            } satisfies AdminReservationChatLocationState
-                          }
-                          className="btn btn-outline-primary btn-sm"
-                        >
-                          {t('admin.reservations.actions.viewChat')}
-                        </Link>
+                        {(() => {
+                          const chatLink = adminReservationChatTo(
+                            reservationId,
+                            reservation.links.self,
+                            reservation.links.messages,
+                          );
+                          return (
+                            <Link
+                              to={chatLink.pathname}
+                              state={chatLink.state}
+                              className="btn btn-outline-primary btn-sm"
+                            >
+                              {t('admin.reservations.actions.viewChat')}
+                            </Link>
+                          );
+                        })()}
                       </td>
                     </tr>
                   );

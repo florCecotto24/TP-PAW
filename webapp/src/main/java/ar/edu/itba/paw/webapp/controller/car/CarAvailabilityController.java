@@ -22,9 +22,7 @@ import org.springframework.stereotype.Component;
 import ar.edu.itba.paw.webapp.api.common.VndMediaType;
 import ar.edu.itba.paw.webapp.form.car.AvailabilityCreateForm;
 import ar.edu.itba.paw.webapp.support.CarAvailabilityHttpSupport;
-import ar.edu.itba.paw.webapp.support.CarResourceAccess;
 import ar.edu.itba.paw.webapp.support.CurrentUserResolver;
-import ar.edu.itba.paw.webapp.support.PaginationSupport;
 import ar.edu.itba.paw.webapp.validation.constraint.common.ValidYearMonth;
 
 /** Car availability sub-resource ({@code /cars/{id}/availabilities}). HTTP routing only. */
@@ -34,8 +32,6 @@ public class CarAvailabilityController {
 
     private final CarAvailabilityHttpSupport carAvailabilityHttpSupport;
     private final CurrentUserResolver currentUserResolver;
-    private final CarResourceAccess carResourceAccess;
-    private final PaginationSupport paginationSupport;
 
     @Context
     private UriInfo uriInfo;
@@ -43,13 +39,9 @@ public class CarAvailabilityController {
     @Autowired
     public CarAvailabilityController(
             final CarAvailabilityHttpSupport carAvailabilityHttpSupport,
-            final CurrentUserResolver currentUserResolver,
-            final CarResourceAccess carResourceAccess,
-            final PaginationSupport paginationSupport) {
+            final CurrentUserResolver currentUserResolver) {
         this.carAvailabilityHttpSupport = carAvailabilityHttpSupport;
         this.currentUserResolver = currentUserResolver;
-        this.carResourceAccess = carResourceAccess;
-        this.paginationSupport = paginationSupport;
     }
 
     @GET
@@ -59,9 +51,13 @@ public class CarAvailabilityController {
             @QueryParam("month") @ValidYearMonth final String month,
             @QueryParam("page") @DefaultValue("1") final int page,
             @QueryParam("pageSize") final Integer pageSizeParam) {
-        carResourceAccess.requireViewableCar(carId, currentUserResolver.currentPrincipalOrNull());
         return carAvailabilityHttpSupport.list(
-                carId, month, paginationSupport.forAvailabilities(page, pageSizeParam), uriInfo);
+                carId,
+                month,
+                page,
+                pageSizeParam,
+                currentUserResolver.currentPrincipalOrNull(),
+                uriInfo);
     }
 
     @POST
@@ -81,8 +77,8 @@ public class CarAvailabilityController {
     public Response getAvailability(
             @PathParam("id") final long carId,
             @PathParam("availabilityId") final long availabilityId) {
-        carResourceAccess.requireViewableCar(carId, currentUserResolver.currentPrincipalOrNull());
-        return carAvailabilityHttpSupport.get(carId, availabilityId, uriInfo);
+        return carAvailabilityHttpSupport.get(
+                carId, availabilityId, currentUserResolver.currentPrincipalOrNull(), uriInfo);
     }
 
     @PATCH

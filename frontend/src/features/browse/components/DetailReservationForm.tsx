@@ -5,6 +5,7 @@ import { getClientConfig } from '../../../api/clientConfig';
 import { formatCurrency } from '../../../api/format';
 import { DetailReservationPanel, LoadingBlock } from '../../../components/ryden';
 import { newReservation } from '../../../routes/paths';
+import { hrefToRelativeApiPath } from '../../../api/uri';
 import type { NewReservationLocationState } from '../../../routes/navigationState';
 import {
   applyRangeProjection,
@@ -47,6 +48,7 @@ function mapSegments(raw: ReturnType<typeof useCarBookableSegments>['data']): Bo
     checkOutTime: s.checkOutTime,
     location: s.location ?? '',
     neighborhoodUri: s.links?.neighborhood,
+    availabilityUri: s.links?.availability,
   }));
 }
 
@@ -144,9 +146,17 @@ export default function DetailReservationForm({
     if (projection.total != null) {
       params.set('reservationTotal', String(projection.total));
     }
+    if (carSelf) {
+      params.set('self', hrefToRelativeApiPath(carSelf));
+    }
     navigate(
       { pathname: newReservation(carId), search: `?${params.toString()}` },
-      { state: carSelf ? ({ carSelf } satisfies NewReservationLocationState) : undefined },
+      {
+        state: {
+          ...(carSelf ? { carSelf } : {}),
+          ...(projection.availabilityUri ? { availabilityUri: projection.availabilityUri } : {}),
+        } satisfies NewReservationLocationState,
+      },
     );
   };
 

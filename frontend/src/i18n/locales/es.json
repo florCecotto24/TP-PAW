@@ -115,7 +115,7 @@
       "user.profile.cbuInvalid": "El CBU no es válido.",
       "car.plate.alreadyExists": "Ya existe un auto con esa patente.",
       "car.gallery.media.invalidType": "Solo se permiten imágenes o videos (mp4, webm, mov).",
-      "car.gallery.pictures.required": "Subí al menos una foto o video para la galería del auto.",
+      "car.gallery.pictures.required": "Subí al menos una foto para la galería del auto (un video solo no alcanza).",
       "publish.prerequisites.missing": "Agregá tu CBU y tu documento de identidad antes de publicar un auto.",
       "car.notFound": "No se encontró el auto.",
       "car.invalidStatusTransition": "No se puede cambiar el auto a ese estado.",

@@ -10,13 +10,16 @@ import { getCollectionPath } from '../../api/apiDiscovery';
 import type { UserDto } from '../../api/types';
 import type { RegisterForm } from './types';
 import { apiErrorMessage } from './errorMessage';
-import { validatePasswordPair, registrationPasswordLimits } from './passwordValidation';
+import {
+  registrationPasswordLimits,
+  validatePassword,
+  validatePasswordConfirm,
+} from './passwordValidation';
 import { PasswordField } from '../../components/ryden';
 
 // /registrarse — "registrarse" = crear el recurso usuario (POST /users,
-// anónimo, contentType vendor user). En 201 la API devuelve Location con la URN
-// canónica /users/{id}; la pasamos como `userUri` a /verificar-email junto con
-// el email, porque la verificación posterior es un PATCH sobre esa URN (D3).
+// anónimo, contentType vendor user). En 201 el UserDto trae links.credentials
+// para reenviar el OTP; lo pasamos a /verificar-email junto con el email.
 export default function RegisterPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -29,8 +32,7 @@ export default function RegisterPage() {
     passwordConfirm: '',
   });
   const [error, setError] = useState<string | null>(null);
-  // Errores por campo devueltos por el server (ValidationErrorDto.errors[]),
-  // igual que `form:errors path="..."` en register.jsp: mensajes ya localizados.
+  // Errores por campo (cliente + server), igual que `form:errors path="..."`.
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
 
@@ -39,30 +41,69 @@ export default function RegisterPage() {
     return () => document.body.classList.remove('auth-page');
   }, []);
 
+  const userLimits = registrationPasswordLimits();
+
+  function passwordErrorMessage(code: ReturnType<typeof validatePassword>): string | null {
+    if (code === 'tooShort') {
+      return t('auth.register.passwordTooShort', { count: userLimits.registrationPasswordMinLength });
+    }
+    if (code === 'tooLong') {
+      return t('auth.register.passwordTooLong', { count: userLimits.registrationPasswordMaxLength });
+    }
+    return null;
+  }
+
+  function applyPasswordValidation(password: string): boolean {
+    const msg = passwordErrorMessage(validatePassword(password));
+    setFieldErrors((prev) => {
+      const next = { ...prev };
+      if (msg) next.password = msg;
+      else delete next.password;
+      return next;
+    });
+    return msg == null;
+  }
+
+  function applyPasswordConfirmValidation(password: string, confirm: string): boolean {
+    const mismatch = validatePasswordConfirm(password, confirm);
+    const msg = mismatch ? t('validation.passwordMismatch') : null;
+    setFieldErrors((prev) => {
+      const next = { ...prev };
+      if (msg) next.passwordConfirm = msg;
+      else delete next.passwordConfirm;
+      return next;
+    });
+    return msg == null;
+  }
+
   function update<K extends keyof RegisterForm>(key: K, value: string) {
-    setForm((f) => ({ ...f, [key]: value }));
+    setForm((f) => {
+      const next = { ...f, [key]: value };
+      if (key === 'password') {
+        applyPasswordValidation(value);
+        if (next.passwordConfirm) applyPasswordConfirmValidation(value, next.passwordConfirm);
+      } else if (key === 'passwordConfirm') {
+        applyPasswordConfirmValidation(next.password, value);
+      } else {
+        setFieldErrors((prev) => {
+          if (!prev[key]) return prev;
+          const cleared = { ...prev };
+          delete cleared[key];
+          return cleared;
+        });
+      }
+      return next;
+    });
   }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
-    setFieldErrors({});
 
-    const passwordError = validatePasswordPair(form.password, form.passwordConfirm);
-    if (passwordError === 'tooShort') {
-      setError(t('auth.register.passwordTooShort', {
-        count: registrationPasswordLimits().registrationPasswordMinLength,
-      }));
-      return;
-    }
-    if (passwordError === 'tooLong') {
-      setError(t('auth.register.passwordTooLong', {
-        count: registrationPasswordLimits().registrationPasswordMaxLength,
-      }));
-      return;
-    }
-    if (passwordError === 'mismatch') {
-      setError(t('validation.passwordMismatch'));
+    const passwordOk = applyPasswordValidation(form.password);
+    const confirmOk = applyPasswordConfirmValidation(form.password, form.passwordConfirm);
+    if (!passwordOk || !confirmOk) {
+      document.getElementById(passwordOk ? 'passwordConfirm' : 'password')?.focus();
       return;
     }
 
@@ -74,11 +115,10 @@ export default function RegisterPage() {
         anonymous: true,
       });
 
-      // 201 → Location = URN del nuevo usuario. La propagamos al flujo de
-      // verificación de email (el código se envía automáticamente al registrar).
-      const userUri = res.location ?? res.data?.links?.self;
+      // 201 → links.credentials (reenvío OTP) + email. No inventamos el path.
+      const credentialsUri = res.data?.links?.credentials;
       const params = new URLSearchParams({ email: form.email });
-      if (userUri) params.set('userUri', userUri);
+      if (credentialsUri) params.set('credentialsUri', credentialsUri);
       navigate(`${paths.verifyEmail}?${params.toString()}`);
     } catch (err) {
       if (err instanceof ApiError && err.body?.errors?.length) {
@@ -95,8 +135,6 @@ export default function RegisterPage() {
       setSubmitting(false);
     }
   }
-
-  const userLimits = registrationPasswordLimits();
 
   return (
     <div className="auth-page__shell auth-page__shell--tall-form">
@@ -116,7 +154,7 @@ export default function RegisterPage() {
               </Alert>
             )}
 
-            <Form onSubmit={onSubmit}>
+            <Form onSubmit={onSubmit} noValidate>
               <Form.Group className="mb-3" controlId="forename">
                 <Form.Label>{t('auth.register.forename')}</Form.Label>
                 <Form.Control
@@ -172,13 +210,14 @@ export default function RegisterPage() {
                 />
                 {fieldErrors.password ? (
                   <div className="text-danger small d-block mt-1">{fieldErrors.password}</div>
-                ) : null}
-                <Form.Text className="text-muted">
-                  {t('auth.register.passwordHint', {
-                    min: userLimits.registrationPasswordMinLength,
-                    max: userLimits.registrationPasswordMaxLength,
-                  })}
-                </Form.Text>
+                ) : (
+                  <Form.Text className="text-muted">
+                    {t('auth.register.passwordHint', {
+                      min: userLimits.registrationPasswordMinLength,
+                      max: userLimits.registrationPasswordMaxLength,
+                    })}
+                  </Form.Text>
+                )}
               </Form.Group>
               <Form.Group className="mb-4" controlId="passwordConfirm">
                 <Form.Label>{t('auth.register.passwordConfirm')}</Form.Label>

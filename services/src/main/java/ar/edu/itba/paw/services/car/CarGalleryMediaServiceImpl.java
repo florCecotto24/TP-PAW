@@ -48,6 +48,22 @@ public class CarGalleryMediaServiceImpl implements CarGalleryMediaService {
     }
 
     @Override
+    public boolean hasNonEmptyImageUpload(final List<GalleryMediaUpload> galleryMedia) {
+        if (galleryMedia == null || galleryMedia.isEmpty()) {
+            return false;
+        }
+        for (final GalleryMediaUpload media : galleryMedia) {
+            if (media.getData() == null || media.getData().length == 0) {
+                continue;
+            }
+            if (CarGalleryMediaContentTypes.isImageContentType(media.getContentType())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
     @Transactional
     public CarPicture attachSingleGalleryMedia(
             final long ownerId,

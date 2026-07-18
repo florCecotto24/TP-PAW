@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { publishValidationI18nParams, validateGalleryFiles } from './publishCarValidation';
+import { paintVideoPoster, videoPreviewSrc } from '../../components/ryden/media/videoPoster';
+import {
+  galleryNeedsPhoto,
+  isGalleryImageFile,
+  publishValidationI18nParams,
+  validateGalleryFiles,
+} from './publishCarValidation';
 
 // Replica el selector de galería del viejo publishCarForm.jsp (+ js/components.js):
 // permite elegir VARIAS fotos/videos (acumulando entre selecciones, sin duplicar),
@@ -8,13 +14,14 @@ import { publishValidationI18nParams, validateGalleryFiles } from './publishCarV
 // foto "principal" (portada). Al cambiar la selección o la portada emite la lista
 // ORDENADA con la portada primero (displayOrder 0 ⇒ principal en el backend).
 
-function isImage(file: File): boolean {
-  return (file.type || '').toLowerCase().startsWith('image/');
-}
-
 function isAllowedMedia(file: File): boolean {
   const t = (file.type || '').toLowerCase();
-  return t.startsWith('image/') || t === 'video/mp4' || t === 'video/webm' || t === 'video/quicktime';
+  if (t.startsWith('image/') || t === 'video/mp4' || t === 'video/webm' || t === 'video/quicktime') {
+    return true;
+  }
+  // Some browsers leave File.type empty for .mov/.mp4 from disk.
+  const name = (file.name || '').toLowerCase();
+  return /\.(jpe?g|png|gif|webp|mp4|webm|mov)$/.test(name);
 }
 
 export interface GalleryPickerProps {
@@ -41,7 +48,7 @@ export default function GalleryPicker({ onChange }: GalleryPickerProps) {
 
   // La portada debe ser una imagen; default = primera imagen.
   const defaultCoverIndex = useCallback((list: File[]): number => {
-    const idx = list.findIndex(isImage);
+    const idx = list.findIndex(isGalleryImageFile);
     return idx >= 0 ? idx : 0;
   }, []);
 
@@ -80,13 +87,22 @@ export default function GalleryPicker({ onChange }: GalleryPickerProps) {
         );
         if (!dup) merged.push(f);
       }
-      const galleryError = validateGalleryFiles(merged);
+      // Accept videos before photos; photo rule is a soft field hint + submit block.
+      const galleryError = validateGalleryFiles(merged, undefined, undefined, { requirePhoto: false });
       if (galleryError) {
         setError(t(galleryError, publishValidationI18nParams()));
         return prev;
       }
+      const imageIdx = merged.findIndex(isGalleryImageFile);
       if (!hadItems && merged.length > 0) {
-        setCoverIndex(defaultCoverIndex(merged));
+        setCoverIndex(imageIdx >= 0 ? imageIdx : 0);
+        setCoverConfirm(true);
+      } else if (
+        imageIdx >= 0
+        && !(coverIndex >= 0 && coverIndex < merged.length && isGalleryImageFile(merged[coverIndex]))
+      ) {
+        // Video-first then photo: promote the first still to cover.
+        setCoverIndex(imageIdx);
         setCoverConfirm(true);
       }
       return merged;
@@ -106,10 +122,15 @@ export default function GalleryPicker({ onChange }: GalleryPickerProps) {
   }
 
   function onSetCover(index: number) {
-    if (index === coverIndex || !isImage(files[index])) return;
+    if (index === coverIndex || !isGalleryImageFile(files[index])) return;
     setCoverIndex(index);
     setCoverConfirm(true);
   }
+
+  const photoMissing = galleryNeedsPhoto(files);
+  const fieldInvalid = Boolean(error) || photoMissing;
+  const fieldMessage = error
+    ?? (photoMissing ? t('owner.publish.errors.photoRequired') : null);
 
   return (
     <div className="mb-4">
@@ -118,14 +139,20 @@ export default function GalleryPicker({ onChange }: GalleryPickerProps) {
         ref={inputRef}
         id={inputId}
         type="file"
-        className="form-control"
+        className={`form-control${fieldInvalid ? ' is-invalid' : ''}`}
         accept="image/*,video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov"
         multiple
+        aria-invalid={fieldInvalid || undefined}
+        aria-describedby={fieldMessage ? `${inputId}-error` : undefined}
         onChange={onAdd}
       />
-      <small className="text-muted d-block mt-2">{t('owner.publish.picturesHint')}</small>
-
-      {error && <div className="alert alert-danger mt-2 py-2 small" role="alert">{error}</div>}
+      {fieldMessage ? (
+        <div id={`${inputId}-error`} className="text-danger d-block small mt-1" role="alert">
+          {fieldMessage}
+        </div>
+      ) : (
+        <small className="text-muted d-block mt-2">{t('owner.publish.picturesHint')}</small>
+      )}
 
       {coverConfirm && files.length > 0 && (
         <div className="publish-gallery-cover-confirm mt-2 py-2 small" role="status" aria-live="polite">
@@ -136,7 +163,7 @@ export default function GalleryPicker({ onChange }: GalleryPickerProps) {
       {files.length > 0 && (
         <div className="row g-2 mt-2" id="picturesPreview">
           {files.map((file, index) => {
-            const image = isImage(file);
+            const image = isGalleryImageFile(file);
             const isCover = image && index === coverIndex;
             return (
               <div className="col-6 col-md-4" key={`${file.name}-${file.size}-${index}`}>
@@ -162,14 +189,16 @@ export default function GalleryPicker({ onChange }: GalleryPickerProps) {
                   ) : (
                     <>
                       <video
-                        className="img-fluid rounded w-100 publish-gallery-media"
+                        className="img-fluid rounded w-100 publish-gallery-media publish-gallery-media--video"
                         muted
                         playsInline
                         preload="metadata"
-                        src={previews[index]}
+                        src={videoPreviewSrc(previews[index])}
+                        onLoadedMetadata={(ev) => paintVideoPoster(ev.currentTarget)}
+                        onLoadedData={(ev) => paintVideoPoster(ev.currentTarget)}
                       />
                       <span
-                        className="position-absolute top-50 start-50 translate-middle text-white fs-2"
+                        className="position-absolute top-50 start-50 translate-middle text-white fs-2 publish-gallery-video-badge"
                         aria-hidden="true"
                       >
                         <i className="bi bi-play-circle" />

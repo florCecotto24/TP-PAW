@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.webapp.support;
 
+import java.util.Locale;
 import java.util.Optional;
 
 import javax.ws.rs.core.Response;
@@ -14,6 +15,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import ar.edu.itba.paw.exception.car.CarNotFoundException;
 import ar.edu.itba.paw.models.domain.car.Car;
+import ar.edu.itba.paw.models.domain.car.CarBrand;
 import ar.edu.itba.paw.models.domain.car.CarModel;
 import ar.edu.itba.paw.services.car.CarBrandService;
 import ar.edu.itba.paw.services.car.CarMarketInsightService;
@@ -46,9 +48,10 @@ class ModelCatalogSupportTest {
     @Test
     void testPriceInsightRejectsExcludeCarFromOtherModel() {
         // 1.Arrange
+        final long brandId = 1L;
         final long modelId = 10L;
         final long excludeCarId = 55L;
-        Mockito.when(carModelService.findById(modelId)).thenReturn(Optional.of(Mockito.mock(CarModel.class)));
+        stubModelUnderBrand(brandId, modelId);
         final Car car = Mockito.mock(Car.class);
         final CarModel otherModel = Mockito.mock(CarModel.class);
         Mockito.when(otherModel.getId()).thenReturn(99L);
@@ -57,19 +60,41 @@ class ModelCatalogSupportTest {
 
         // 2.Act / 3.Assert
         Assertions.assertThrows(CarNotFoundException.class,
-                () -> support.priceInsightResponse(modelId, excludeCarId));
+                () -> support.priceInsightResponse(brandId, modelId, excludeCarId, null));
     }
 
     @Test
     void testPriceInsightNoContentWhenExcludeCarMissing() {
         // 1.Arrange
+        final long brandId = 1L;
         final long modelId = 10L;
-        Mockito.when(carModelService.findById(modelId)).thenReturn(Optional.of(Mockito.mock(CarModel.class)));
+        stubModelUnderBrand(brandId, modelId);
 
         // 2.Act
-        final Response response = support.priceInsightResponse(modelId, null);
+        final Response response = support.priceInsightResponse(brandId, modelId, null, null);
 
         // 3.Assert
         Assertions.assertEquals(Response.Status.NO_CONTENT.getStatusCode(), response.getStatus());
+    }
+
+    @Test
+    void testRejectModelForBrandReturnsNoContent() {
+        // 1.Arrange
+        final long brandId = 1L;
+        final long modelId = 10L;
+        stubModelUnderBrand(brandId, modelId);
+
+        // 2.Act
+        final Response response = support.rejectModelForBrand(brandId, modelId, Locale.ENGLISH);
+
+        // 3.Assert
+        Assertions.assertEquals(Response.Status.NO_CONTENT.getStatusCode(), response.getStatus());
+    }
+
+    private void stubModelUnderBrand(final long brandId, final long modelId) {
+        Mockito.when(carBrandService.findById(brandId)).thenReturn(Optional.of(Mockito.mock(CarBrand.class)));
+        final CarModel model = Mockito.mock(CarModel.class);
+        Mockito.when(model.getBrandId()).thenReturn(brandId);
+        Mockito.when(carModelService.findById(modelId)).thenReturn(Optional.of(model));
     }
 }

@@ -135,6 +135,11 @@ public class OtpAttemptLimiter {
         return emailKey == null ? "" : emailKey.trim().toLowerCase(java.util.Locale.ROOT);
     }
 
+    /** Key space for email-verification OTP <em>issuance</em> (separate from failed-verify lockout). */
+    public static String issuanceKey(final String email) {
+        return "issue:" + normalize(email);
+    }
+
     private static final class Window {
         private final int failures;
         private final Instant windowStart;

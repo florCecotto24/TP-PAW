@@ -156,7 +156,7 @@ export function fetchOwnerCars(
 }
 
 export function fetchCar(carSelf: string): Promise<ApiResponse<CarDto>> {
-  return sessionClient.follow<CarDto>(carSelf, { accept: MediaTypes.car });
+  return sessionClient.follow<CarDto>(carSelf, { accept: MediaTypes.carPrivate });
 }
 
 /**
@@ -194,7 +194,7 @@ export async function publishCar(
 
   const { body, contentType } = await encodeMultipart(parts);
   return sessionClient.post<CarDto>(getCollectionPath('cars'), body, {
-    accept: MediaTypes.car,
+    accept: MediaTypes.carPrivate,
     contentType,
   });
 }
@@ -211,7 +211,7 @@ export function fetchPriceMarketInsight(
 
 export function patchCar(carSelf: string, patch: CarPatchDto): Promise<ApiResponse<CarDto>> {
   return sessionClient.patch<CarDto>(carSelf, patch, {
-    accept: MediaTypes.car,
+    accept: MediaTypes.carPrivate,
     contentType: MediaTypes.car,
   });
 }

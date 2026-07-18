@@ -17,19 +17,15 @@ export interface ApiIndexDto {
   resources: Record<string, ApiIndexResourceDescriptor>;
 }
 
-const COLLECTION_FALLBACKS = {
-  cars: '/cars',
-  brands: '/brands',
-  models: '/models',
-  neighborhoods: '/neighborhoods',
-  reservations: '/reservations',
-  users: '/users',
-  reviews: '/reviews',
-} as const;
-
-export const API_COLLECTION_FALLBACK_PATHS = COLLECTION_FALLBACKS;
-
-export type ApiCollectionName = keyof typeof COLLECTION_FALLBACKS;
+/** Collection names published by {@code GET /api/} {@code resources}. */
+export type ApiCollectionName =
+  | 'cars'
+  | 'brands'
+  | 'models'
+  | 'neighborhoods'
+  | 'reservations'
+  | 'users'
+  | 'reviews';
 
 interface ApiDiscoveryState {
   ready: boolean;
@@ -62,10 +58,10 @@ export const useApiDiscoveryStore = create<ApiDiscoveryState>((set, get) => ({
   collectionPath: (name) => {
     const index = get().index;
     const href = index?.resources?.[name]?.href ?? index?.links?.[name];
-    if (href) {
-      return hrefToRelativeApiPath(href);
+    if (!href) {
+      throw new Error(`api.discovery.missingCollection:${name}`);
     }
-    return COLLECTION_FALLBACKS[name];
+    return hrefToRelativeApiPath(href);
   },
   itemTemplate: (name) => get().index?.resources?.[name]?.itemTemplate ?? null,
 }));

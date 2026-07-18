@@ -3,6 +3,7 @@ package ar.edu.itba.paw.services.car;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -64,6 +65,7 @@ public class CarServiceImpl implements CarService {
     private final CarListingPolicyService carListingPolicyService;
     private final CarMarketInsightService carMarketInsightService;
     private final CarGalleryMediaService carGalleryMediaService;
+    private final CarExhaustionRowProcessor carExhaustionRowProcessor;
 
     @Autowired
     public CarServiceImpl(
@@ -78,7 +80,8 @@ public class CarServiceImpl implements CarService {
             @Lazy final AdminService adminService,
             final CarListingPolicyService carListingPolicyService,
             final CarMarketInsightService carMarketInsightService,
-            final CarGalleryMediaService carGalleryMediaService) {
+            final CarGalleryMediaService carGalleryMediaService,
+            final CarExhaustionRowProcessor carExhaustionRowProcessor) {
         this.carDao = carDao;
         this.userService = userService;
         this.userReadinessService = userReadinessService;
@@ -91,6 +94,7 @@ public class CarServiceImpl implements CarService {
         this.carListingPolicyService = carListingPolicyService;
         this.carMarketInsightService = carMarketInsightService;
         this.carGalleryMediaService = carGalleryMediaService;
+        this.carExhaustionRowProcessor = carExhaustionRowProcessor;
     }
 
     @Override
@@ -133,7 +137,8 @@ public class CarServiceImpl implements CarService {
         if (carDao.existsByOwnerAndPlate(ownerId, plate)) {
             throw new DuplicatePlateException(plate);
         }
-        if (carGalleryMediaService.countNonEmptyGalleryUploads(galleryMedia) < 1) {
+        if (carGalleryMediaService.countNonEmptyGalleryUploads(galleryMedia) < 1
+                || !carGalleryMediaService.hasNonEmptyImageUpload(galleryMedia)) {
             throw new CarValidationException(MessageKeys.CAR_GALLERY_PICTURES_REQUIRED);
         }
         final Car car;
@@ -153,9 +158,13 @@ public class CarServiceImpl implements CarService {
                     insuranceFilename != null ? insuranceFilename : "insurance",
                     insuranceContentType != null ? insuranceContentType : "application/octet-stream",
                     insuranceData);
-            carDao.updateInsuranceDocument(car.getId(), stored.getId());
+            // Dirty-check the managed entity — avoid PESSIMISTIC_WRITE find on a row that may
+            // not be flushed yet (StaleObjectStateException right after createCar).
+            car.setInsuranceFile(stored);
+            car.setUpdatedAt(OffsetDateTime.now());
         } else {
-            carDao.setCarStatus(car.getId(), Car.Status.LACK_DOC);
+            car.setStatus(Car.Status.LACK_DOC);
+            car.setUpdatedAt(OffsetDateTime.now());
         }
         return car;
     }
@@ -390,8 +399,12 @@ public class CarServiceImpl implements CarService {
         return carListingPolicyService.resolveOwnerListingStatuses(requestedStatuses, viewerIsSelfOrAdmin);
     }
 
+    /**
+     * Deliberately NOT {@code @Transactional}: each pause commits in
+     * {@link CarExhaustionRowProcessor} ({@code REQUIRES_NEW}); an outer TX would hold the
+     * connection for the whole catalog scan and roll back all pauses on a single failure.
+     */
     @Override
-    @Transactional
     public void refreshExhaustedCarsToPaused() {
         final int batchSize = 200;
         Long afterId = null;
@@ -411,10 +424,8 @@ public class CarServiceImpl implements CarService {
                     carAvailabilityService.getBookableWallAvailabilityPeriodsByCars(activeCarIds);
             for (final Long carId : activeCarIds) {
                 final List<AvailabilityPeriod> bookable = bookableByCarId.getOrDefault(carId, List.of());
-                if (bookable.isEmpty()) {
-                    if (carDao.updateCarStatusIfCurrent(carId, Car.Status.PAUSED, Car.Status.ACTIVE)) {
-                        paused++;
-                    }
+                if (bookable.isEmpty() && carExhaustionRowProcessor.pauseIfStillActive(carId)) {
+                    paused++;
                 }
             }
             if (activeCarIds.size() < batchSize) {
@@ -451,6 +462,7 @@ public class CarServiceImpl implements CarService {
         final Locale ownerMailLocale = userLocaleService.resolveMailLocale(ownerId);
         for (final Car car : active) {
             final Car.Status current = car.getStatus();
+            carDao.lockForReservationWrite(car.getId());
             if (!carDao.updateCarStatusIfCurrent(car.getId(), Car.Status.LACK_DOC, current)) {
                 continue;
             }
@@ -474,6 +486,7 @@ public class CarServiceImpl implements CarService {
             // LACK_DOC because of missing insurance (not just missing CBU), restoring the CBU
             // alone is not enough to make it active.
             if (car.getInsuranceFileId().isPresent()) {
+                carDao.lockForReservationWrite(car.getId());
                 carDao.updateCarStatusIfCurrent(car.getId(), Car.Status.ACTIVE, Car.Status.LACK_DOC);
             }
         }
@@ -502,11 +515,13 @@ public class CarServiceImpl implements CarService {
                 originalFilename != null ? originalFilename : "insurance",
                 contentType,
                 data);
+        carDao.lockForReservationWrite(carId);
         carDao.updateInsuranceDocument(carId, stored.getId());
         if (previousInsuranceId != null && previousInsuranceId > 0 && !previousInsuranceId.equals(stored.getId())) {
             storedFileService.deleteById(previousInsuranceId);
         }
-        if (car.getStatus() == Car.Status.LACK_DOC) {
+        final Car locked = carDao.getCarById(carId).orElse(car);
+        if (locked.getStatus() == Car.Status.LACK_DOC) {
             final User owner = userService.getUserById(ownerId).orElse(null);
             if (owner != null && userReadinessService.hasValidCbu(owner)) {
                 carDao.updateCarStatusIfCurrent(carId, Car.Status.ACTIVE, Car.Status.LACK_DOC);
@@ -523,21 +538,15 @@ public class CarServiceImpl implements CarService {
         }
         final Car car = carOpt.get();
         final Long previousInsuranceId = car.getInsuranceFileId().orElse(null);
+        carDao.lockForReservationWrite(carId);
         carDao.clearInsuranceDocument(carId);
         if (previousInsuranceId != null && previousInsuranceId > 0) {
             storedFileService.deleteById(previousInsuranceId);
         }
-        if (car.getStatus() == Car.Status.ACTIVE || car.getStatus() == Car.Status.PAUSED) {
+        final Car locked = carDao.getCarById(carId).orElse(car);
+        if (locked.getStatus() == Car.Status.ACTIVE || locked.getStatus() == Car.Status.PAUSED) {
             carDao.setCarStatus(carId, Car.Status.LACK_DOC);
         }
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public boolean hasUploadedInsurance(final long carId) {
-        return carDao.getCarById(carId)
-                .flatMap(Car::getInsuranceFileId)
-                .isPresent();
     }
 
     @Override

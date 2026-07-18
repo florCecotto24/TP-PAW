@@ -38,8 +38,9 @@ export function useRiderReservationsPage(
   const reservationsLink = useSessionStore((s) => s.currentUser?.links?.reservations);
   return useQuery({
     queryKey: ['reservations', 'rider-page', reservationsLink, riderId, filters, pageIndex],
-    enabled: riderId != null || !!reservationsLink,
+    enabled: !!reservationsLink && riderId != null,
     queryFn: async () => {
+      if (!reservationsLink) throw new Error('reservations.list.missingLink');
       const query = filtersToApiQuery(riderId as string | number, filters, pageIndex);
       const res = await listReservations(query, reservationsLink);
       return {

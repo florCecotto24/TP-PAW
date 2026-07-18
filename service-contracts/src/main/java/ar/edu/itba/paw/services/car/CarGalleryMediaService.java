@@ -14,6 +14,9 @@ public interface CarGalleryMediaService {
 
     int countNonEmptyGalleryUploads(List<GalleryMediaUpload> galleryMedia);
 
+    /** {@code true} when at least one non-empty upload is an image (videos alone do not count). */
+    boolean hasNonEmptyImageUpload(List<GalleryMediaUpload> galleryMedia);
+
     CarPicture attachSingleGalleryMedia(
             long ownerId, long carId, GalleryMediaUpload media, int displayOrder);
 

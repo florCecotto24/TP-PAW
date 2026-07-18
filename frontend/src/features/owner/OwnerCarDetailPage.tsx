@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Alert, Button, Modal } from 'react-bootstrap';
 import { ApiError } from '../../api/client';
 import { useSessionStore } from '../../session/sessionStore';
@@ -15,23 +15,31 @@ import {
   uploadInsurance,
 } from './api';
 import { hasCbu, useApiErrorMessage, useCarReservationPreview, useCurrentUserId } from './hooks';
-import { LoadingBlock, FieldView, ReceiptUploadPicker, AuthenticatedImg } from '../../components/ryden';
+import { LoadingBlock, FieldView, ReceiptUploadPicker, AuthenticatedCoverMedia } from '../../components/ryden';
+import {
+  validatePublishDescription,
+  validatePublishMinimumRentalDays,
+  publishValidationI18nParams,
+  carValidationLimits,
+} from './publishCarValidation';
 import ReservationListCard from '../reservations/components/ReservationListCard';
 import AvailabilityManager from './AvailabilityManager';
 import GalleryManager from './GalleryManager';
 import { STATUS_BADGE, type CarDto, type PictureDto } from './types';
-import { paths, carDetail, ownerReservationsCar } from '../../routes/paths';
+import { paths, ownerReservationsCar } from '../../routes/paths';
 import { resolveResourceUri } from '../../api/resourceUri';
-import type { OwnerCarDetailLocationState } from '../../routes/navigationState';
+import { carDetailTo, type OwnerCarDetailLocationState } from '../../routes/navigationState';
 
 export default function OwnerCarDetailPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { id } = useParams<{ id: string }>();
   const carSelfFromNav = (location.state as OwnerCarDetailLocationState | null)?.carSelf;
   const carSelfUri = resolveResourceUri({
     stateUri: carSelfFromNav,
+    querySelf: searchParams.get('self'),
     routeId: id,
     collection: 'cars',
   });
@@ -41,7 +49,7 @@ export default function OwnerCarDetailPage() {
   const ownerId = useCurrentUserId();
 
   const [car, setCar] = useState<CarDto | null>(null);
-  const [coverImage, setCoverImage] = useState<PictureDto | null>(null);
+  const [coverMedia, setCoverMedia] = useState<PictureDto | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [showDeactivate, setShowDeactivate] = useState(false);
@@ -60,6 +68,9 @@ export default function OwnerCarDetailPage() {
   const [attributesSaved, setAttributesSaved] = useState(false);
   const [description, setDescription] = useState('');
   const [minDays, setMinDays] = useState('1');
+  const [descriptionError, setDescriptionError] = useState<string | null>(null);
+  const [minDaysError, setMinDaysError] = useState<string | null>(null);
+  const carValidation = carValidationLimits();
 
   useEffect(() => {
     if (!carSelfUri || !ownerId) return;
@@ -67,7 +78,7 @@ export default function OwnerCarDetailPage() {
     if (currentUserRole == null) return;
     let active = true;
     setCar(null);
-    setCoverImage(null);
+    setCoverMedia(null);
     setError(null);
     setEditingAttributes(false);
     setAttributesSaved(false);
@@ -94,18 +105,18 @@ export default function OwnerCarDetailPage() {
     return () => { active = false; };
   }, [carSelfUri, ownerId, currentUserRole, navigate, errorMessage]);
 
-  // Imagen de portada de la cabecera (reservation-detail-car-media del JSP):
-  // la primera imagen de la galería, si hay alguna.
+  // Portada de cabecera: prefer image, else first gallery item (legacy video-only cars).
   useEffect(() => {
     if (!car) {
-      setCoverImage(null);
+      setCoverMedia(null);
       return;
     }
     let active = true;
     fetchPictures(car)
       .then((res) => {
         if (!active) return;
-        setCoverImage((res.data ?? []).find((p) => p.kind === 'image') ?? null);
+        const pictures = res.data ?? [];
+        setCoverMedia(pictures.find((p) => p.kind === 'image') ?? pictures[0] ?? null);
       })
       .catch(() => { /* la cabecera cae al ícono placeholder si falla */ });
     return () => { active = false; };
@@ -121,11 +132,15 @@ export default function OwnerCarDetailPage() {
     if (!car) return;
     syncAttributesFromCar(car);
     setAttributesSaved(false);
+    setDescriptionError(null);
+    setMinDaysError(null);
     setEditingAttributes(true);
   }
 
   function cancelEditAttributes() {
     if (car) syncAttributesFromCar(car);
+    setDescriptionError(null);
+    setMinDaysError(null);
     setEditingAttributes(false);
   }
 
@@ -165,6 +180,18 @@ export default function OwnerCarDetailPage() {
 
   async function onSaveAttributes(e: FormEvent) {
     e.preventDefault();
+    const descKey = validatePublishDescription(description);
+    const daysKey = validatePublishMinimumRentalDays(minDays);
+    setDescriptionError(descKey ? t(descKey, publishValidationI18nParams()) : null);
+    setMinDaysError(daysKey ? t(daysKey, publishValidationI18nParams()) : null);
+    if (descKey) {
+      document.getElementById('detailDescription')?.focus();
+      return;
+    }
+    if (daysKey) {
+      document.getElementById('detailMinDays')?.focus();
+      return;
+    }
     const saved = await applyPatch(
       { description: description.trim(), minimumRentalDays: Number(minDays) || 1 },
       'owner.detail.errors.saveFailed',
@@ -281,6 +308,7 @@ export default function OwnerCarDetailPage() {
   // también en admin_paused, lo cual no refleja el JSP de referencia.
   const canDeactivate = car.status !== 'deactivated' && car.status !== 'admin_paused';
   const missingCbu = car.status === 'lack_doc' && !hasCbu(currentUser);
+  const publicCarLink = id ? carDetailTo(id, car.links.self) : null;
 
   return (
     <main className="container pt-5 pb-4">
@@ -305,12 +333,13 @@ export default function OwnerCarDetailPage() {
             <div className="card-body p-4">
               <div className="d-flex flex-column flex-md-row gap-3 align-items-start">
                 <div className="reservation-detail-car-media rounded-3 overflow-hidden border flex-shrink-0">
-                  {coverImage ? (
-                    <AuthenticatedImg
-                      src={coverImage.links.self}
+                  {coverMedia ? (
+                    <AuthenticatedCoverMedia
+                      src={coverMedia.links.self}
+                      preferVideo={coverMedia.kind === 'video'}
                       alt={`${car.brandName} ${car.modelName}`}
                       className="w-100 h-100"
-                      style={{ objectFit: 'cover' }}
+                      style={{ objectFit: 'cover', backgroundColor: '#212529' }}
                       fallback={
                         <div className="w-100 h-100 d-flex align-items-center justify-content-center text-secondary bg-body-tertiary">
                           <i className="bi bi-car-front fs-1" aria-hidden="true" />
@@ -402,16 +431,26 @@ export default function OwnerCarDetailPage() {
                   />
                 </div>
               ) : (
-                <form onSubmit={(e) => { void onSaveAttributes(e); }}>
+                <form onSubmit={(e) => { void onSaveAttributes(e); }} noValidate>
                   <div className="mb-3">
                     <label className="form-label" htmlFor="detailDescription">{t('owner.detail.description')}</label>
                     <textarea
                       id="detailDescription"
-                      className="form-control"
+                      className={`form-control${descriptionError ? ' is-invalid' : ''}`}
                       rows={3}
+                      maxLength={carValidation.descriptionMaxLength}
                       value={description}
-                      onChange={(e) => setDescription(e.target.value)}
+                      aria-invalid={descriptionError ? true : undefined}
+                      onChange={(e) => {
+                        const next = e.target.value;
+                        setDescription(next);
+                        const key = validatePublishDescription(next);
+                        setDescriptionError(key ? t(key, publishValidationI18nParams()) : null);
+                      }}
                     />
+                    {descriptionError ? (
+                      <div className="text-danger d-block small mt-1" role="alert">{descriptionError}</div>
+                    ) : null}
                   </div>
                   <div className="mb-3">
                     <label className="form-label" htmlFor="detailMinDays">{t('owner.detail.minimumRentalDays')}</label>
@@ -419,11 +458,20 @@ export default function OwnerCarDetailPage() {
                       id="detailMinDays"
                       type="number"
                       min={1}
-                      className="form-control"
+                      className={`form-control${minDaysError ? ' is-invalid' : ''}`}
                       style={{ maxWidth: '10rem' }}
                       value={minDays}
-                      onChange={(e) => setMinDays(e.target.value)}
+                      aria-invalid={minDaysError ? true : undefined}
+                      onChange={(e) => {
+                        const next = e.target.value;
+                        setMinDays(next);
+                        const key = validatePublishMinimumRentalDays(next);
+                        setMinDaysError(key ? t(key, publishValidationI18nParams()) : null);
+                      }}
                     />
+                    {minDaysError ? (
+                      <div className="text-danger d-block small mt-1" role="alert">{minDaysError}</div>
+                    ) : null}
                   </div>
                   <div className="d-flex justify-content-end gap-2">
                     <Button
@@ -499,8 +547,12 @@ export default function OwnerCarDetailPage() {
                 )}
               </div>
 
-              {id ? (
-                <Link to={carDetail(id)} className="btn btn-outline-secondary w-100">
+              {publicCarLink ? (
+                <Link
+                  to={publicCarLink.pathname}
+                  state={publicCarLink.state}
+                  className="btn btn-outline-secondary w-100"
+                >
                   <i className="bi bi-eye me-2" aria-hidden="true" />
                   {t('owner.detail.viewCar')}
                 </Link>

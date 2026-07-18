@@ -115,7 +115,7 @@
       "user.profile.cbuInvalid": "The CBU is not valid.",
       "car.plate.alreadyExists": "A car with that plate already exists.",
       "car.gallery.media.invalidType": "Only images or videos (mp4, webm, mov) are allowed.",
-      "car.gallery.pictures.required": "Upload at least one photo or video for the car gallery.",
+      "car.gallery.pictures.required": "Upload at least one photo for the car gallery (videos alone are not enough).",
       "publish.prerequisites.missing": "Add your CBU and identity document before publishing a car.",
       "car.notFound": "Car not found.",
       "car.invalidStatusTransition": "The car cannot move to that status.",

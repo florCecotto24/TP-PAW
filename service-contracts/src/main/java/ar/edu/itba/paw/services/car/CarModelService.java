@@ -49,9 +49,6 @@ public interface CarModelService {
     // (cascading car-row cleanup, notification emails, etc.).
     // -----------------------------------------------------------------------------------------------------------
 
-    /** Models awaiting admin validation. */
-    List<CarModel> findPendingOrdered();
-
     /** Paginated models awaiting admin validation. */
     Page<CarModel> findPendingPage(int page, int pageSize);
 

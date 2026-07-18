@@ -21,7 +21,6 @@ import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.policy.ReservationTimingPolicy;
 import ar.edu.itba.paw.util.ReservationMailComposer;
 
-import ar.edu.itba.paw.services.review.ReviewService;
 /**
  * Coverage for the review auto-skip scheduler. The other dispatch methods (return reminder,
  * checkout, review invite) are exercised through the controller and integration tests.
@@ -40,9 +39,6 @@ class ReservationLifecycleSchedulerServiceImplTest {
 
     @Mock
     private ReservationTimingPolicy reservationTimingPolicy;
-
-    @Mock
-    private ReviewService reviewService;
 
     @Mock
     private ReservationMailComposer mailComposer;
@@ -93,7 +89,6 @@ class ReservationLifecycleSchedulerServiceImplTest {
         Mockito.when(reservationService.findReservationsForOwnerReviewAutoSkip(
                 Mockito.any(OffsetDateTime.class), Mockito.any(OffsetDateTime.class)))
                 .thenReturn(List.of());
-        Mockito.when(reviewService.hasRiderReview(RESERVATION_ID)).thenReturn(false);
         Mockito.doThrow(new RiderReservationException("err"))
                 .when(lifecycleRowProcessor).autoSkipRiderReview(RIDER_ID, RESERVATION_ID);
 

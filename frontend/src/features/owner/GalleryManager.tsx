@@ -2,7 +2,7 @@ import { useEffect, useState, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, Modal } from 'react-bootstrap';
 import { addPicture, deletePicture, fetchPictures } from './api';
-import { AuthenticatedImg } from '../../components/ryden';
+import { AuthenticatedImg, AuthenticatedVideo } from '../../components/ryden';
 import { useApiErrorMessage } from './hooks';
 import type { CarDto, PictureDto } from './types';
 
@@ -83,8 +83,22 @@ export default function GalleryManager({ car }: { car: CarDto }) {
                       }
                     />
                   ) : (
-                    <div className="publish-gallery-media w-100 d-flex align-items-center justify-content-center text-secondary bg-body-tertiary rounded">
-                      <i className="bi bi-play-circle fs-2" aria-hidden="true" />
+                    <div className="position-relative">
+                      <AuthenticatedVideo
+                        className="img-fluid rounded w-100 publish-gallery-media publish-gallery-media--video"
+                        src={p.links.self}
+                        fallback={
+                          <div className="publish-gallery-media w-100 d-flex align-items-center justify-content-center text-secondary bg-body-tertiary rounded">
+                            <i className="bi bi-play-circle fs-2" aria-hidden="true" />
+                          </div>
+                        }
+                      />
+                      <span
+                        className="position-absolute top-50 start-50 translate-middle text-white fs-2 publish-gallery-video-badge"
+                        aria-hidden="true"
+                      >
+                        <i className="bi bi-play-circle" />
+                      </span>
                     </div>
                   )}
                   <button

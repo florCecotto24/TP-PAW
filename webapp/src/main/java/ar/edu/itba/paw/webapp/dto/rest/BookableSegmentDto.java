@@ -39,6 +39,14 @@ public final class BookableSegmentDto {
                     "neighborhood",
                     RestUriUtils.neighborhoodUri(uriInfo, neighborhoodId).toString());
         }
+        final Long carId = segment.getCarId();
+        final Long availabilityId = segment.getAvailabilityId();
+        if (carId != null && availabilityId != null) {
+            dto.links.withRelated(
+                    "availability",
+                    RestUriUtils.carAvailabilityUri(uriInfo, carId, availabilityId).toString());
+            dto.links.withRelated("car", RestUriUtils.carUri(uriInfo, carId).toString());
+        }
         return dto;
     }
 

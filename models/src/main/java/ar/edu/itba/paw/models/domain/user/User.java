@@ -133,6 +133,11 @@ public class User {
         }
     }
 
+    /**
+     * Admin user id that last assigned {@link #userRole}, stored as a scalar FK.
+     * Kept as {@link Long} (not {@code @ManyToOne}) so role history survives if the assigner
+     * account is deleted and callers never navigate the association.
+     */
     @Column(name = "role_assigned_by")
     private Long roleAssignedBy;
 

@@ -95,6 +95,26 @@ public final class ModelCatalogSupport {
         return ModelDto.from(model, uriInfo);
     }
 
+    /** GET model item under its brand → {@code 200} with {@link ModelDto}. */
+    public Response getModelForBrand(final long brandId, final long modelId, final UriInfo uriInfo) {
+        final CarModel model = requireModelForBrand(brandId, modelId);
+        return Response.ok(toDto(model, uriInfo)).build();
+    }
+
+    public Response approveModelIfRequested(
+            final long brandId,
+            final long modelId,
+            final boolean validated,
+            final Locale locale,
+            final UriInfo uriInfo) {
+        requireModelForBrand(brandId, modelId);
+        if (validated) {
+            approveModel(modelId, locale);
+        }
+        final CarModel updated = requireModelForBrand(brandId, modelId);
+        return Response.ok(toDto(updated, uriInfo)).build();
+    }
+
     public void approveModel(final long modelId, final Locale locale) {
         carModelService.findById(modelId)
                 .orElseThrow(() -> new CarModelNotFoundException(modelId));
@@ -105,9 +125,19 @@ public final class ModelCatalogSupport {
         adminService.rejectCatalogEntry(modelId, locale);
     }
 
-    public Response priceInsightResponse(final long modelId, final Long excludeCarId) {
-        carModelService.findById(modelId)
-                .orElseThrow(() -> new CarModelNotFoundException(modelId));
+    /** Admin DELETE: ownership check under the brand, then catalog rejection → {@code 204}. */
+    public Response rejectModelForBrand(final long brandId, final long modelId, final Locale locale) {
+        requireModelForBrand(brandId, modelId);
+        rejectModel(modelId, locale);
+        return Response.noContent().build();
+    }
+
+    public Response priceInsightResponse(
+            final long brandId,
+            final long modelId,
+            final Long excludeCarId,
+            final UriInfo uriInfo) {
+        requireModelForBrand(brandId, modelId);
         if (excludeCarId == null) {
             return Response.noContent().build();
         }
@@ -120,7 +150,8 @@ public final class ModelCatalogSupport {
             throw new CarNotFoundException(excludeCarId);
         }
         return carMarketInsightService.getPriceMarketInsightForCar(car, excludeCarId)
-                .map(insight -> Response.ok(PriceMarketInsightDto.from(insight)).build())
+                .map(insight -> Response.ok(
+                        PriceMarketInsightDto.from(insight, brandId, modelId, uriInfo)).build())
                 .orElse(Response.noContent().build());
     }
 }

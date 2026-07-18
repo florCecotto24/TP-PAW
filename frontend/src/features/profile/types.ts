@@ -10,9 +10,13 @@ export interface Links {
   reservations?: string;
   'owned-reservations'?: string;
   favorites?: string;
+  /** RFC 6570 template …/favorites/{carId} (solo user.private). */
+  'favorites-item-template'?: string;
   identityDocument?: string;
   licenseDocument?: string;
   reviews?: string;
+  /** Present while email is unverified — POST re-issues the verification OTP. */
+  credentials?: string;
   [rel: string]: string | undefined;
 }
 
@@ -40,6 +44,8 @@ export interface UserDto {
   identityValidated?: boolean;
   licenseUploaded?: boolean;
   identityUploaded?: boolean;
+  /** Present only on {@code user.private.v1} — bytes exist; links.profilePicture is always announced. */
+  hasProfilePicture?: boolean;
   blocked?: boolean;
   role?: UserRole;
   ratingAsRider?: number | null;
@@ -61,6 +67,7 @@ export interface UserPatchDto {
   cbu?: string;
   latestLocale?: string;
   password?: string;
+  passwordConfirm?: string;
   currentPassword?: string;
 }
 

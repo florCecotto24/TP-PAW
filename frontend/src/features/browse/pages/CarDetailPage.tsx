@@ -19,8 +19,8 @@ import { ApiError } from '../../../api/client';
 import { formatDateLong } from '../../../i18n/dateFormat';
 import { useSessionStore } from '../../../session/sessionStore';
 import { apiErrorMessage } from '../../auth/errorMessage';
-import { carDetail, paths, publicProfile } from '../../../routes/paths';
-import type { CarDetailLocationState } from '../../../routes/navigationState';
+import { carDetail, paths } from '../../../routes/paths';
+import { publicProfileTo, type CarDetailLocationState } from '../../../routes/navigationState';
 import DetailReservationForm from '../components/DetailReservationForm';
 import BrowseCarCard from '../components/BrowseCarCard';
 import {
@@ -92,7 +92,8 @@ export default function CarDetailPage() {
   const { id: resolvedId } = useParams<{ id: string }>();
   const location = useLocation();
   const carSelfFromNav = (location.state as CarDetailLocationState | null)?.carSelf;
-  const carQuery = useCar(resolvedId, carSelfFromNav);
+  const carSelfFromQuery = searchParams.get('self');
+  const carQuery = useCar(resolvedId, carSelfFromNav, carSelfFromQuery);
   const car = carQuery.data;
   const picturesQuery = useCarPictures(car?.links?.pictures);
   const isLoggedIn = useSessionStore((s) => s.status === 'authenticated');
@@ -201,8 +202,10 @@ export default function CarDetailPage() {
   const isFavorited = favoriteQuery.data ?? false;
   const favoriteAria = isFavorited ? t('carCard.favorite.remove') : t('carCard.favorite.add');
   const similarSearchHref = `${paths.search}?category=${car.type}`;
-  const ownerProfileHref =
-    ownerId != null ? `${publicProfile(ownerId)}?carId=${resolvedId}` : undefined;
+  const ownerProfileLink =
+    ownerId != null
+      ? publicProfileTo(ownerId, car.links.owner, { carId: String(resolvedId) })
+      : null;
   const ownerProfileImageUrl = profilePictureAssetUrl(ownerQuery.data?.links);
 
   const reviewsToggleView = reviewsIsListView ? 'carousel' : 'list';
@@ -267,10 +270,11 @@ export default function CarDetailPage() {
             />
           )}
 
-          {ownerQuery.data && ownerProfileHref ? (
+          {ownerQuery.data && ownerProfileLink ? (
             <div className="d-flex align-items-center gap-2">
               <Link
-                to={ownerProfileHref}
+                to={ownerProfileLink.pathname}
+                state={ownerProfileLink.state}
                 className="d-flex align-items-center gap-2 text-decoration-none text-reset"
               >
                 {ownerProfileImageUrl ? (

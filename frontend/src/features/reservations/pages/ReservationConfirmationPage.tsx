@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useLocation, useParams } from 'react-router-dom';
+import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import BreadcrumbTrail from '../../../components/ryden/layout/BreadcrumbTrail';
 import { LoadingBlock, ReceiptUploadPicker } from '../../../components/ryden';
@@ -16,12 +16,14 @@ export default function ReservationConfirmationPage() {
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const reservationSelfFromNav = (location.state as ReservationConfirmationLocationState | null)?.reservationSelf;
   const queryClient = useQueryClient();
   const currentUser = useSessionStore((s) => s.currentUser);
 
   const reservationUri = resolveResourceUri({
     stateUri: reservationSelfFromNav,
+    querySelf: searchParams.get('self'),
     routeId: id,
     collection: 'reservations',
   });

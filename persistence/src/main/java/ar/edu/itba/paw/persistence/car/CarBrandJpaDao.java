@@ -122,13 +122,6 @@ public class CarBrandJpaDao implements CarBrandDao {
     }
 
     @Override
-    public List<CarBrand> findPendingOrdered() {
-        return em.createQuery(
-                "FROM CarBrand b WHERE b.validated = FALSE ORDER BY LOWER(b.name) ASC", CarBrand.class)
-                .getResultList();
-    }
-
-    @Override
     @Transactional
     public void deleteById(final long brandId) {
         final CarBrand brand = em.find(CarBrand.class, brandId);

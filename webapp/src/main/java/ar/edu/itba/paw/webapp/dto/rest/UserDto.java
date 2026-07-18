@@ -35,7 +35,7 @@ public final class UserDto {
         dto.emailVerified = user.getEmailValidated().orElse(Boolean.FALSE);
         dto.ratingAsOwner = ratingAsOwner;
         dto.ratingAsRider = ratingAsRider;
-        dto.links = UserLinks.build(user, uriInfo);
+        dto.links = UserLinks.buildPublic(user, uriInfo);
         return dto;
     }
 

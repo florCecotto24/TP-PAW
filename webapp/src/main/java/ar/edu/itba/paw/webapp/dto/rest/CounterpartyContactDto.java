@@ -3,7 +3,6 @@ package ar.edu.itba.paw.webapp.dto.rest;
 import javax.ws.rs.core.UriInfo;
 
 import ar.edu.itba.paw.models.domain.user.User;
-import ar.edu.itba.paw.webapp.util.RestUriUtils;
 
 /**
  * Contact details for a reservation counterparty, exposed only to the other participant.
@@ -25,7 +24,7 @@ public final class CounterpartyContactDto {
         dto.surname = user.getSurname();
         dto.email = user.getEmail();
         dto.phoneNumber = user.getPhoneNumber().orElse(null);
-        dto.links = UserLinks.build(user, uriInfo);
+        dto.links = UserLinks.buildCounterparty(user, uriInfo);
         return dto;
     }
 

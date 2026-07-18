@@ -7,6 +7,7 @@ public final class CarRepresentationVersions {
 
     public static final String SUMMARY = "summary";
     public static final String DETAIL = "detail";
+    public static final String PRIVATE = "private";
 
     private CarRepresentationVersions() {
     }

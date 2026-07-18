@@ -20,6 +20,8 @@ export const MediaTypes = {
   carSummary: 'application/vnd.paw.car.summary.v1+json',
   carSimilar: 'application/vnd.paw.car.similar.v1+json',
   car: 'application/vnd.paw.car.v1+json',
+  // Owner/admin detail (includes plate). Same URN as `car`; 403 if Accept private without ACL.
+  carPrivate: 'application/vnd.paw.car.private.v1+json',
   availability: 'application/vnd.paw.availability.v1+json',
   picture: 'application/vnd.paw.picture.v1+json',
   reservationSummary: 'application/vnd.paw.reservation.summary.v1+json',

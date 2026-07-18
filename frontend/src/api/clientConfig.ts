@@ -135,7 +135,11 @@ export const useClientConfigStore = create<ClientConfigState>((set, get) => ({
     if (get().ready && get().config != null) {
       return;
     }
-    const path = configLink ? hrefToRelativeApiPath(configLink) : '/config';
+    const path = configLink ? hrefToRelativeApiPath(configLink) : null;
+    if (!path) {
+      set({ config: null, ready: false });
+      return;
+    }
     try {
       const res = await client.get<ClientConfigDto>(path, {
         accept: MediaTypes.config,

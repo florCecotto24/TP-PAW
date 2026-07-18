@@ -7,9 +7,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import ar.edu.itba.paw.models.domain.review.Review;
-import ar.edu.itba.paw.models.dto.car.CarPublicReview;
 import ar.edu.itba.paw.models.dto.Page;
-import ar.edu.itba.paw.models.dto.profile.ReviewItemDto;
 
 import ar.edu.itba.paw.services.file.ImageService;
 import ar.edu.itba.paw.services.reservation.ReservationService;
@@ -20,12 +18,6 @@ import ar.edu.itba.paw.services.user.UserService;
  * and {@code UserService}.
  */
 public interface ReviewService {
-
-    /** Maximum trimmed length for review comment text (configuration-backed). */
-    int getReviewCommentMaxLength();
-
-    /** Public car page: paginated reviews with reviewer display fields. */
-    Page<CarPublicReview> getCarPublicReviews(long carId, int page, int pageSize);
 
     /** Hydrated review entities for REST {@code GET /reviews?carId=…}. */
     Page<Review> getCarPublicReviewEntities(long carId, int page, int pageSize);
@@ -41,9 +33,6 @@ public interface ReviewService {
 
     /** Single review by its own surrogate id, backing {@code GET /reviews/{id}}. */
     Optional<Review> getReviewById(long reviewId);
-
-    /** Total public reviews stored for the car. */
-    long countReviewsForCar(long carId);
 
     /**
      * Owner rates the rider after a completed rental; enforces reservation state and one review per side.
@@ -98,12 +87,6 @@ public interface ReviewService {
             String imageContentType,
             byte[] imageBytes);
 
-    /** Whether the owner already left a review for this reservation. */
-    boolean hasOwnerReview(long reservationId);
-
-    /** Whether the rider already left a review for this reservation. */
-    boolean hasRiderReview(long reservationId);
-
     /**
      * Average rating (1–5 scale) for the given user as owner or rider, from reviews where they were rated
      * ({@code counterpartyIsOwner} selects which side of the reservation is the rated party).
@@ -115,20 +98,4 @@ public interface ReviewService {
 
     /** Batch rider-side ratings for admin user listings. Missing keys mean no rated reviews. */
     Map<Long, BigDecimal> getAverageRatingsAsRiderForUserIds(Collection<Long> userIds);
-
-    /**
-     * Recent rated reviews for the counterparty profile snippet. Comment-less reviews are included
-     * (their {@link ReviewItemDto#getCommentText()} is {@code null}) so the JSP can render a
-     * "no comment" placeholder for them.
-     */
-    List<ReviewItemDto> getRecentReviewsForCounterparty(long counterpartyUserId, boolean counterpartyIsOwner, int limit);
-
-    /** Total rated reviews stored against the counterparty (owner side or rider side). */
-    long countReviewsForCounterparty(long counterpartyUserId, boolean counterpartyIsOwner);
-
-    /**
-     * SQL-paginated feed of every rated review left to {@code userId} (both as owner and as
-     * rider), ordered by date desc. Backs {@code GET /reviews?recipientUserId=…}.
-     */
-    Page<ReviewItemDto> getReviewsForUser(long userId, int page, int pageSize);
 }

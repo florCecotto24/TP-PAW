@@ -17,6 +17,21 @@ public final class RestUriUtils {
         return uriInfo.getBaseUriBuilder().path("users").path(String.valueOf(userId)).build();
     }
 
+    /** Re-issue email-verification OTP ({@code POST /users/{id}/credentials}). */
+    public static URI userCredentialsUri(final UriInfo uriInfo, final long userId) {
+        return uriInfo.getBaseUriBuilder()
+                .path("users").path(String.valueOf(userId))
+                .path("credentials")
+                .build();
+    }
+
+    public static URI reservationCounterpartyUri(final UriInfo uriInfo, final long reservationId) {
+        return uriInfo.getBaseUriBuilder()
+                .path("reservations").path(String.valueOf(reservationId))
+                .path("counterparty")
+                .build();
+    }
+
     public static URI userProfilePictureUri(final UriInfo uriInfo, final long userId) {
         return uriInfo.getBaseUriBuilder()
                 .path("users").path(String.valueOf(userId))
@@ -56,6 +71,18 @@ public final class RestUriUtils {
                 .path("users").path(String.valueOf(userId))
                 .path("favorites")
                 .build();
+    }
+
+    /**
+     * RFC 6570 URI template for favorite membership
+     * ({@code /users/{id}/favorites/{carId}}). Clients expand {@code {carId}} from
+     * {@code car.links.self}; they must not concatenate the collection href.
+     */
+    public static String userFavoriteMembershipTemplate(final UriInfo uriInfo, final long userId) {
+        return uriInfo.getBaseUriBuilder()
+                .path("users").path(String.valueOf(userId))
+                .path("favorites").path("{carId}")
+                .toTemplate();
     }
 
     public static URI userDocumentsUri(final UriInfo uriInfo, final long userId) {

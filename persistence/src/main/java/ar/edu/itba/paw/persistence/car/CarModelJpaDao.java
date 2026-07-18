@@ -98,16 +98,6 @@ public class CarModelJpaDao implements CarModelDao {
     }
 
     @Override
-    public List<CarModel> findPendingOrdered() {
-        return em.createQuery(
-                "FROM CarModel m JOIN FETCH m.brand "
-                        + "WHERE m.validated = FALSE "
-                        + "ORDER BY m.brand.id ASC, LOWER(m.name) ASC",
-                CarModel.class)
-                .getResultList();
-    }
-
-    @Override
     @SuppressWarnings("unchecked")
     public Page<CarModel> findPendingPage(final int page, final int pageSize) {
         final int safePage = Math.max(0, page);

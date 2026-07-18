@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
 import { useApiDiscoveryStore } from './apiDiscovery';
-import { canonicalCarUri, canonicalItemUri, resolveResourceUri } from './resourceUri';
+import {
+  canonicalCarUri,
+  canonicalItemUri,
+  resolveResourceUri,
+  sanitizeResourceSelfParam,
+} from './resourceUri';
 
 describe('resourceUri', () => {
   useApiDiscoveryStore.setState({
@@ -21,11 +26,23 @@ describe('resourceUri', () => {
     // 2.Act
     const resolved = resolveResourceUri({
       stateUri: stateSelf,
+      querySelf: '/cars/1',
       routeId: '1',
       collection: 'cars',
     });
     // 3.Assert
     expect(resolved).toBe(stateSelf);
+  });
+
+  it('testResolveResourceUriPrefersQuerySelfOverItemTemplate', () => {
+    // 1.Arrange / 2.Act
+    const resolved = resolveResourceUri({
+      querySelf: '/cars/42',
+      routeId: '42',
+      collection: 'cars',
+    });
+    // 3.Assert
+    expect(resolved).toBe('/cars/42');
   });
 
   it('testResolveResourceUriExpandsDiscoveredItemTemplate', () => {
@@ -39,6 +56,14 @@ describe('resourceUri', () => {
     // 3.Assert
     expect(resolved).toBe(canonicalItemUri('reservations', id));
     expect(resolved).toBe('/reservations/42');
+  });
+
+  it('testSanitizeResourceSelfParamRejectsWrongCollectionOrId', () => {
+    // 2.Act / 3.Assert
+    expect(sanitizeResourceSelfParam('/users/1', 'cars', '1')).toBeNull();
+    expect(sanitizeResourceSelfParam('/cars/99', 'cars', '1')).toBeNull();
+    expect(sanitizeResourceSelfParam('javascript:alert(1)', 'cars', '1')).toBeNull();
+    expect(sanitizeResourceSelfParam('/cars/7', 'cars', '7')).toBe('/cars/7');
   });
 
   it('testCanonicalCarUriEncodesTemplateIdentifier', () => {

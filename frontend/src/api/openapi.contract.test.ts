@@ -5,7 +5,6 @@ import { describe, expect, it } from 'vitest';
 import { MediaTypes } from './mediaTypes';
 import { CLIENT_CONFIG_FALLBACK } from './clientConfig';
 import {
-  API_COLLECTION_FALLBACK_PATHS,
   useApiDiscoveryStore,
 } from './apiDiscovery';
 import { hrefToRelativeApiPath } from './uri';
@@ -469,6 +468,7 @@ describe('openapi.yaml contract (frontend)', () => {
       'identityValidated',
       'licenseUploaded',
       'identityUploaded',
+      'hasProfilePicture',
       'blocked',
       'role',
       'ratingAsRider',
@@ -483,18 +483,16 @@ describe('openapi.yaml contract (frontend)', () => {
     expect(missing, `UserPrivateDto missing in openapi: ${missing.join(', ')}`).toEqual([]);
   });
 
-  it('testApiDiscoveryFallbackPathsAreDocumentedCollectionGetEndpoints', () => {
+  it('testApiDiscoveryCollectionPathRequiresIndexHref', () => {
     // 1.Arrange
-    const paths = Object.values(API_COLLECTION_FALLBACK_PATHS);
+    useApiDiscoveryStore.setState({
+      ready: false,
+      index: null,
+    });
 
-    // 2.Act
-    const undocumented = paths.filter(
-      (path) => !new RegExp(`^  ${path.replace('/', '\\/')}:\\r?\\n    get:`, 'm').test(yaml),
-    );
-
-    // 3.Assert
-    expect(undocumented, `collection paths missing GET in openapi: ${undocumented.join(', ')}`).toEqual(
-      [],
+    // 2.Act / 3.Assert
+    expect(() => useApiDiscoveryStore.getState().collectionPath('cars')).toThrow(
+      'api.discovery.missingCollection:cars',
     );
   });
 
@@ -516,7 +514,6 @@ describe('openapi.yaml contract (frontend)', () => {
 
     // 3.Assert
     expect(path).toBe(hrefToRelativeApiPath(href));
-    expect(path).not.toBe(API_COLLECTION_FALLBACK_PATHS.cars);
   });
 
   it('testLinksSchemaDocumentsTypedUserDocumentRels', () => {

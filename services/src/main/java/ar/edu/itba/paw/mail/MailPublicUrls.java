@@ -1,5 +1,8 @@
 package ar.edu.itba.paw.mail;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
@@ -25,5 +28,21 @@ public final class MailPublicUrls {
         }
         final String p = pathFromContextRoot.startsWith("/") ? pathFromContextRoot : "/" + pathFromContextRoot;
         return base + p;
+    }
+
+    /**
+     * SPA deep link with {@code ?self=} carrying the relative API item path
+     * ({@code /cars/{id}}, {@code /reservations/{id}}, …) so F5/bookmark can follow
+     * hypermedia without inventing the URN in the client.
+     */
+    public String absolutePathWithSelf(final String spaPath, final String apiCollection, final long resourceId) {
+        final String self = "/" + apiCollection + "/" + resourceId;
+        final String encoded = URLEncoder.encode(self, StandardCharsets.UTF_8);
+        if (spaPath == null || spaPath.isBlank()) {
+            return absolutePath("/?self=" + encoded);
+        }
+        final String path = spaPath.startsWith("/") ? spaPath : "/" + spaPath;
+        final String sep = path.contains("?") ? "&" : "?";
+        return absolutePath(path + sep + "self=" + encoded);
     }
 }

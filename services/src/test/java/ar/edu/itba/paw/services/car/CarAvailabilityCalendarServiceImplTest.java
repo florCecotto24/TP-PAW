@@ -81,7 +81,30 @@ public class CarAvailabilityCalendarServiceImplTest {
     }
 
     @Test
-    public void testGetBookableSegmentsMergesContiguousDaysWithIdenticalProjection() {
+    public void testGetBookableSegmentsMergesContiguousDaysWithinSameAvailability() {
+        // 1. Arrange
+        final LocalDate start = LocalDate.of(2030, 9, 1);
+        final LocalDate end = LocalDate.of(2030, 9, 6);
+        final CarAvailability a = buildAvailabilityWith(
+                20L, CAR_ID, start, end, PRICE, CHECK_IN, CHECK_OUT, "Av. Centro");
+        Mockito.when(carAvailabilityService.findByCarId(CAR_ID)).thenReturn(List.of(a));
+        Mockito.when(reservationService.findBlockingReservationsByCarId(CAR_ID)).thenReturn(List.of());
+        Mockito.when(reservationService.getConfiguredPickupLeadHours()).thenReturn(24);
+        Mockito.when(carAvailabilityAddressFormatter.formatPublicPickupLocation(a)).thenReturn("Av. Centro");
+
+        // 2. Act
+        final List<BookableSegmentProjection> result =
+                calendarService.getBookableSegmentsForRiderDatePickerByCar(CAR_ID, farFutureInstant(start));
+
+        // 3. Assert
+        Assertions.assertEquals(1, result.size());
+        Assertions.assertEquals(start, result.get(0).getFrom());
+        Assertions.assertEquals(end, result.get(0).getTo());
+        Assertions.assertEquals(20L, result.get(0).getAvailabilityId());
+    }
+
+    @Test
+    public void testGetBookableSegmentsKeepsSeparateWhenContiguousButDifferentAvailabilityId() {
         final LocalDate aStart = LocalDate.of(2030, 9, 1);
         final LocalDate aEnd = LocalDate.of(2030, 9, 3);
         final LocalDate bStart = LocalDate.of(2030, 9, 4);
@@ -99,9 +122,9 @@ public class CarAvailabilityCalendarServiceImplTest {
         final List<BookableSegmentProjection> result =
                 calendarService.getBookableSegmentsForRiderDatePickerByCar(CAR_ID, farFutureInstant(aStart));
 
-        Assertions.assertEquals(1, result.size());
-        Assertions.assertEquals(aStart, result.get(0).getFrom());
-        Assertions.assertEquals(bEnd, result.get(0).getTo());
+        Assertions.assertEquals(2, result.size());
+        Assertions.assertEquals(20L, result.get(0).getAvailabilityId());
+        Assertions.assertEquals(21L, result.get(1).getAvailabilityId());
     }
 
     @Test

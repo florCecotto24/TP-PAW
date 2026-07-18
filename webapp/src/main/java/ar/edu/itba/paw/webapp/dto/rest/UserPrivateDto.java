@@ -30,6 +30,7 @@ public final class UserPrivateDto {
     private boolean identityValidated;
     private boolean licenseUploaded;
     private boolean identityUploaded;
+    private boolean hasProfilePicture;
     private boolean blocked;
     private String role;
     private BigDecimal ratingAsRider;
@@ -87,6 +88,7 @@ public final class UserPrivateDto {
             dto.identityValidated = user.isIdentityValidated();
             dto.licenseUploaded = user.getLicenseFileId().isPresent();
             dto.identityUploaded = user.getIdentityFileId().isPresent();
+            dto.hasProfilePicture = user.getProfilePictureId().isPresent();
             dto.blocked = user.isBlocked();
             dto.role = user.getUserRole() == null
                     ? UserRole.USER.name().toLowerCase(Locale.ROOT)
@@ -215,6 +217,14 @@ public final class UserPrivateDto {
 
     public void setIdentityUploaded(final boolean identityUploaded) {
         this.identityUploaded = identityUploaded;
+    }
+
+    public boolean getHasProfilePicture() {
+        return hasProfilePicture;
+    }
+
+    public void setHasProfilePicture(final boolean hasProfilePicture) {
+        this.hasProfilePicture = hasProfilePicture;
     }
 
     public boolean isBlocked() {

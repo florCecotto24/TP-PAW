@@ -57,6 +57,7 @@ const es: Record<string, string> = {
   'auth.forgot.reset': 'Restablecer contraseña',
   'auth.forgot.resetting': 'Restableciendo...',
   'auth.forgot.missingUser': 'Completá tu email y el código que te enviamos para poder continuar.',
+  'auth.forgot.discoveryMissing': 'No se pudo descubrir el endpoint de recuperación. Recargá la página.',
 };
 
 const en: Record<string, string> = {
@@ -114,6 +115,7 @@ const en: Record<string, string> = {
   'auth.forgot.reset': 'Reset password',
   'auth.forgot.resetting': 'Resetting...',
   'auth.forgot.missingUser': 'Enter your email and the code we sent you to continue.',
+  'auth.forgot.discoveryMissing': 'Could not discover the recovery endpoint. Reload the page.',
 };
 
 export const authI18n: { es: Record<string, string>; en: Record<string, string> } = { es, en };

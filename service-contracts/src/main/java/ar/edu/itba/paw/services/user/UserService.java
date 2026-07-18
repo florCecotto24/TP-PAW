@@ -222,20 +222,6 @@ public interface UserService {
             String email, String forename, String surname, String password, String passwordConfirm, Locale locale);
 
     /**
-     * When the account-confirmation screen is shown, ensures prerequisites so the user can complete the step (no-op if {@code email} is blank or unknown).
-     */
-    void ensureAccountConfirmationPrerequisites(String email, Locale locale);
-
-    /**
-     * Asks the service to issue another confirmation for {@code email}.
-     * @return {@code false} if there is no account for that address (caller may show a generic message)
-     */
-    boolean requestAccountConfirmationResend(String email, Locale locale);
-
-    /** Confirms the account with the code the user entered; returns the user id. */
-    long completeAccountConfirmation(String email, String code);
-
-    /**
      * Marks {@code userId} as blocked. Intended for system-driven blocks (e.g. refund-proof overdue sweep);
      * admin-initiated blocks live in {@link AdminService#blockUser(long, long)} and include extra validations.
      */
@@ -266,12 +252,6 @@ public interface UserService {
      *         {@code targetUserId} is already an administrator
      */
     void promoteToAdmin(long targetUserId, long assignedByUserId);
-
-    /**
-     * Creates a user row directly from a pre-encoded password hash (BCrypt). Bypasses the registration form
-     * validation and is intended for admin-initiated account creation only.
-     */
-    User createUserWithEncodedPassword(String email, String forename, String surname, String bcryptEncodedHash);
 
     /**
      * Creates a user row with admin role, a pre-encoded password hash, and the email pre-verified.

@@ -16,7 +16,11 @@ import ar.edu.itba.paw.models.dto.car.PriceMarketPosition;
 import ar.edu.itba.paw.webapp.support.CarRestEnums;
 
 /**
- * REST car representation ({@code application/vnd.paw.car.v1+json}).
+ * REST car representation.
+ * <ul>
+ *   <li>{@code application/vnd.paw.car.v1+json} — public detail; {@code plate} is always null.</li>
+ *   <li>{@code application/vnd.paw.car.private.v1+json} — owner/admin; {@code plate} is always set.</li>
+ * </ul>
  * Favorites and browse endpoints may populate only the fields available in {@link CarCard}.
  */
 public final class CarDto {
@@ -47,15 +51,17 @@ public final class CarDto {
     public CarDto() {
     }
 
-    public static CarDto from(final Car car, final UriInfo uriInfo) {
+    /** Public detail: never exposes the licence plate. */
+    public static CarDto fromPublic(final Car car, final UriInfo uriInfo) {
         return from(car, uriInfo, false);
     }
 
-    /**
-     * @param includePlate whether to expose the licence plate (a sensitive identifier). Only owner/admin
-     *                     callers may see it; public/anonymous detail views must pass {@code false}.
-     */
-    public static CarDto from(final Car car, final UriInfo uriInfo, final boolean includePlate) {
+    /** Owner/admin private detail: always includes the licence plate. */
+    public static CarDto fromPrivate(final Car car, final UriInfo uriInfo) {
+        return from(car, uriInfo, true);
+    }
+
+    private static CarDto from(final Car car, final UriInfo uriInfo, final boolean includePlate) {
         final CarDto dto = new CarDto();
         dto.plate = includePlate ? car.getPlate() : null;
         dto.year = car.getYear().orElse(null);

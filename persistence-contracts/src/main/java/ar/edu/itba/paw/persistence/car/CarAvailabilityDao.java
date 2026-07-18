@@ -61,12 +61,6 @@ public interface CarAvailabilityDao {
     List<CarAvailability> findByCarIdsEndingOnOrAfter(Collection<Long> carIds, LocalDate minEndDate);
 
     /**
-     * Returns {@code true} when the car has at least one {@link CarAvailability.Kind#OFFERED} row.
-     * Lightweight existence check (no full row scan).
-     */
-    boolean existsAnyOfferedByCar(long carId);
-
-    /**
      * Minimum {@link CarAvailability.Kind#OFFERED OFFERED} day price for each given car. Cars
      * without any offered availability are absent from the returned map. Useful for "from" pricing
      * displays.

@@ -101,9 +101,20 @@ public class EmailVerificationServiceImpl implements EmailVerificationService {
                     .log("Public verification-code request for user id={} with an active code (no-op)");
             return;
         }
+        // Issuance quota (separate key space from failed-verify lockout). Over-quota → silent 200
+        // (anti-enumeration); distinct from Basic OTP attempt limiting.
+        final String issuanceKey = OtpAttemptLimiter.issuanceKey(user.getEmail());
+        try {
+            otpAttemptLimiter.assertAllowed(issuanceKey);
+        } catch (final ar.edu.itba.paw.exception.user.OtpAttemptsExceededException ex) {
+            LOGGER.atDebug().addArgument(userId)
+                    .log("Public verification-code issuance rate-limited for user id={} (silent no-op)");
+            return;
+        }
         emailVerificationCodeDao.deleteForUser(userId);
         try {
             insertAndSend(userId, user.getEmail(), locale);
+            otpAttemptLimiter.recordFailure(issuanceKey);
         } catch (final RuntimeException e) {
             LOGGER.atWarn()
                     .addArgument(userId)

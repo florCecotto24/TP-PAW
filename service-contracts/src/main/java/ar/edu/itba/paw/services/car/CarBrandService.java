@@ -46,9 +46,6 @@ public interface CarBrandService {
     // (model dependency checks, notification emails, etc.).
     // -----------------------------------------------------------------------------------------------------------
 
-    /** Brands awaiting admin validation. */
-    List<CarBrand> findPendingOrdered();
-
     /** Admin-only: sets {@code validated = true} on the brand row. No-op when brand is missing. */
     void markAsValidated(long brandId);
 

@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { paintVideoPoster, videoPreviewSrc } from '../media/videoPoster';
 
 export interface GalleryMediaItem {
   url: string;
@@ -43,7 +44,15 @@ function GalleryCell({
   if (item.video) {
     return (
       <div className={className}>
-        <video src={src} className="car-detail-gallery__video" muted playsInline preload="metadata" />
+        <video
+          src={videoPreviewSrc(src)}
+          className="car-detail-gallery__video"
+          muted
+          playsInline
+          preload="metadata"
+          onLoadedMetadata={(ev) => paintVideoPoster(ev.currentTarget)}
+          onLoadedData={(ev) => paintVideoPoster(ev.currentTarget)}
+        />
         <button
           {...openProps}
           className="car-detail-gallery__open-btn btn p-0 border-0 bg-transparent text-start"

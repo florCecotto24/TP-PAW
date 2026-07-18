@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 import ar.edu.itba.paw.exception.car.CarNotFoundException;
 import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.services.car.CarService;
+import ar.edu.itba.paw.webapp.api.common.VndMediaType;
 import ar.edu.itba.paw.webapp.dto.rest.CarDto;
 import ar.edu.itba.paw.webapp.form.car.CarPatchForm;
 import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
@@ -57,7 +58,8 @@ public final class CarPatchSupport {
 
         final Car updated = carService.getCarById(carId)
                 .orElseThrow(() -> new CarNotFoundException(carId));
-        // Owner/admin edit path: plate is visible to the authorized caller.
-        return Response.ok(CarDto.from(updated, uriInfo, true)).build();
+        return Response.ok(CarDto.fromPrivate(updated, uriInfo))
+                .type(VndMediaType.CAR_PRIVATE_V1_JSON)
+                .build();
     }
 }

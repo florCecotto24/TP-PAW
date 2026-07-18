@@ -77,20 +77,26 @@ export function myCarsPageCount(total: number | undefined): number {
 
 /** Vista previa de reservas activas del auto (en curso o próximas) para el detalle owner. */
 export function useCarReservationPreview(
-  ownerId: string | null | undefined,
+  _ownerId: string | null | undefined,
   carId: string | null | undefined,
 ) {
+  const ownedReservationsLink = useSessionStore(
+    (s) => s.currentUser?.links?.['owned-reservations'],
+  );
   return useQuery({
-    queryKey: ['owner', 'car-reservations-preview', ownerId, carId],
-    enabled: ownerId != null && carId != null,
+    queryKey: ['owner', 'car-reservations-preview', ownedReservationsLink, carId],
+    enabled: !!ownedReservationsLink && carId != null,
     queryFn: async () => {
-      const res = await listReservations({
-        ownerId: ownerId as string,
-        carId: carId as string,
-        status: ['pending', 'accepted', 'started'],
-        page: 1,
-        pageSize: 20,
-      });
+      if (!ownedReservationsLink) throw new Error('reservations.list.missingLink');
+      const res = await listReservations(
+        {
+          carId: carId as string,
+          status: ['pending', 'accepted', 'started'],
+          page: 1,
+          pageSize: 20,
+        },
+        ownedReservationsLink,
+      );
       const items = (res.data ?? []) as ReservationSummaryDto[];
       return {
         preview: pickCarReservationPreview(items),

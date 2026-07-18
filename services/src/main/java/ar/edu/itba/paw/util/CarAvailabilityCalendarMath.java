@@ -98,13 +98,15 @@ public final class CarAvailabilityCalendarMath {
                     && Objects.equals(cur.getCheckInTime(), next.getCheckInTime())
                     && Objects.equals(cur.getCheckOutTime(), next.getCheckOutTime())
                     && cur.getPublicLocation().equals(next.getPublicLocation())
-                    && Objects.equals(cur.getNeighborhoodId(), next.getNeighborhoodId());
+                    && Objects.equals(cur.getNeighborhoodId(), next.getNeighborhoodId())
+                    && Objects.equals(cur.getAvailabilityId(), next.getAvailabilityId())
+                    && Objects.equals(cur.getCarId(), next.getCarId());
             if (contiguous && sameProjection) {
                 cur = new BookableSegmentProjection(
                         cur.getFrom(), next.getTo(),
                         cur.getDayPrice(), cur.getCheckInTime(),
                         cur.getCheckOutTime(), cur.getPublicLocation(),
-                        cur.getNeighborhoodId());
+                        cur.getNeighborhoodId(), cur.getAvailabilityId(), cur.getCarId());
             } else {
                 out.add(cur);
                 cur = next;
@@ -142,7 +144,7 @@ public final class CarAvailabilityCalendarMath {
                                 d, seg.getTo(),
                                 seg.getDayPrice(), seg.getCheckInTime(),
                                 seg.getCheckOutTime(), seg.getPublicLocation(),
-                                seg.getNeighborhoodId()));
+                                seg.getNeighborhoodId(), seg.getAvailabilityId(), seg.getCarId()));
                     }
                     break;
                 }

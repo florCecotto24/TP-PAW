@@ -15,7 +15,7 @@ import {
 } from '@tanstack/react-query';
 import { sessionClient, useSessionStore } from '../../session/sessionStore';
 import { getCollectionPath } from '../../api/apiDiscovery';
-import { canonicalCarUri } from '../../api/resourceUri';
+import { resolveResourceUri } from '../../api/resourceUri';
 import { MediaTypes } from '../../api/mediaTypes';
 import { ApiError, followAllPages, followLinkCollection, getLinkCollectionPage, type ApiResponse } from '../../api/client';
 import type { UserDto, Links } from '../../api/types';
@@ -119,14 +119,23 @@ export function pageCount(total: number | undefined, pageSize: number): number {
 }
 
 // --- Detalle de auto ---------------------------------------------------------
-export function useCar(id: string | undefined, carSelf?: string | undefined) {
+export function useCar(
+  id: string | undefined,
+  carSelf?: string | undefined,
+  querySelf?: string | null,
+) {
   return useQuery({
     // Key by route id so list→detail (with state.self) and F5 (id-only) share cache
     // and do not remount into isLoading when location.state is dropped.
     queryKey: ['browse', 'car', id],
-    enabled: !!(carSelf || id),
+    enabled: !!(carSelf || querySelf || id),
     queryFn: async () => {
-      const uri = carSelf?.trim() || (id ? canonicalCarUri(id) : null);
+      const uri = resolveResourceUri({
+        stateUri: carSelf,
+        querySelf,
+        routeId: id,
+        collection: 'cars',
+      });
       if (!uri) throw new Error('missing car uri');
       const res = await sessionClient.follow<CarDto>(uri, { accept: MediaTypes.car });
       return res.data;
@@ -218,8 +227,8 @@ export function useNeighborhoods() {
 }
 
 // --- Favoritos (idempotente: PUT agrega, DELETE quita) -----------------------
-// Colección: currentUser.links.favorites. Membresía canónica (OpenAPI):
-// GET|PUT|DELETE {favorites}/{carId} vía favoriteMembershipUri (H-07).
+// Colección: currentUser.links.favorites. Membresía: expandir
+// favorites-item-template con {carId} (no concatenar la colección).
 
 async function loadFavoritedCarIds(favoritesLink: string): Promise<Set<string>> {
   const ids = new Set<string>();
@@ -265,15 +274,17 @@ export function useFavoritedCarIds() {
  * fallaba al favoritar autos abiertos desde el panel admin.
  */
 export function useIsFavorite(carSelf: string | undefined) {
-  const favoritesLink = useSessionStore((s) => s.currentUser?.links?.favorites);
+  const favoritesTemplate = useSessionStore(
+    (s) => s.currentUser?.links?.['favorites-item-template'],
+  );
   const userSelf = useSessionStore((s) => s.currentUser?.links?.self);
   return useQuery({
     queryKey: ['browse', 'favorites', userSelf, carSelf],
-    enabled: !!carSelf && !!favoritesLink && !!userSelf,
+    enabled: !!carSelf && !!favoritesTemplate && !!userSelf,
     queryFn: async () => {
       const carId = lastPathSegment(carSelf as string);
       if (!carId) return false;
-      const target = favoriteMembershipUri(favoritesLink as string, carSelf as string);
+      const target = favoriteMembershipUri(favoritesTemplate as string, carSelf as string);
       try {
         await sessionClient.get(target);
         return true;
@@ -310,10 +321,10 @@ export function useToggleFavorite() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ car, makeFavorite }: { car: CarSummaryDto; makeFavorite: boolean }) => {
-      const favoritesLink = useSessionStore.getState().currentUser?.links?.favorites;
-      if (!favoritesLink) throw new Error('browse.favorite.noSession');
+      const favoritesTemplate = useSessionStore.getState().currentUser?.links?.['favorites-item-template'];
+      if (!favoritesTemplate) throw new Error('browse.favorite.noSession');
       const carSelf = car.links?.self ?? '';
-      const target = favoriteMembershipUri(favoritesLink, carSelf);
+      const target = favoriteMembershipUri(favoritesTemplate, carSelf);
       const res: ApiResponse<unknown> = makeFavorite
         ? await sessionClient.put(target)
         : await sessionClient.del(target);
@@ -413,6 +424,8 @@ export interface BookableSegmentDto {
   location: string;
   links: {
     neighborhood?: string;
+    availability?: string;
+    car?: string;
   };
 }
 

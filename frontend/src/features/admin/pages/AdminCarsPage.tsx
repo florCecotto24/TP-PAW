@@ -42,7 +42,7 @@ export default function AdminCarsPage() {
     return collectionQueryPath('cars', { status: statusFilter || 'all' });
   }, [statusFilter]);
 
-  const list = usePagedList<CarDto>(listPath, MediaTypes.car, pageIndex + 1, [statusFilter]);
+  const list = usePagedList<CarDto>(listPath, MediaTypes.carPrivate, pageIndex + 1, [statusFilter]);
 
   const onStatusFilterChange = (value: AdminCarStatusFilter) => {
     setSearchParams(withPageIndex(withAdminCarStatus(searchParams, value), 0));

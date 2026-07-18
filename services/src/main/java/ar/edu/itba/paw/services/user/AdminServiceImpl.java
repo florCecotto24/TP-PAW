@@ -249,21 +249,6 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     @Transactional
-    public void validateCarModel(final long modelId) {
-        if (carModelService.findById(modelId).isEmpty()) {
-            throw new CarModelNotFoundException(modelId);
-        }
-        carModelService.markAsValidated(modelId);
-    }
-
-    @Override
-    @Transactional
-    public void rejectCarModel(final long modelId) {
-        carModelService.deleteById(modelId);
-    }
-
-    @Override
-    @Transactional
     public void validateCatalogEntry(final long modelId, final Locale locale) {
         final CarModel model = carModelService.findById(modelId)
                 .orElseThrow(() -> new CarModelNotFoundException(modelId));
@@ -359,18 +344,6 @@ public class AdminServiceImpl implements AdminService {
             return UserRole.USER;
         }
         throw new IllegalArgumentException("Invalid role filter: " + role);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<CarBrand> findPendingBrands() {
-        return carBrandService.findPendingOrdered();
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<CarModel> findPendingModels() {
-        return carModelService.findPendingOrdered();
     }
 
     @Override

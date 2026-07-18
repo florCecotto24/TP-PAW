@@ -1,7 +1,5 @@
 package ar.edu.itba.paw.webapp.controller.catalog;
 
-import java.util.Locale;
-
 import javax.validation.Valid;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
@@ -20,7 +18,6 @@ import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Component;
 
-import ar.edu.itba.paw.models.domain.car.CarModel;
 import ar.edu.itba.paw.webapp.api.common.VndMediaType;
 import ar.edu.itba.paw.webapp.dto.rest.CatalogApprovalDto;
 import ar.edu.itba.paw.webapp.support.ModelCatalogSupport;
@@ -46,8 +43,7 @@ public class BrandModelItemController {
     @Produces(VndMediaType.MODEL_V1_JSON)
     public Response getModel(
             @PathParam("id") final long brandId, @PathParam("modelId") final long modelId) {
-        final CarModel model = modelCatalogSupport.requireModelForBrand(brandId, modelId);
-        return Response.ok(modelCatalogSupport.toDto(model, uriInfo)).build();
+        return modelCatalogSupport.getModelForBrand(brandId, modelId, uriInfo);
     }
 
     @GET
@@ -57,8 +53,7 @@ public class BrandModelItemController {
             @PathParam("id") final long brandId,
             @PathParam("modelId") final long modelId,
             @QueryParam("excludeCarId") final Long excludeCarId) {
-        modelCatalogSupport.requireModelForBrand(brandId, modelId);
-        return modelCatalogSupport.priceInsightResponse(modelId, excludeCarId);
+        return modelCatalogSupport.priceInsightResponse(brandId, modelId, excludeCarId, uriInfo);
     }
 
     @PATCH
@@ -69,22 +64,19 @@ public class BrandModelItemController {
             @PathParam("id") final long brandId,
             @PathParam("modelId") final long modelId,
             @Valid final CatalogApprovalDto patch) {
-        modelCatalogSupport.requireModelForBrand(brandId, modelId);
-        final Locale locale = LocaleContextHolder.getLocale();
-        if (Boolean.TRUE.equals(patch.getValidated())) {
-            modelCatalogSupport.approveModel(modelId, locale);
-        }
-        final CarModel updated = modelCatalogSupport.requireModelForBrand(brandId, modelId);
-        return Response.ok(modelCatalogSupport.toDto(updated, uriInfo)).build();
+        return modelCatalogSupport.approveModelIfRequested(
+                brandId,
+                modelId,
+                Boolean.TRUE.equals(patch.getValidated()),
+                LocaleContextHolder.getLocale(),
+                uriInfo);
     }
 
     @DELETE
     @PreAuthorize("@userResourceAccess.isAdmin()")
     public Response rejectModel(
             @PathParam("id") final long brandId, @PathParam("modelId") final long modelId) {
-        modelCatalogSupport.requireModelForBrand(brandId, modelId);
-        final Locale locale = LocaleContextHolder.getLocale();
-        modelCatalogSupport.rejectModel(modelId, locale);
-        return Response.noContent().build();
+        return modelCatalogSupport.rejectModelForBrand(
+                brandId, modelId, LocaleContextHolder.getLocale());
     }
 }

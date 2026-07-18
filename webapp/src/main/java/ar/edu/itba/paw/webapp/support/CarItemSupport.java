@@ -5,6 +5,7 @@ import javax.ws.rs.core.Request;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Component;
 
 import ar.edu.itba.paw.exception.car.CarNotFoundException;
@@ -21,6 +22,8 @@ import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
  */
 @Component
 public final class CarItemSupport {
+
+    private static final String ACCESS_DENIED_MESSAGE = "You do not have permission to perform this action.";
 
     private final CarService carService;
     private final CarResourceAccess carResourceAccess;
@@ -49,13 +52,23 @@ public final class CarItemSupport {
                     VndMediaType.CAR_SUMMARY_V1_JSON,
                     () -> CarSummaryDto.from(car, uriInfo));
         }
-        // Plate is a sensitive identifier: only expose it to the owner/admin, never on the public detail.
-        final boolean includePlate = carResourceAccess.isOwnerOrAdmin(car, viewer);
+        // Same pattern as user.private: explicit Accept opts into the plate-bearing MIME;
+        // non-owner/admin get 403 (not a public car.v1 with plate=null).
+        if (carRepresentationSupport.acceptsPrivateCar(httpHeaders)) {
+            if (!carResourceAccess.isOwnerOrAdmin(car, viewer)) {
+                throw new AccessDeniedException(ACCESS_DENIED_MESSAGE);
+            }
+            return ConditionalJsonResponses.okOrNotModified(
+                    request,
+                    CarRepresentationVersions.etagValue(car, CarRepresentationVersions.PRIVATE),
+                    VndMediaType.CAR_PRIVATE_V1_JSON,
+                    () -> CarDto.fromPrivate(car, uriInfo));
+        }
         return ConditionalJsonResponses.okOrNotModified(
                 request,
                 CarRepresentationVersions.etagValue(car, CarRepresentationVersions.DETAIL),
                 VndMediaType.CAR_V1_JSON,
-                () -> CarDto.from(car, uriInfo, includePlate));
+                () -> CarDto.fromPublic(car, uriInfo));
     }
 
     public Response deactivate(final long carId) {

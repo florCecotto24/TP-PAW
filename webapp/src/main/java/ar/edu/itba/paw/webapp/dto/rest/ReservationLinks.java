@@ -43,7 +43,7 @@ public final class ReservationLinks {
                     .withRelated("messages", RestUriUtils.reservationMessagesUri(uriInfo, reservationId).toString())
                     .withRelated("reviews", RestUriUtils.reservationReviewsUri(uriInfo, reservationId).toString())
                     .withRelated("counterparty",
-                            RestUriUtils.reservationUri(uriInfo, reservationId).toString() + "/counterparty");
+                            RestUriUtils.reservationCounterpartyUri(uriInfo, reservationId).toString());
             links = links.withRelated(
                     "payment-receipt",
                     RestUriUtils.reservationPaymentReceiptUri(uriInfo, reservationId).toString());

@@ -1,10 +1,8 @@
 package ar.edu.itba.paw.services.car;
 
 
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
@@ -15,7 +13,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -70,12 +67,6 @@ public class CarAvailabilityCalendarServiceImpl implements CarAvailabilityCalend
 
     @Override
     @Transactional(readOnly = true)
-    public List<AvailabilityPeriod> getBookableWallAvailabilityPeriodsByCar(final long carId) {
-        return CarAvailabilityCalendarMath.mergeAdjacentWallDaysToPeriods(computeBookableWallDaysByCar(carId));
-    }
-
-    @Override
-    @Transactional(readOnly = true)
     public Map<Long, List<AvailabilityPeriod>> getBookableWallAvailabilityPeriodsByCars(
             final Collection<Long> carIds) {
         if (carIds == null || carIds.isEmpty()) {
@@ -105,49 +96,15 @@ public class CarAvailabilityCalendarServiceImpl implements CarAvailabilityCalend
 
     @Override
     @Transactional(readOnly = true)
-    public List<AvailabilityPeriod> getBookableWallAvailabilityPeriodsForRiderDatePickerByCar(
-            final long carId,
-            final LocalTime checkInTime,
-            final Instant now) {
-        final List<AvailabilityPeriod> bookable = getBookableWallAvailabilityPeriodsByCar(carId);
-        final List<AvailabilityPeriod> merged = BookableWallAvailabilityCalendar.mergeAdjacentPeriods(bookable);
-        final int leadHours = reservationService.getConfiguredPickupLeadHours();
-        final Instant minPickupExclusive = now.plus(leadHours, ChronoUnit.HOURS);
-        return BookableWallAvailabilityCalendar.clipPeriodsToMinPickupInstant(
-                merged, checkInTime, AppTimezone.WALL_ZONE, minPickupExclusive);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
     public List<BookableSegmentProjection> getBookableSegmentsForRiderDatePickerByCar(
             final long carId, final Instant now) {
-        return computeBookableSegmentsForRiderDatePicker(carId, now, /* excludingReservationId */ null);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<BookableSegmentProjection> getBookableSegmentsForRiderDatePickerByCarExcluding(
-            final long carId, final Instant now, final long excludingReservationId) {
-        return computeBookableSegmentsForRiderDatePicker(carId, now, excludingReservationId);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<BookableSegmentProjection> getAllEffectiveSegmentsForOwnerCalendar(final long carId) {
-        return computeEffectiveSegmentsForOwnerCalendar(carAvailabilityService.findByCarId(carId));
+        return computeBookableSegmentsForRiderDatePicker(carId, now);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<CarAvailability> findEffectiveOfferedByCar(final long carId) {
         return computeEffectiveOffered(carAvailabilityService.findByCarId(carId));
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<CarAvailability> findEffectiveOfferedByCarInRange(
-            final long carId, final LocalDate from, final LocalDate to) {
-        return computeEffectiveOffered(carAvailabilityService.findOverlappingRangeByCar(carId, from, to));
     }
 
     @Override
@@ -207,26 +164,6 @@ public class CarAvailabilityCalendarServiceImpl implements CarAvailabilityCalend
                 .collect(Collectors.toList());
     }
 
-    private List<BookableSegmentProjection> mapToSegments(final List<CarAvailability> effective) {
-        return effective.stream()
-                .map(ca -> new BookableSegmentProjection(
-                        ca.getStartInclusive(),
-                        ca.getEndInclusive(),
-                        ca.getDayPriceValue(),
-                        ca.getCheckInTime(),
-                        ca.getCheckOutTime(),
-                        carAvailabilityAddressFormatter.formatPublicPickupLocation(ca),
-                        ca.getNeighborhoodId().orElse(null)))
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * Computes owner-facing calendar segments with day-by-day effective price resolution,
-     * then merges contiguous days that share identical attributes. Unlike the rider-facing
-     * variant, this does <b>not</b> subtract reservation-blocked days or apply pickup-lead
-     * clipping — the owner calendar must show <b>all</b> offered days exactly as they will
-     * appear to riders, with the effective (most recent) price per day.
-     */
     private List<BookableSegmentProjection> computeEffectiveSegmentsForOwnerCalendar(
             final List<CarAvailability> rows) {
         if (rows.isEmpty()) {
@@ -260,56 +197,18 @@ public class CarAvailabilityCalendarServiceImpl implements CarAvailabilityCalend
                     eff.getCheckInTime(),
                     eff.getCheckOutTime(),
                     carAvailabilityAddressFormatter.formatPublicPickupLocation(eff),
-                    eff.getNeighborhoodId().orElse(null)));
+                    eff.getNeighborhoodId().orElse(null),
+                    eff.getId(),
+                    eff.getCarId()));
         }
         return CarAvailabilityCalendarMath.mergeContiguousIdenticalProjections(singleDay);
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public BigDecimal resolveMinEffectiveDayPriceByCar(final long carId, final BigDecimal defaultPrice) {
-        final LocalDate today = LocalDate.now(AppTimezone.WALL_ZONE);
-        BigDecimal min = defaultPrice;
-        for (final CarAvailability la : carAvailabilityService.findByCarId(carId)) {
-            if (la.getKind() != CarAvailability.Kind.OFFERED) {
-                continue;
-            }
-            if (la.getEndInclusive().isBefore(today)) {
-                continue;
-            }
-            final BigDecimal periodPrice = la.getDayPriceValue();
-            if (periodPrice != null && (min == null || periodPrice.compareTo(min) < 0)) {
-                min = periodPrice;
-            }
-        }
-        return min;
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public boolean isCarPriceVariableByCar(final long carId, final BigDecimal defaultPrice) {
-        final LocalDate today = LocalDate.now(AppTimezone.WALL_ZONE);
-        for (final CarAvailability la : carAvailabilityService.findByCarId(carId)) {
-            if (la.getKind() != CarAvailability.Kind.OFFERED) {
-                continue;
-            }
-            if (la.getEndInclusive().isBefore(today)) {
-                continue;
-            }
-            final BigDecimal periodPrice = la.getDayPriceValue();
-            if (periodPrice != null && defaultPrice != null && periodPrice.compareTo(defaultPrice) != 0) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     private List<BookableSegmentProjection> computeBookableSegmentsForRiderDatePicker(
-            final long carId, final Instant now, final Long excludingReservationIdOrNull) {
+            final long carId, final Instant now) {
         final List<CarAvailability> allRows = carAvailabilityService.findByCarId(carId);
-        final List<BlockingReservationProjection> blockingReservations = excludingReservationIdOrNull == null
-                ? reservationService.findBlockingReservationsByCarId(carId)
-                : reservationService.findBlockingReservationsByCarIdExcluding(carId, excludingReservationIdOrNull);
+        final List<BlockingReservationProjection> blockingReservations =
+                reservationService.findBlockingReservationsByCarId(carId);
         return buildRiderBookableSegments(allRows, blockingReservations, now);
     }
 
@@ -362,7 +261,9 @@ public class CarAvailabilityCalendarServiceImpl implements CarAvailabilityCalend
                     eff.getCheckInTime(),
                     eff.getCheckOutTime(),
                     carAvailabilityAddressFormatter.formatPublicPickupLocation(eff),
-                    eff.getNeighborhoodId().orElse(null)));
+                    eff.getNeighborhoodId().orElse(null),
+                    eff.getId(),
+                    eff.getCarId()));
         }
         final List<BookableSegmentProjection> merged =
                 CarAvailabilityCalendarMath.mergeContiguousIdenticalProjections(singleDay);
@@ -406,23 +307,6 @@ public class CarAvailabilityCalendarServiceImpl implements CarAvailabilityCalend
             }
         }
         return effective;
-    }
-
-    private SortedSet<LocalDate> computeBookableWallDaysByCar(final long carId) {
-        return computeBookableWallDaysByCarInternal(
-                carId, reservationService.findBlockingReservationsByCarId(carId));
-    }
-
-    private SortedSet<LocalDate> computeBookableWallDaysByCarExcluding(
-            final long carId, final long excludingReservationId) {
-        return computeBookableWallDaysByCarInternal(
-                carId, reservationService.findBlockingReservationsByCarIdExcluding(carId, excludingReservationId));
-    }
-
-    private SortedSet<LocalDate> computeBookableWallDaysByCarInternal(
-            final long carId, final List<BlockingReservationProjection> blockingReservations) {
-        return computeBookableWallDaysFromRows(
-                carAvailabilityService.findByCarId(carId), blockingReservations);
     }
 
     /**

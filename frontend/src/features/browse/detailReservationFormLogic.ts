@@ -2,6 +2,8 @@
  * Port of {@code detailReservationForm.js} — bookable-segment range projection for car detail.
  */
 
+import { idFromUri } from '../../api/uri';
+
 export interface BookableSegment {
   from: string;
   to: string;
@@ -10,6 +12,7 @@ export interface BookableSegment {
   checkOutTime: string | null;
   location: string;
   neighborhoodUri?: string;
+  availabilityUri?: string;
 }
 
 export interface RangeProjection {
@@ -22,6 +25,7 @@ export interface RangeProjection {
   total: number | null;
   showPricing: boolean;
   billableDays: number;
+  availabilityUri?: string;
 }
 
 const DASH = '\u2014';
@@ -151,6 +155,7 @@ export function applyRangeProjection(
     total: subtotalInfo.complete && subtotalInfo.days > 0 ? subtotalInfo.total : null,
     showPricing: subtotalInfo.complete && subtotalInfo.days > 0,
     billableDays,
+    availabilityUri: pickupSeg?.availabilityUri,
   };
 }
 
@@ -189,7 +194,7 @@ export function initialDefaultDates(
   const matchSeg = segments.find(
     (seg) =>
       seg.neighborhoodUri != null &&
-      searchNeighborhoodIds.some((id) => seg.neighborhoodUri!.endsWith(`/neighborhoods/${id}`)),
+      searchNeighborhoodIds.some((nid) => idFromUri(seg.neighborhoodUri) === String(nid)),
   );
   if (!matchSeg) return [];
   const d1 = dayStartFromYmd(matchSeg.from);

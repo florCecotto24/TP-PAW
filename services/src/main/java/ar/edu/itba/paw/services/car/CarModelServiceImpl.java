@@ -96,12 +96,6 @@ public class CarModelServiceImpl implements CarModelService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<CarModel> findPendingOrdered() {
-        return carModelDao.findPendingOrdered();
-    }
-
-    @Override
-    @Transactional(readOnly = true)
     public Page<CarModel> findPendingPage(final int page, final int pageSize) {
         return carModelDao.findPendingPage(page, pageSize);
     }

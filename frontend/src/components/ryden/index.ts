@@ -78,6 +78,13 @@ export type { AvatarProps } from './profile/Avatar';
 // Media
 export { default as AuthenticatedImg } from './media/AuthenticatedImg';
 export type { AuthenticatedImgProps } from './media/AuthenticatedImg';
+export { default as AuthenticatedVideo } from './media/AuthenticatedVideo';
+export type { AuthenticatedVideoProps } from './media/AuthenticatedVideo';
+export { default as AuthenticatedCoverMedia } from './media/AuthenticatedCoverMedia';
+export type { AuthenticatedCoverMediaProps } from './media/AuthenticatedCoverMedia';
+export { paintVideoPoster, videoPreviewSrc } from './media/videoPoster';
+export { default as FlatpickrDateInput } from './forms/FlatpickrDateInput';
+export type { FlatpickrDateInputProps } from './forms/FlatpickrDateInput';
 
 // Review
 export { default as ReviewCard } from './review/ReviewCard';

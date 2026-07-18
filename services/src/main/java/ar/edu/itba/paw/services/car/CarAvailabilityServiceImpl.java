@@ -6,6 +6,7 @@ import ar.edu.itba.paw.exception.car.AvailabilityRiderLeadViolationException;
 import ar.edu.itba.paw.exception.car.CarValidationException;
 import ar.edu.itba.paw.exception.reservation.ReservationConflictException;
 import ar.edu.itba.paw.models.domain.car.AvailabilityPeriod;
+import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.models.domain.car.CarAvailability;
 import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.models.dto.Page;
@@ -29,18 +30,13 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
-import java.time.YearMonth;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Comparator;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 import ar.edu.itba.paw.services.reservation.ReservationService;
 import ar.edu.itba.paw.services.user.UserReadinessService;
@@ -152,40 +148,9 @@ public class CarAvailabilityServiceImpl implements CarAvailabilityService {
     }
 
     @Override
-    @Transactional
-    public void updateMinimumRentalDays(final long carId, final int minDays) {
-        final List<AvailabilityPeriod> periods = effectiveOfferedAvailabilityFor(carId).stream()
-                .map(la -> new AvailabilityPeriod(la.getStartInclusive(), la.getEndInclusive()))
-                .collect(Collectors.toList());
-        if (!periods.isEmpty()) {
-            CarAvailabilityCalendarMath.validateMinimumRentalDaysAgainstPeriods(minDays, periods);
-        }
-        carService.updateMinimumRentalDays(carId, minDays);
-    }
-
-    @Override
     @Transactional(readOnly = true)
     public List<CarAvailability> findByCarId(final long carId) {
         return carAvailabilityDao.findByCarId(carId);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<CarAvailability> findEffectiveOfferedByCar(final long carId) {
-        return effectiveOfferedAvailabilityFor(carId);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public Page<CarAvailability> findEffectiveOfferedByCarAndMonth(
-            final long carId, final YearMonth month, final int page, final int pageSize) {
-        final LocalDate monthStart = month.atDay(1);
-        final LocalDate monthEnd = month.atEndOfMonth();
-        final List<CarAvailability> allMonthRows =
-                carAvailabilityDao.findOverlappingRangeByCar(carId, monthStart, monthEnd);
-        final List<CarAvailability> effectiveRows =
-                CarAvailabilityCalendarServiceImpl.computeEffectiveOffered(allMonthRows);
-        return slicePage(effectiveRows, page, pageSize);
     }
 
     @Override
@@ -225,24 +190,10 @@ public class CarAvailabilityServiceImpl implements CarAvailabilityService {
         return new Page<>(content, safePage, safePageSize, total);
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<BookableSegmentProjection> getEffectiveSegmentsForOwnerCalendarInRange(
-            final long carId, final LocalDate from, final LocalDate to) {
-        return carAvailabilityCalendarService.getEffectiveSegmentsForOwnerCalendarInRange(carId, from, to);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public boolean existsAnyOfferedByCar(final long carId) {
-        return carAvailabilityDao.existsAnyOfferedByCar(carId);
-    }
-
     /**
-     * Private helper shared by {@link #findEffectiveOfferedByCar(long)} and {@link #updateMinimumRentalDays(long, int)}.
-     * Extracted so the writable {@code updateMinimumRentalDays} no longer self-invokes the public
-     * {@code findEffectiveOfferedByCar}, which would skip the proxy and lose the {@code @Transactional}
-     * annotation if the outer transaction ever changes its propagation/read-only flag.
+     * Private helper that resolves the currently-effective OFFERED rows for the car via the
+     * calendar service. Kept separate from the paginated public method so the resolution logic
+     * has a single call site.
      */
     private List<CarAvailability> effectiveOfferedAvailabilityFor(final long carId) {
         return carAvailabilityCalendarService.findEffectiveOfferedByCar(carId);
@@ -254,29 +205,6 @@ public class CarAvailabilityServiceImpl implements CarAvailabilityService {
             final Collection<Long> carIds,
             final LocalDate minEndDate) {
         return carAvailabilityDao.findByCarIdsEndingOnOrAfter(carIds, minEndDate);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<AvailabilityPeriod> findReservationBlockedWallRangesByCar(final long carId) {
-        final ZoneId wall = AppTimezone.WALL_ZONE;
-        final LocalDate today = LocalDate.now(wall);
-        final List<BlockingReservationProjection> blocking = reservationService.findBlockingReservationsByCarId(carId);
-        if (blocking.isEmpty()) {
-            return List.of();
-        }
-        final List<AvailabilityPeriod> out = new ArrayList<>(blocking.size());
-        for (final BlockingReservationProjection r : blocking) {
-            final LocalDate startDay = r.getStartDate().atZoneSameInstant(wall).toLocalDate();
-            final LocalDate endDay = r.getEndDate().atZoneSameInstant(wall).toLocalDate();
-            // Reservations whose wall-window already ended cannot block a new publication: those
-            // days are in the past relative to the owner's calendar.
-            if (endDay.isBefore(today)) {
-                continue;
-            }
-            out.add(new AvailabilityPeriod(startDay, endDay));
-        }
-        return out;
     }
 
     private CarAvailability applyOwnerEditByCar(
@@ -415,25 +343,9 @@ public class CarAvailabilityServiceImpl implements CarAvailabilityService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<AvailabilityPeriod> getBookableWallAvailabilityPeriodsByCar(final long carId) {
-        return carAvailabilityCalendarService.getBookableWallAvailabilityPeriodsByCar(carId);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
     public Map<Long, List<AvailabilityPeriod>> getBookableWallAvailabilityPeriodsByCars(
             final Collection<Long> carIds) {
         return carAvailabilityCalendarService.getBookableWallAvailabilityPeriodsByCars(carIds);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<AvailabilityPeriod> getBookableWallAvailabilityPeriodsForRiderDatePickerByCar(
-            final long carId,
-            final LocalTime checkInTime,
-            final Instant now) {
-        return carAvailabilityCalendarService.getBookableWallAvailabilityPeriodsForRiderDatePickerByCar(
-                carId, checkInTime, now);
     }
 
     @Override
@@ -448,32 +360,6 @@ public class CarAvailabilityServiceImpl implements CarAvailabilityService {
     public List<BookableSegmentProjection> getBookableSegmentsForRiderDatePickerByCar(
             final long carId, final Instant now) {
         return carAvailabilityCalendarService.getBookableSegmentsForRiderDatePickerByCar(carId, now);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<BookableSegmentProjection> getBookableSegmentsForRiderDatePickerByCarExcluding(
-            final long carId, final Instant now, final long excludingReservationId) {
-        return carAvailabilityCalendarService.getBookableSegmentsForRiderDatePickerByCarExcluding(
-                carId, now, excludingReservationId);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public BigDecimal resolveMinEffectiveDayPriceByCar(final long carId, final BigDecimal defaultPrice) {
-        return carAvailabilityCalendarService.resolveMinEffectiveDayPriceByCar(carId, defaultPrice);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public boolean isCarPriceVariableByCar(final long carId, final BigDecimal defaultPrice) {
-        return carAvailabilityCalendarService.isCarPriceVariableByCar(carId, defaultPrice);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<BookableSegmentProjection> getAllEffectiveSegmentsForOwnerCalendar(final long carId) {
-        return carAvailabilityCalendarService.getAllEffectiveSegmentsForOwnerCalendar(carId);
     }
 
     private void rejectIfReservationsOverlapAnyChunkByCar(
@@ -520,25 +406,6 @@ public class CarAvailabilityServiceImpl implements CarAvailabilityService {
         return out;
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public Optional<CarAvailability> findMostRecentByCarId(final long carId) {
-        return carAvailabilityDao.findByCarId(carId).stream()
-                .max(Comparator.comparing(CarAvailability::getCreatedAt));
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public LocalDate getPublicationMinAvailabilityFirstWallDay(
-            final LocalTime checkInTime, final Instant now) {
-        final LocalTime pickup = checkInTime != null ? checkInTime : CarAvailability.DEFAULT_CHECK_IN_TIME;
-        return RiderPickupLeadTime.minCarAvailabilityFirstDayInclusive(
-                pickup,
-                AppTimezone.WALL_ZONE,
-                now,
-                reservationTimingPolicy.getPickupLeadHours());
-    }
-
     private void validatePublicationAvailabilityRiderLead(
             final List<AvailabilityPeriod> periods, final LocalTime checkInTime, final Instant now) {
         if (periods == null || periods.isEmpty()) {
@@ -580,13 +447,6 @@ public class CarAvailabilityServiceImpl implements CarAvailabilityService {
                 LocalDate.now(AppTimezone.WALL_ZONE), periods);
     }
 
-    // Intentionally not @Transactional: returns a value from the singleton policy bean
-    // (CarAvailabilityPolicy holds Spring-bound config), no DAO / EntityManager touch.
-    @Override
-    public int getConfiguredMaxAvailabilityForwardWallDays() {
-        return carAvailabilityPolicy.getMaxAvailabilityForwardWallDays();
-    }
-
     @Override
     @Transactional
     public List<CarAvailability> createListing(
@@ -610,6 +470,17 @@ public class CarAvailabilityServiceImpl implements CarAvailabilityService {
         // here keeps the picker's disabled-days contract honest server-side.
         // Serialize against concurrent booking before the overlap check + OFFERED writes.
         carService.lockForReservationWrite(carId);
+        final Car car = carService.getCarById(carId)
+                .orElseThrow(() -> new CarValidationException(MessageKeys.CAR_NOT_FOUND));
+        if (car.getOwnerId() != ownerUserId) {
+            throw new CarValidationException(MessageKeys.CAR_NOT_FOUND);
+        }
+        // Publishing availability is only meaningful for listings that can return to the market
+        // (ACTIVE or PAUSED). DEACTIVATED / LACK_DOC / ADMIN_PAUSED must be restored first.
+        // Bookable-segments and POST /reservations still require ACTIVE.
+        if (car.getStatus() != Car.Status.ACTIVE && car.getStatus() != Car.Status.PAUSED) {
+            throw new CarValidationException(MessageKeys.CAR_INVALID_STATUS_TRANSITION);
+        }
         rejectIfReservationsOverlapAnyChunkByCar(
                 carId,
                 periodsToDateRanges(input.periods()),
@@ -657,51 +528,6 @@ public class CarAvailabilityServiceImpl implements CarAvailabilityService {
                 input.startPointStreet(), input.rawStartPointNumber(),
                 input.rawNeighborhoodId(),
                 input.checkInTime(), input.checkOutTime());
-    }
-
-    @Override
-    @Transactional
-    public void applyOwnerBulkEdit(
-            final long ownerUserId, final long carId, final AvailabilityCreateInput input, final Instant now) {
-        Objects.requireNonNull(input, "input");
-        Objects.requireNonNull(now, "now");
-        final List<AvailabilityPeriod> newPeriods = input.periods();
-        if (newPeriods.isEmpty()) {
-            return;
-        }
-        final List<CarAvailability> existing = carAvailabilityDao.findByCarId(carId);
-        if (existing.isEmpty()) {
-            // Same shape as the original controller branch: minimumRentalDays hardcoded to 1.
-            createListing(
-                    ownerUserId,
-                    carId,
-                    new AvailabilityCreateInput(
-                            input.pricePerDay(),
-                            input.startPointStreet(),
-                            input.rawStartPointNumber(),
-                            input.rawNeighborhoodId(),
-                            input.checkInTime(),
-                            input.checkOutTime(),
-                            newPeriods,
-                            input.periodPrices(),
-                            1),
-                    now);
-            return;
-        }
-        final CarAvailability mostRecent = existing.stream()
-                .max(Comparator.comparing(CarAvailability::getCreatedAt))
-                .orElseThrow();
-        for (int i = 0; i < newPeriods.size(); i++) {
-            final AvailabilityPeriod np = newPeriods.get(i);
-            applyOwnerEditByCar(
-                    carId,
-                    mostRecent.getStartInclusive(), mostRecent.getEndInclusive(),
-                    np.getStartInclusive(), np.getEndInclusive(),
-                    input.effectivePriceAt(i),
-                    input.startPointStreet(), input.rawStartPointNumber(),
-                    input.rawNeighborhoodId(),
-                    input.checkInTime(), input.checkOutTime());
-        }
     }
 
     /**

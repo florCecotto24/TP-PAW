@@ -39,8 +39,6 @@ import ar.edu.itba.paw.webapp.support.CarListSupport;
 import ar.edu.itba.paw.webapp.support.CarPatchSupport;
 import ar.edu.itba.paw.webapp.support.CarPublishSupport;
 import ar.edu.itba.paw.webapp.support.CurrentUserResolver;
-import ar.edu.itba.paw.webapp.support.PaginationParams;
-import ar.edu.itba.paw.webapp.support.PaginationSupport;
 import ar.edu.itba.paw.webapp.validation.constraint.car.ValidCarPowertrainList;
 import ar.edu.itba.paw.webapp.validation.constraint.car.ValidCarStatusList;
 import ar.edu.itba.paw.webapp.validation.constraint.car.ValidCarTransmissionList;
@@ -56,7 +54,6 @@ import ar.edu.itba.paw.webapp.validation.constraint.common.ValidYearMonth;
 public class CarController {
 
     private final CurrentUserResolver currentUserResolver;
-    private final PaginationSupport paginationSupport;
     private final CarListSupport carListSupport;
     private final CarPublishSupport carPublishSupport;
     private final CarPatchSupport carPatchSupport;
@@ -71,13 +68,11 @@ public class CarController {
     @Autowired
     public CarController(
             final CurrentUserResolver currentUserResolver,
-            final PaginationSupport paginationSupport,
             final CarListSupport carListSupport,
             final CarPublishSupport carPublishSupport,
             final CarPatchSupport carPatchSupport,
             final CarItemSupport carItemSupport) {
         this.currentUserResolver = currentUserResolver;
-        this.paginationSupport = paginationSupport;
         this.carListSupport = carListSupport;
         this.carPublishSupport = carPublishSupport;
         this.carPatchSupport = carPatchSupport;
@@ -91,7 +86,7 @@ public class CarController {
     // neither (public browse, active-only). Not a @PreAuthorize candidate: each branch's rule
     // is chosen by which query params the caller sent, not a precondition on path/query alone.
     @GET
-    @Produces({VndMediaType.CAR_SUMMARY_V1_JSON, VndMediaType.CAR_V1_JSON})
+    @Produces({VndMediaType.CAR_SUMMARY_V1_JSON, VndMediaType.CAR_V1_JSON, VndMediaType.CAR_PRIVATE_V1_JSON})
     public Response listCars(
             @QueryParam("page") @DefaultValue("1") final int page,
             @QueryParam("pageSize") final Integer pageSizeParam,
@@ -112,32 +107,11 @@ public class CarController {
             @QueryParam("flexDays") final Integer flexDays,
             @QueryParam("status") @ValidCarStatusList final List<String> status,
             @QueryParam("sort") final String sort) {
-        final PaginationParams paging = paginationSupport.forBrowseCars(page, pageSizeParam);
-
-        if (ownerId == null && carListSupport.isStatusAll(status)) {
-            return carListSupport.listAdminCatalog(paging, uriInfo);
-        }
-
-        if (ownerId != null) {
-            return carListSupport.listOwnerCars(
-                    paging,
-                    ownerId,
-                    query,
-                    category,
-                    transmission,
-                    powertrain,
-                    priceMin,
-                    priceMax,
-                    rating,
-                    status,
-                    sort,
-                    currentUserResolver.currentPrincipalOrNull(),
-                    uriInfo);
-        }
-
-        return carListSupport.listPublicBrowse(
-                paging,
+        return carListSupport.listCars(
+                page,
+                pageSizeParam,
                 query,
+                ownerId,
                 category,
                 transmission,
                 powertrain,
@@ -153,12 +127,13 @@ public class CarController {
                 flexDays,
                 status,
                 sort,
+                currentUserResolver.currentPrincipalOrNull(),
                 uriInfo);
     }
 
     @POST
     @Consumes(VndMediaType.CAR_V1_JSON)
-    @Produces(VndMediaType.CAR_V1_JSON)
+    @Produces(VndMediaType.CAR_PRIVATE_V1_JSON)
     public Response publishCarJson(final CarCreateForm form) throws IOException {
         return carPublishSupport.publishJson(
                 currentUserResolver.requireUserId(),
@@ -169,7 +144,7 @@ public class CarController {
 
     @POST
     @Consumes(MediaType.MULTIPART_FORM_DATA)
-    @Produces(VndMediaType.CAR_V1_JSON)
+    @Produces(VndMediaType.CAR_PRIVATE_V1_JSON)
     public Response publishCarMultipart(
             @FormDataParam("car") final InputStream carPart,
             @FormDataParam("pictures") final List<FormDataBodyPart> pictureParts,
@@ -185,7 +160,7 @@ public class CarController {
 
     @GET
     @Path("/{id}")
-    @Produces({VndMediaType.CAR_SUMMARY_V1_JSON, VndMediaType.CAR_V1_JSON})
+    @Produces({VndMediaType.CAR_SUMMARY_V1_JSON, VndMediaType.CAR_V1_JSON, VndMediaType.CAR_PRIVATE_V1_JSON})
     public Response getCar(@PathParam("id") final long id, @Context final Request request) {
         return carItemSupport.get(
                 id, currentUserResolver.currentPrincipalOrNull(), httpHeaders, request, uriInfo);
@@ -207,7 +182,7 @@ public class CarController {
     @PATCH
     @Path("/{id}")
     @Consumes(VndMediaType.CAR_V1_JSON)
-    @Produces(VndMediaType.CAR_V1_JSON)
+    @Produces(VndMediaType.CAR_PRIVATE_V1_JSON)
     @PreAuthorize("@carResourceAccess.isOwnerOrAdminById(#id, @currentUserResolver.currentPrincipalOrNull())")
     public Response patchCar(
             @P("id") @PathParam("id") final long id,

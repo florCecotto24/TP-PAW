@@ -45,33 +45,106 @@ public final class CarListSupport {
     private final CarMarketInsightService carMarketInsightService;
     private final AdminService adminService;
     private final CarResourceAccess carResourceAccess;
+    private final PaginationSupport paginationSupport;
 
     public CarListSupport(
             final CarService carService,
             final CarListingPolicyService carListingPolicyService,
             final CarMarketInsightService carMarketInsightService,
             final AdminService adminService,
-            final CarResourceAccess carResourceAccess) {
+            final CarResourceAccess carResourceAccess,
+            final PaginationSupport paginationSupport) {
         this.carService = carService;
         this.carListingPolicyService = carListingPolicyService;
         this.carMarketInsightService = carMarketInsightService;
         this.adminService = adminService;
         this.carResourceAccess = carResourceAccess;
+        this.paginationSupport = paginationSupport;
     }
 
-    public boolean isStatusAll(final List<String> status) {
+    /**
+     * Dispatches {@code GET /cars}: admin catalog ({@code status=all}), owner fleet ({@code ownerId}),
+     * or public browse.
+     */
+    public Response listCars(
+            final int page,
+            final Integer pageSizeParam,
+            final String query,
+            final Long ownerId,
+            final List<String> category,
+            final List<String> transmission,
+            final List<String> powertrain,
+            final BigDecimal priceMin,
+            final BigDecimal priceMax,
+            final String priceMarket,
+            final List<String> rating,
+            final Long neighborhoodId,
+            final String from,
+            final String until,
+            final boolean flexible,
+            final String flexMonth,
+            final Integer flexDays,
+            final List<String> status,
+            final String sort,
+            final RydenUserDetails viewer,
+            final UriInfo uriInfo) {
+        final PaginationParams paging = paginationSupport.forBrowseCars(page, pageSizeParam);
+
+        if (ownerId == null && isStatusAll(status)) {
+            return listAdminCatalog(paging, uriInfo);
+        }
+
+        if (ownerId != null) {
+            return listOwnerCars(
+                    paging,
+                    ownerId,
+                    query,
+                    category,
+                    transmission,
+                    powertrain,
+                    priceMin,
+                    priceMax,
+                    rating,
+                    status,
+                    sort,
+                    viewer,
+                    uriInfo);
+        }
+
+        return listPublicBrowse(
+                paging,
+                query,
+                category,
+                transmission,
+                powertrain,
+                priceMin,
+                priceMax,
+                priceMarket,
+                rating,
+                neighborhoodId,
+                from,
+                until,
+                flexible,
+                flexMonth,
+                flexDays,
+                status,
+                sort,
+                uriInfo);
+    }
+
+    boolean isStatusAll(final List<String> status) {
         return status != null
                 && status.size() == 1
                 && "all".equalsIgnoreCase(status.get(0));
     }
 
-    public Response listAdminCatalog(final PaginationParams paging, final UriInfo uriInfo) {
+    private Response listAdminCatalog(final PaginationParams paging, final UriInfo uriInfo) {
         carResourceAccess.requireAdmin();
         final Page<Car> adminPage = adminService.listCars(paging.getZeroBasedPage(), paging.getPageSize());
         return pagedCarsFromEntities(adminPage, paging, uriInfo);
     }
 
-    public Response listOwnerCars(
+    private Response listOwnerCars(
             final PaginationParams paging,
             final long ownerId,
             final String query,
@@ -114,7 +187,7 @@ public final class CarListSupport {
         return pagedCarSummariesFromCards(ownerPage, paging, !selfOrAdmin, uriInfo);
     }
 
-    public Response listPublicBrowse(
+    private Response listPublicBrowse(
             final PaginationParams paging,
             final String query,
             final List<String> category,
@@ -199,7 +272,7 @@ public final class CarListSupport {
             return Response.noContent().build();
         }
         final List<CarDto> dtos = page.getContent().stream()
-                .map(car -> CarDto.from(car, uriInfo, true))
+                .map(car -> CarDto.fromPrivate(car, uriInfo))
                 .collect(Collectors.toList());
         return pagedFullCarsOk(dtos, paging, (int) page.getTotalItems(), uriInfo);
     }
@@ -224,7 +297,7 @@ public final class CarListSupport {
             final UriInfo uriInfo) {
         final Response.ResponseBuilder builder =
                 Response.ok(new GenericEntity<List<CarDto>>(dtos) {})
-                        .type(VndMediaType.CAR_V1_JSON)
+                        .type(VndMediaType.CAR_PRIVATE_V1_JSON)
                         .header("X-Total-Count", totalItems);
         PaginationLinks.add(builder, uriInfo, paging.getPage(), paging.getPageSize(), totalItems);
         return builder.build();

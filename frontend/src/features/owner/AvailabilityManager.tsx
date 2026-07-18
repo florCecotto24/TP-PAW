@@ -10,7 +10,7 @@ import PriceMarketInsightCard from '../../components/ryden/car/PriceMarketInsigh
 import { formatDateRange, flatpickrLocale, formatMonthYear, shiftMonth, wallTodayYmd } from '../../i18n/dateFormat';
 import { idFromUri } from '../../api/uri';
 import { getClientConfig } from '../../api/clientConfig';
-import { firstAvailabilityValidationError, minAvailabilityStartDateYmd } from './availabilityValidation';
+import { minAvailabilityStartDateYmd, availabilityDatesError, availabilityPriceError, availabilityStreetError, availabilityNumberError, availabilityNeighborhoodError, availabilityCheckTimesError, type AvailabilityValidationError } from './availabilityValidation';
 import {
   availabilityIdentity,
   createAvailability,
@@ -62,6 +62,10 @@ export default function AvailabilityManager({ car }: { car: CarDto }) {
   const [form, setForm] = useState<AvailabilityCreateDto>(EMPTY_FORM);
   const [editing, setEditing] = useState<AvailabilityDto | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<
+    'dates' | 'dayPrice' | 'street' | 'number' | 'neighborhood' | 'checkOut',
+    string
+  >>>({});
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [reloadTick, setReloadTick] = useState(0);
@@ -190,8 +194,83 @@ export default function AvailabilityManager({ car }: { car: CarDto }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [car, month, reloadTick]);
 
+  function availabilityErrorText(code: AvailabilityValidationError | null): string | null {
+    if (!code) return null;
+    return t(`owner.availability.errors.${code}`, {
+      min: listingLimits.pricePerDayMin,
+      integer: listingLimits.pricePerDayIntegerDigits,
+      fraction: listingLimits.pricePerDayFractionDigits,
+      minDate: minStartDate,
+      hours: pickupLeadHours,
+    });
+  }
+
+  function fieldErrorPatch(
+    key: keyof AvailabilityCreateDto,
+    next: AvailabilityCreateDto,
+  ): Partial<typeof fieldErrors> {
+    const leadMin = editing && next.startDate === editing.startDate ? undefined : minStartDate;
+    if (key === 'startDate' || key === 'endDate') {
+      return { dates: availabilityErrorText(availabilityDatesError(next, leadMin)) ?? undefined };
+    }
+    if (key === 'dayPrice') {
+      return { dayPrice: availabilityErrorText(availabilityPriceError(next.dayPrice)) ?? undefined };
+    }
+    if (key === 'startPointStreet') {
+      return { street: availabilityErrorText(availabilityStreetError(next.startPointStreet)) ?? undefined };
+    }
+    if (key === 'startPointNumber') {
+      return { number: availabilityErrorText(availabilityNumberError(next.startPointNumber)) ?? undefined };
+    }
+    if (key === 'neighborhoodUri') {
+      return {
+        neighborhood: availabilityErrorText(availabilityNeighborhoodError(next.neighborhoodUri)) ?? undefined,
+      };
+    }
+    if (key === 'checkInTime' || key === 'checkOutTime') {
+      return {
+        checkOut: availabilityErrorText(
+          availabilityCheckTimesError(next.checkInTime, next.checkOutTime),
+        ) ?? undefined,
+      };
+    }
+    return {};
+  }
+
   function update<K extends keyof AvailabilityCreateDto>(key: K, value: AvailabilityCreateDto[K]) {
-    setForm((f) => ({ ...f, [key]: value }));
+    setForm((f) => {
+      const next = { ...f, [key]: value };
+      const patch = fieldErrorPatch(key, next);
+      setFieldErrors((prev) => {
+        const merged = { ...prev, ...patch };
+        (Object.keys(patch) as (keyof typeof patch)[]).forEach((k) => {
+          if (!merged[k]) delete merged[k];
+        });
+        return merged;
+      });
+      return next;
+    });
+  }
+
+  function validateAllFields(): boolean {
+    const leadMinStartDate = editing && form.startDate === editing.startDate ? undefined : minStartDate;
+    const next: typeof fieldErrors = {};
+    const dates = availabilityErrorText(availabilityDatesError(form, leadMinStartDate));
+    const dayPrice = availabilityErrorText(availabilityPriceError(form.dayPrice));
+    const street = availabilityErrorText(availabilityStreetError(form.startPointStreet));
+    const number = availabilityErrorText(availabilityNumberError(form.startPointNumber));
+    const neighborhood = availabilityErrorText(availabilityNeighborhoodError(form.neighborhoodUri));
+    const checkOut = availabilityErrorText(
+      availabilityCheckTimesError(form.checkInTime, form.checkOutTime),
+    );
+    if (dates) next.dates = dates;
+    if (dayPrice) next.dayPrice = dayPrice;
+    if (street) next.street = street;
+    if (number) next.number = number;
+    if (neighborhood) next.neighborhood = neighborhood;
+    if (checkOut) next.checkOut = checkOut;
+    setFieldErrors(next);
+    return Object.keys(next).length === 0;
   }
 
   // Calendario inline read-only del mes: marca los días reservables con su precio
@@ -247,6 +326,7 @@ export default function AvailabilityManager({ car }: { car: CarDto }) {
 
   function startEdit(p: AvailabilityDto) {
     setEditing(p);
+    setFieldErrors({});
     // Repoblamos el barrio desde su link (antes quedaba undefined y al guardar la
     // edición se perdía el barrio salvo que se re-eligiera).
     const nbLink = p.links.neighborhood;
@@ -265,21 +345,29 @@ export default function AvailabilityManager({ car }: { car: CarDto }) {
   function resetForm() {
     setEditing(null);
     setForm(EMPTY_FORM);
+    setFieldErrors({});
   }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
-    const leadMinStartDate = editing && form.startDate === editing.startDate ? undefined : minStartDate;
-    const validationError = firstAvailabilityValidationError(form, leadMinStartDate);
-    if (validationError) {
-      setError(t(`owner.availability.errors.${validationError}`, {
-        min: getClientConfig().listing.pricePerDayMin,
-        integer: getClientConfig().listing.pricePerDayIntegerDigits,
-        fraction: getClientConfig().listing.pricePerDayFractionDigits,
-        minDate: minStartDate,
-        hours: pickupLeadHours,
-      }));
+    setNotice(null);
+    if (!validateAllFields()) {
+      const leadMinStartDate = editing && form.startDate === editing.startDate ? undefined : minStartDate;
+      // Keep top alert empty for field rules; only focus first invalid.
+      if (availabilityDatesError(form, leadMinStartDate)) {
+        document.getElementById('availFormRangePicker')?.focus();
+      } else if (availabilityPriceError(form.dayPrice)) {
+        document.getElementById('availPrice')?.focus();
+      } else if (availabilityStreetError(form.startPointStreet)) {
+        document.getElementById('availStreet')?.focus();
+      } else if (availabilityNumberError(form.startPointNumber)) {
+        document.getElementById('availNumber')?.focus();
+      } else if (availabilityNeighborhoodError(form.neighborhoodUri)) {
+        document.getElementById('nb_dd_btn_availNeighborhood')?.focus();
+      } else {
+        document.getElementById('availCheckOut')?.focus();
+      }
       return;
     }
     setBusy(true);
@@ -400,17 +488,25 @@ export default function AvailabilityManager({ car }: { car: CarDto }) {
           <h3 className="h6 fw-semibold mb-3">
             {editing ? t('owner.availability.editTitle') : t('owner.availability.createTitle')}
           </h3>
-          <form onSubmit={onSubmit}>
+          <form onSubmit={onSubmit} noValidate>
             <div className="mb-3">
               <label className="form-label required-label" htmlFor="availFormRangePicker">
                 {t('owner.availability.dateRange')}
               </label>
-              <div id="availFormRangePicker" ref={rangePickerRef} className="owner-cal-container" />
+              <div
+                id="availFormRangePicker"
+                ref={rangePickerRef}
+                className={`owner-cal-container${fieldErrors.dates ? ' is-invalid' : ''}`}
+                tabIndex={-1}
+              />
               {(form.startDate || form.endDate) && (
                 <p className="small text-secondary mt-2 mb-0">
                   {formatDateRange(form.startDate, form.endDate, i18n.language)}
                 </p>
               )}
+              {fieldErrors.dates ? (
+                <div className="text-danger d-block small mt-1" role="alert">{fieldErrors.dates}</div>
+              ) : null}
             </div>
 
             <div className="mb-3">
@@ -425,16 +521,31 @@ export default function AvailabilityManager({ car }: { car: CarDto }) {
                   type="number"
                   min={0}
                   step="0.01"
-                  className="form-control js-listing-price-decimal"
+                  className={`form-control js-listing-price-decimal${fieldErrors.dayPrice ? ' is-invalid' : ''}`}
                   style={{ maxWidth: '12rem' }}
                   value={form.dayPrice === 0 ? '' : form.dayPrice}
+                  aria-invalid={fieldErrors.dayPrice ? true : undefined}
                   onChange={(e) => {
                     const raw = e.target.value;
                     update('dayPrice', raw === '' ? 0 : Number(raw));
                   }}
+                  onBlur={() => {
+                    setFieldErrors((prev) => {
+                      const msg = availabilityErrorText(availabilityPriceError(form.dayPrice));
+                      if (!msg) {
+                        const next = { ...prev };
+                        delete next.dayPrice;
+                        return next;
+                      }
+                      return { ...prev, dayPrice: msg };
+                    });
+                  }}
                   required
                 />
               </PriceMarketInsightCard>
+              {fieldErrors.dayPrice ? (
+                <div className="text-danger d-block small mt-1" role="alert">{fieldErrors.dayPrice}</div>
+              ) : null}
             </div>
 
             <div className="mb-3">
@@ -456,27 +567,91 @@ export default function AvailabilityManager({ car }: { car: CarDto }) {
                   update('neighborhoodUri', match?.uri ?? '');
                 }}
               />
+              {fieldErrors.neighborhood ? (
+                <div className="text-danger d-block small mt-1" role="alert">{fieldErrors.neighborhood}</div>
+              ) : null}
             </div>
 
             <div className="row g-3 mb-3">
               <div className="col-md-8">
                 <label className="form-label required-label" htmlFor="availStreet">{t('owner.availability.street')}</label>
-                <input id="availStreet" className="form-control" maxLength={listingLimits.addressStreetMaxLength} value={form.startPointStreet} onChange={(e) => update('startPointStreet', e.target.value)} required />
+                <input
+                  id="availStreet"
+                  className={`form-control${fieldErrors.street ? ' is-invalid' : ''}`}
+                  maxLength={listingLimits.addressStreetMaxLength}
+                  value={form.startPointStreet}
+                  aria-invalid={fieldErrors.street ? true : undefined}
+                  onChange={(e) => update('startPointStreet', e.target.value)}
+                  onBlur={() => {
+                    const msg = availabilityErrorText(availabilityStreetError(form.startPointStreet));
+                    setFieldErrors((prev) => {
+                      if (!msg) {
+                        const next = { ...prev };
+                        delete next.street;
+                        return next;
+                      }
+                      return { ...prev, street: msg };
+                    });
+                  }}
+                  required
+                />
+                {fieldErrors.street ? (
+                  <div className="text-danger d-block small mt-1" role="alert">{fieldErrors.street}</div>
+                ) : null}
               </div>
               <div className="col-md-4">
                 <label className="form-label" htmlFor="availNumber">{t('owner.availability.streetNumber')}</label>
-                <input id="availNumber" className="form-control" maxLength={listingLimits.addressNumberMaxLength} value={form.startPointNumber ?? ''} onChange={(e) => update('startPointNumber', e.target.value)} />
+                <input
+                  id="availNumber"
+                  className={`form-control${fieldErrors.number ? ' is-invalid' : ''}`}
+                  maxLength={listingLimits.addressNumberMaxLength}
+                  value={form.startPointNumber ?? ''}
+                  aria-invalid={fieldErrors.number ? true : undefined}
+                  onChange={(e) => update('startPointNumber', e.target.value)}
+                  onBlur={() => {
+                    const msg = availabilityErrorText(availabilityNumberError(form.startPointNumber));
+                    setFieldErrors((prev) => {
+                      if (!msg) {
+                        const next = { ...prev };
+                        delete next.number;
+                        return next;
+                      }
+                      return { ...prev, number: msg };
+                    });
+                  }}
+                />
+                {fieldErrors.number ? (
+                  <div className="text-danger d-block small mt-1" role="alert">{fieldErrors.number}</div>
+                ) : null}
               </div>
             </div>
 
             <div className="row g-3 mb-3">
               <div className="col-md-6">
                 <label className="form-label required-label" htmlFor="availCheckIn">{t('owner.availability.checkIn')}</label>
-                <input id="availCheckIn" type="time" className="form-control" value={form.checkInTime} onChange={(e) => update('checkInTime', e.target.value)} required />
+                <input
+                  id="availCheckIn"
+                  type="time"
+                  className={`form-control${fieldErrors.checkOut ? ' is-invalid' : ''}`}
+                  value={form.checkInTime}
+                  onChange={(e) => update('checkInTime', e.target.value)}
+                  required
+                />
               </div>
               <div className="col-md-6">
                 <label className="form-label required-label" htmlFor="availCheckOut">{t('owner.availability.checkOut')}</label>
-                <input id="availCheckOut" type="time" className="form-control" value={form.checkOutTime} onChange={(e) => update('checkOutTime', e.target.value)} required />
+                <input
+                  id="availCheckOut"
+                  type="time"
+                  className={`form-control${fieldErrors.checkOut ? ' is-invalid' : ''}`}
+                  value={form.checkOutTime}
+                  aria-invalid={fieldErrors.checkOut ? true : undefined}
+                  onChange={(e) => update('checkOutTime', e.target.value)}
+                  required
+                />
+                {fieldErrors.checkOut ? (
+                  <div className="text-danger d-block small mt-1" role="alert">{fieldErrors.checkOut}</div>
+                ) : null}
               </div>
             </div>
 

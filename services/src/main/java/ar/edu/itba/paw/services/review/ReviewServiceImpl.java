@@ -18,9 +18,7 @@ import ar.edu.itba.paw.exception.car.CarNotFoundException;
 import ar.edu.itba.paw.exception.reservation.RiderReservationException;
 import ar.edu.itba.paw.exception.user.UserNotFoundException;
 import ar.edu.itba.paw.models.domain.review.Review;
-import ar.edu.itba.paw.models.dto.car.CarPublicReview;
 import ar.edu.itba.paw.models.dto.Page;
-import ar.edu.itba.paw.models.dto.profile.ReviewItemDto;
 import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.models.domain.file.Image;
 import ar.edu.itba.paw.models.domain.reservation.Reservation;
@@ -68,18 +66,6 @@ public class ReviewServiceImpl implements ReviewService {
 
     @Override
     @Transactional(readOnly = true)
-    public int getReviewCommentMaxLength() {
-        return reviewValidationPolicy.getCommentMaxLength();
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public Page<CarPublicReview> getCarPublicReviews(final long carId, final int page, final int pageSize) {
-        return reviewDao.findCarPublicReviews(carId, page, pageSize);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
     public Page<Review> getCarPublicReviewEntities(final long carId, final int page, final int pageSize) {
         carService.getCarById(carId).orElseThrow(() -> new CarNotFoundException(carId));
         return reviewDao.findPublicReviewsForCar(carId, page, pageSize);
@@ -99,24 +85,6 @@ public class ReviewServiceImpl implements ReviewService {
 
     @Override
     @Transactional(readOnly = true)
-    public long countReviewsForCar(final long carId) {
-        return reviewDao.countReviewsForCar(carId);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public boolean hasOwnerReview(final long reservationId) {
-        return reviewDao.existsReview(reservationId, false);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public boolean hasRiderReview(final long reservationId) {
-        return reviewDao.existsReview(reservationId, true);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
     public BigDecimal getAverageRatingForCounterparty(final long counterpartyUserId, final boolean counterpartyIsOwner) {
         return reviewDao.findAverageRatingForCounterparty(counterpartyUserId, counterpartyIsOwner);
     }
@@ -131,27 +99,6 @@ public class ReviewServiceImpl implements ReviewService {
     @Transactional(readOnly = true)
     public Map<Long, BigDecimal> getAverageRatingsAsRiderForUserIds(final Collection<Long> userIds) {
         return reviewDao.findAverageRatingsAsRiderForUserIds(userIds);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<ReviewItemDto> getRecentReviewsForCounterparty(
-            final long counterpartyUserId,
-            final boolean counterpartyIsOwner,
-            final int limit) {
-        return reviewDao.findRecentReviewsForCounterparty(counterpartyUserId, counterpartyIsOwner, limit);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public long countReviewsForCounterparty(final long counterpartyUserId, final boolean counterpartyIsOwner) {
-        return reviewDao.countReviewsForCounterparty(counterpartyUserId, counterpartyIsOwner);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public Page<ReviewItemDto> getReviewsForUser(final long userId, final int page, final int pageSize) {
-        return reviewDao.findReviewsForUserPage(userId, page, pageSize);
     }
 
     @Override

@@ -62,9 +62,15 @@ public final class AvailabilityDto {
         dto.checkInTime = segment.getCheckInTime().toString();
         dto.checkOutTime = segment.getCheckOutTime().toString();
         dto.kind = CarRestEnums.toRestName(CarAvailability.Kind.OFFERED);
-        // Monthly rows are computed projections, not individual availability resources.
+        // Monthly rows are computed projections; link the source availability when known.
         dto.links = new LinksDto()
                 .withRelated("car", RestUriUtils.carUri(uriInfo, carId).toString());
+        final Long availabilityId = segment.getAvailabilityId();
+        if (availabilityId != null) {
+            dto.links.withRelated(
+                    "self",
+                    RestUriUtils.carAvailabilityUri(uriInfo, carId, availabilityId).toString());
+        }
         final Long neighborhoodId = segment.getNeighborhoodId();
         if (neighborhoodId != null) {
             dto.links.withRelated("neighborhood",

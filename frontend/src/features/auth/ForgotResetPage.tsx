@@ -9,7 +9,11 @@ import { hrefToRelativeApiPath } from '../../api/uri';
 import { paths } from '../../routes/paths';
 import type { ForgotStep, PasswordResetCodeRequest, PasswordResetPatch } from './types';
 import { apiErrorMessage } from './errorMessage';
-import { validatePasswordPair, registrationPasswordLimits } from './passwordValidation';
+import {
+  registrationPasswordLimits,
+  validatePassword,
+  validatePasswordConfirm,
+} from './passwordValidation';
 import { PasswordField } from '../../components/ryden';
 
 function basicAuthHeader(email: string, secret: string): string {
@@ -37,12 +41,47 @@ export default function ForgotResetPage() {
 
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
+
+  const limits = registrationPasswordLimits();
 
   useEffect(() => {
     document.body.classList.add('auth-page');
     return () => document.body.classList.remove('auth-page');
   }, []);
+
+  function passwordErrorMessage(code: ReturnType<typeof validatePassword>): string | null {
+    if (code === 'tooShort') {
+      return t('auth.register.passwordTooShort', { count: limits.registrationPasswordMinLength });
+    }
+    if (code === 'tooLong') {
+      return t('auth.register.passwordTooLong', { count: limits.registrationPasswordMaxLength });
+    }
+    return null;
+  }
+
+  function applyPasswordValidation(value: string): boolean {
+    const msg = passwordErrorMessage(validatePassword(value));
+    setFieldErrors((prev) => {
+      const next = { ...prev };
+      if (msg) next.password = msg;
+      else delete next.password;
+      return next;
+    });
+    return msg == null;
+  }
+
+  function applyPasswordConfirmValidation(pwd: string, confirm: string): boolean {
+    const msg = validatePasswordConfirm(pwd, confirm) ? t('validation.passwordMismatch') : null;
+    setFieldErrors((prev) => {
+      const next = { ...prev };
+      if (msg) next.passwordConfirm = msg;
+      else delete next.passwordConfirm;
+      return next;
+    });
+    return msg == null;
+  }
 
   async function onRequest(e: FormEvent) {
     e.preventDefault();
@@ -53,9 +92,11 @@ export default function ForgotResetPage() {
     setSubmitting(true);
     try {
       const credentialsLink = useApiDiscoveryStore.getState().index?.links?.credentials;
-      const credentialsPath = credentialsLink
-        ? hrefToRelativeApiPath(credentialsLink)
-        : '/credentials';
+      if (!credentialsLink) {
+        setError(t('auth.forgot.discoveryMissing'));
+        return;
+      }
+      const credentialsPath = hrefToRelativeApiPath(credentialsLink);
       await sessionClient.post(credentialsPath, body, {
         contentType: MediaTypes.credential,
         anonymous: true,
@@ -73,18 +114,10 @@ export default function ForgotResetPage() {
     setError(null);
     setInfo(null);
 
-    const limits = registrationPasswordLimits();
-    const passwordError = validatePasswordPair(password, passwordConfirm);
-    if (passwordError === 'tooShort') {
-      setError(t('auth.register.passwordTooShort', { count: limits.registrationPasswordMinLength }));
-      return;
-    }
-    if (passwordError === 'tooLong') {
-      setError(t('auth.register.passwordTooLong', { count: limits.registrationPasswordMaxLength }));
-      return;
-    }
-    if (passwordError === 'mismatch') {
-      setError(t('validation.passwordMismatch'));
+    const passwordOk = applyPasswordValidation(password);
+    const confirmOk = applyPasswordConfirmValidation(password, passwordConfirm);
+    if (!passwordOk || !confirmOk) {
+      document.getElementById(passwordOk ? 'passwordConfirm' : 'password')?.focus();
       return;
     }
     if (!email.trim() || !resetCode.trim()) {
@@ -149,7 +182,7 @@ export default function ForgotResetPage() {
 
             {step === 'request' && (
               <>
-                <Form onSubmit={onRequest} className="needs-validation">
+                <Form onSubmit={onRequest} className="needs-validation" noValidate>
                   <Form.Group className="mb-4" controlId="email">
                     <Form.Label>{t('auth.forgot.email')}</Form.Label>
                     <Form.Control
@@ -181,7 +214,7 @@ export default function ForgotResetPage() {
             )}
 
             {step === 'reset' && (
-              <Form onSubmit={onReset} className="needs-validation">
+              <Form onSubmit={onReset} className="needs-validation" noValidate>
                 {!params.get('email') && (
                   <Form.Group className="mb-3" controlId="emailReset">
                     <Form.Label>{t('auth.forgot.email')}</Form.Label>
@@ -210,26 +243,42 @@ export default function ForgotResetPage() {
                   <PasswordField
                     id="password"
                     value={password}
-                    onChange={setPassword}
+                    onChange={(v) => {
+                      setPassword(v);
+                      applyPasswordValidation(v);
+                      if (passwordConfirm) applyPasswordConfirmValidation(v, passwordConfirm);
+                    }}
                     autoComplete="new-password"
+                    isInvalid={!!fieldErrors.password}
                     required
                   />
-                  <Form.Text className="text-muted">
-                    {t('auth.register.passwordHint', {
-                      min: registrationPasswordLimits().registrationPasswordMinLength,
-                      max: registrationPasswordLimits().registrationPasswordMaxLength,
-                    })}
-                  </Form.Text>
+                  {fieldErrors.password ? (
+                    <div className="text-danger small d-block mt-1">{fieldErrors.password}</div>
+                  ) : (
+                    <Form.Text className="text-muted">
+                      {t('auth.register.passwordHint', {
+                        min: limits.registrationPasswordMinLength,
+                        max: limits.registrationPasswordMaxLength,
+                      })}
+                    </Form.Text>
+                  )}
                 </Form.Group>
                 <Form.Group className="mb-4" controlId="passwordConfirm">
                   <Form.Label>{t('auth.forgot.confirmPassword')}</Form.Label>
                   <PasswordField
                     id="passwordConfirm"
                     value={passwordConfirm}
-                    onChange={setPasswordConfirm}
+                    onChange={(v) => {
+                      setPasswordConfirm(v);
+                      applyPasswordConfirmValidation(password, v);
+                    }}
                     autoComplete="new-password"
+                    isInvalid={!!fieldErrors.passwordConfirm}
                     required
                   />
+                  {fieldErrors.passwordConfirm ? (
+                    <div className="text-danger small d-block mt-1">{fieldErrors.passwordConfirm}</div>
+                  ) : null}
                 </Form.Group>
                 <Button type="submit" variant="primary" className="w-100" disabled={submitting}>
                   {submitting ? t('auth.forgot.resetting') : t('auth.forgot.reset')}

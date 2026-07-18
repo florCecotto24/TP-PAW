@@ -26,7 +26,6 @@ import ar.edu.itba.paw.models.util.time.AppTimezone;
 import ar.edu.itba.paw.policy.ReservationTimingPolicy;
 import ar.edu.itba.paw.util.ReservationMailComposer;
 
-import ar.edu.itba.paw.services.review.ReviewService;
 /**
  * Scheduled lifecycle jobs (return reminders, return checkout notifications, rider review
  * invitations, automatic review-skipping) plus per-car analytics consumed by the owner car
@@ -43,7 +42,6 @@ public class ReservationLifecycleSchedulerServiceImpl implements ReservationLife
 
     private final ReservationService reservationService;
     private final ReservationTimingPolicy reservationTimingPolicy;
-    private final ReviewService reviewService;
     private final ReservationMailComposer mailComposer;
     private final ReservationLifecycleRowProcessor lifecycleRowProcessor;
 
@@ -51,12 +49,10 @@ public class ReservationLifecycleSchedulerServiceImpl implements ReservationLife
     public ReservationLifecycleSchedulerServiceImpl(
             @Lazy final ReservationService reservationService,
             final ReservationTimingPolicy reservationTimingPolicy,
-            @Lazy final ReviewService reviewService,
             final ReservationMailComposer mailComposer,
             final ReservationLifecycleRowProcessor lifecycleRowProcessor) {
         this.reservationService = reservationService;
         this.reservationTimingPolicy = reservationTimingPolicy;
-        this.reviewService = reviewService;
         this.mailComposer = mailComposer;
         this.lifecycleRowProcessor = lifecycleRowProcessor;
     }
@@ -98,6 +94,10 @@ public class ReservationLifecycleSchedulerServiceImpl implements ReservationLife
         LOGGER.atInfo().addArgument(queued).log("Return reminder run: queued {} email(s)");
     }
 
+    /**
+     * Deliberately NOT {@code @Transactional}: each claim commits in {@code REQUIRES_NEW} before
+     * {@code @Async} mail is queued, so a rolled-back batch cannot leave emails for unclaimed rows.
+     */
     @Override
     public void dispatchReturnCheckoutEmails() {
         final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
@@ -125,6 +125,10 @@ public class ReservationLifecycleSchedulerServiceImpl implements ReservationLife
         LOGGER.atInfo().addArgument(queued).log("Return checkout email run: queued {} email(s)");
     }
 
+    /**
+     * Deliberately NOT {@code @Transactional}: each claim commits in {@code REQUIRES_NEW} before
+     * {@code @Async} mail is queued.
+     */
     @Override
     public void dispatchRiderReviewInviteEmails() {
         final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
@@ -152,6 +156,10 @@ public class ReservationLifecycleSchedulerServiceImpl implements ReservationLife
         LOGGER.atInfo().addArgument(queued).log("Rider review invite run: queued {} email(s)");
     }
 
+    /**
+     * Deliberately NOT {@code @Transactional}: each auto-skip commits in {@code REQUIRES_NEW}.
+     * Candidates are already filtered with {@code NOT EXISTS} in the DAO (no per-row review probe).
+     */
     @Override
     public void dispatchReviewAutoSkips() {
         final int days = reservationTimingPolicy.getReviewAutoSkipDays();
@@ -170,9 +178,6 @@ public class ReservationLifecycleSchedulerServiceImpl implements ReservationLife
                 .log("Review auto-skip (rider) run: {} candidate reservation(s) (window {} days)");
         int rDone = 0;
         for (final Reservation r : riderCandidates) {
-            if (reviewService.hasRiderReview(r.getId())) {
-                continue;
-            }
             try {
                 lifecycleRowProcessor.autoSkipRiderReview(r.getRiderId(), r.getId());
                 rDone++;
@@ -190,9 +195,6 @@ public class ReservationLifecycleSchedulerServiceImpl implements ReservationLife
                 .log("Review auto-skip (owner) run: {} candidate reservation(s) (window {} days)");
         int oDone = 0;
         for (final Reservation r : ownerCandidates) {
-            if (reviewService.hasOwnerReview(r.getId())) {
-                continue;
-            }
             final long ownerId = Optional.ofNullable(r.getCar())
                     .map(Car::getOwner)
                     .map(User::getId)

@@ -3,6 +3,11 @@ package ar.edu.itba.paw.webapp.support;
 /**
  * Resolved pagination query params for a single collection request (1-based {@code page},
  * clamped {@code pageSize}). Controllers pass {@link #getZeroBasedPage()} to services/DAOs.
+ *
+ * Guidelines ask for a pageSize ceiling: we sanitize via clamp to
+ * {@code [1, maxPageSize]} (same policy the guidelines approved as an alternative to {@code 400}).
+ * OpenAPI documents {@code maximum} per collection; Bean Validation {@code @Max} on each
+ * {@code @QueryParam} would duplicate the property-driven max.
  */
 public final class PaginationParams {
 

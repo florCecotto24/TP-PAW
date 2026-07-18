@@ -214,16 +214,21 @@ export function canonicalApiUserPath(uri: string): string {
 }
 
 /**
- * Favorite membership URI (OpenAPI {@code GET|PUT|DELETE /users/{id}/favorites/{carId}}).
- * Built from {@code user.links.favorites} + the car id segment of {@code car.links.self}
- * — the collection link is followed; the membership path is the weak-entity key under that
- * collection (not an invented `/users/{id}/…` root).
+ * Favorite membership URI from the private user affordance
+ * {@code links.favorites-item-template} (RFC 6570 `{carId}`).
+ * Expands with the car id segment of {@code car.links.self} — never concatenates
+ * the favorites collection href.
  */
 export function favoriteMembershipUri(
-  favoritesCollectionUri: string,
+  favoritesItemTemplate: string,
   carSelfUri: string,
 ): string {
   const carId = lastPathSegment(carSelfUri);
-  const base = favoritesCollectionUri.replace(/\/+$/, '');
-  return `${base}/${carId}`;
+  if (!carId) {
+    throw new Error('browse.favorite.missingCarId');
+  }
+  if (!favoritesItemTemplate.includes('{carId}')) {
+    throw new Error('browse.favorite.missingMembershipTemplate');
+  }
+  return favoritesItemTemplate.replace(/\{carId\}/g, encodeURIComponent(carId));
 }

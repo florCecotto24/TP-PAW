@@ -43,8 +43,9 @@ export function useOwnerReservationsPage(
   );
   return useQuery({
     queryKey: ['reservations', 'owner-page', ownedReservationsLink, ownerId, carId, filters, pageIndex],
-    enabled: ownerId != null || !!ownedReservationsLink,
+    enabled: !!ownedReservationsLink && ownerId != null,
     queryFn: async () => {
+      if (!ownedReservationsLink) throw new Error('reservations.list.missingLink');
       const res = await listReservations(
         filtersToApiQuery(ownerId as string | number, filters, pageIndex, carId),
         ownedReservationsLink,

@@ -19,9 +19,13 @@ import { formatDateTime } from '../../../i18n/dateFormat';
 import { reservationActionError } from '../reservationError';
 import { useCurrentUser } from '../useCurrentUser';
 import { useSessionStore } from '../../../session/sessionStore';
-import { paths, reservationConfirmation } from '../../../routes/paths';
+import { paths } from '../../../routes/paths';
 import { resolveResourceUri } from '../../../api/resourceUri';
-import { carDetailTo, type NewReservationLocationState, type ReservationConfirmationLocationState } from '../../../routes/navigationState';
+import {
+  carDetailTo,
+  reservationConfirmationTo,
+  type NewReservationLocationState,
+} from '../../../routes/navigationState';
 
 function billableDays(startIso: string, endIso: string): number {
   const a = new Date(startIso).getTime();
@@ -43,12 +47,14 @@ export default function NewReservationPage() {
   const { carId } = useParams<{ carId: string }>();
   const location = useLocation();
   const carSelfFromNav = (location.state as NewReservationLocationState | null)?.carSelf;
+  const availabilityUriFromNav = (location.state as NewReservationLocationState | null)?.availabilityUri;
   const [searchParams] = useSearchParams();
   const { id: myId, isAuthenticated } = useCurrentUser();
   const userUri = useSessionStore((s) => s.currentUserUri);
 
   const carUri = resolveResourceUri({
     stateUri: carSelfFromNav,
+    querySelf: searchParams.get('self'),
     routeId: carId,
     collection: 'cars',
   });
@@ -67,7 +73,7 @@ export default function NewReservationPage() {
       const res = await listCarAvailabilities(link);
       return (res.data ?? []).filter((a) => a.kind === 'offered' || a.kind == null);
     },
-    enabled: !!carQuery.data?.links?.availabilities,
+    enabled: !!carQuery.data?.links?.availabilities && !availabilityUriFromNav,
   });
 
   const userQuery = useQuery({
@@ -89,6 +95,7 @@ export default function NewReservationPage() {
   const endDate = untilDateTimeParam.slice(0, 10);
 
   const selectedAvailability = useMemo(() => {
+    if (availabilityUriFromNav) return null;
     if (initialAvailabilityId) {
       return offered.find((a) => idFromUri(a.links.self) === initialAvailabilityId) ?? null;
     }
@@ -96,7 +103,10 @@ export default function NewReservationPage() {
       return offered.find((a) => coversRange(a, startDate, endDate)) ?? null;
     }
     return offered[0] ?? null;
-  }, [offered, initialAvailabilityId, startDate, endDate]);
+  }, [offered, initialAvailabilityId, startDate, endDate, availabilityUriFromNav]);
+
+  const availabilityUri =
+    availabilityUriFromNav ?? selectedAvailability?.links.self ?? null;
 
   const [submitting, setSubmitting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -133,7 +143,7 @@ export default function NewReservationPage() {
 
   const submitReservation = async () => {
     if (submitting) return;
-    if (!carUri || !selectedAvailability || !startIso || !endIso) {
+    if (!carUri || !availabilityUri || !startIso || !endIso) {
       setActionError(t('res.new.missingParams'));
       return;
     }
@@ -142,7 +152,7 @@ export default function NewReservationPage() {
     try {
       const res = await createReservation({
         carUri,
-        availabilityUri: selectedAvailability.links.self,
+        availabilityUri,
         startDate: startIso,
         endDate: endIso,
       });
@@ -150,9 +160,8 @@ export default function NewReservationPage() {
       const reservationSelf = res.data?.links.self ?? res.location ?? null;
       const reservationId = idFromUri(reservationSelf ?? '');
       if (reservationId) {
-        navigate(reservationConfirmation(reservationId), {
-          state: { reservationSelf } satisfies ReservationConfirmationLocationState,
-        });
+        const target = reservationConfirmationTo(reservationId, reservationSelf);
+        navigate(target.pathname, { state: target.state });
       } else {
         navigate(paths.myReservations);
       }
@@ -261,7 +270,7 @@ export default function NewReservationPage() {
                     <div className="alert alert-danger mt-3" role="alert">{actionError}</div>
                   ) : null}
 
-                  {offered.length === 0 || !selectedAvailability ? (
+                  {(!availabilityUriFromNav && (offered.length === 0 || !selectedAvailability)) ? (
                     <div className="alert alert-warning mt-3 mb-0">{t('browse.detail.noAvailability')}</div>
                   ) : (
                     <>
@@ -274,10 +283,12 @@ export default function NewReservationPage() {
                           {' → '}
                           {endIso ? formatDateTime(endIso, i18n.language) : untilDateTimeParam}
                         </p>
-                        <p className="mb-1">
-                          <strong>{t('res.new.location')}</strong> {selectedAvailability.startPointStreet}
-                          {selectedAvailability.startPointNumber ? ` ${selectedAvailability.startPointNumber}` : ''}
-                        </p>
+                        {selectedAvailability ? (
+                          <p className="mb-1">
+                            <strong>{t('res.new.location')}</strong> {selectedAvailability.startPointStreet}
+                            {selectedAvailability.startPointNumber ? ` ${selectedAvailability.startPointNumber}` : ''}
+                          </p>
+                        ) : null}
                         {estimatedTotal != null ? (
                           <p className="mb-0"><strong>{t('res.new.total')}</strong> {formatPrice(estimatedTotal)}</p>
                         ) : null}

@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { paintVideoPoster, videoPreviewSrc } from '../media/videoPoster';
 import type { GalleryMediaItem } from './CarDetailGalleryGrid';
 
 export interface CarDetailGalleryModalProps {
@@ -49,16 +50,18 @@ export default function CarDetailGalleryModal({
                       {item.video ? (
                         <>
                           <video
-                            src={item.url}
+                            src={videoPreviewSrc(item.url)}
                             className="car-detail-carousel-backdrop"
                             muted
                             playsInline
                             preload="metadata"
                             tabIndex={-1}
                             aria-hidden="true"
+                            onLoadedMetadata={(ev) => paintVideoPoster(ev.currentTarget)}
+                            onLoadedData={(ev) => paintVideoPoster(ev.currentTarget)}
                           />
                           <video
-                            src={item.url}
+                            src={videoPreviewSrc(item.url)}
                             className="car-detail-carousel-video"
                             controls
                             playsInline
@@ -67,9 +70,11 @@ export default function CarDetailGalleryModal({
                               vehicle: label,
                               index: index + 1,
                             })}
+                            onLoadedMetadata={(ev) => paintVideoPoster(ev.currentTarget)}
+                            onLoadedData={(ev) => paintVideoPoster(ev.currentTarget)}
                           >
                             {item.contentType ? (
-                              <source src={item.url} type={item.contentType} />
+                              <source src={videoPreviewSrc(item.url)} type={item.contentType} />
                             ) : null}
                           </video>
                         </>

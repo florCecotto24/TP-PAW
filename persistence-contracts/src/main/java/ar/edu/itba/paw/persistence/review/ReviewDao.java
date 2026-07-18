@@ -8,8 +8,6 @@ import java.util.Optional;
 
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.domain.review.Review;
-import ar.edu.itba.paw.models.dto.car.CarPublicReview;
-import ar.edu.itba.paw.models.dto.profile.ReviewItemDto;
 
 /** Reviews per reservation and aggregated rating maintenance. */
 public interface ReviewDao {
@@ -34,19 +32,13 @@ public interface ReviewDao {
     /** Reviews for one reservation (0–2 rows). */
     List<Review> findReviewsForReservation(long reservationId);
 
-    /** Rated rider→car reviews for a listing, paginated (excludes owner→rider). */
-    Page<CarPublicReview> findCarPublicReviews(long carId, int page, int pageSize);
-
-    /** Same rows as {@link #findCarPublicReviews} but returns hydrated {@link Review} entities. */
+    /** Rated rider→car reviews for a listing, paginated (excludes owner→rider), as hydrated {@link Review} entities. */
     Page<Review> findPublicReviewsForCar(long carId, int page, int pageSize);
 
     /**
      * SQL-paginated rated reviews received by {@code userId} (both directions), hydrated entities.
      */
     Page<Review> findReviewsReceivedByUser(long userId, int page, int pageSize);
-
-    /** Total rated rider→car reviews for the listing (excludes owner→rider reviews). */
-    long countReviewsForCar(long carId);
 
     /**
      * Average rating left to {@code counterpartyUserId} as owner ({@code counterpartyIsOwner=true})
@@ -75,27 +67,4 @@ public interface ReviewDao {
      * {@link CarDao#updateRatingAvg(long, java.math.BigDecimal)}.
      */
     BigDecimal findAverageRatingForCar(long carId);
-
-    /**
-     * Recent rated reviews left to {@code counterpartyUserId} as owner ({@code counterpartyIsOwner=true})
-     * or as rider ({@code false}). Comment-less reviews are included; the comment field on
-     * {@link ReviewItemDto} is left {@code null} for those rows.
-     */
-    List<ReviewItemDto> findRecentReviewsForCounterparty(long counterpartyUserId, boolean counterpartyIsOwner, int limit);
-
-    /**
-     * Count of rated reviews left to {@code counterpartyUserId} as owner ({@code counterpartyIsOwner=true})
-     * or as rider ({@code false}). Mirrors the predicate used by
-     * {@link #findAverageRatingForCounterparty(long, boolean)} so the counterparty profile can show
-     * "rating (count)" the same way the public car page does.
-     */
-    long countReviewsForCounterparty(long counterpartyUserId, boolean counterpartyIsOwner);
-
-    /**
-     * SQL-paginated feed of every rated review left to {@code userId}, merging both directions
-     * (as owner and as rider) in a single {@code LIMIT}/{@code OFFSET} query ordered by date desc —
-     * unlike {@link #findRecentReviewsForCounterparty}, which only supports an unpaginated "recent
-     * N" preview per direction. Backs {@code GET /reviews?recipientUserId=…}.
-     */
-    Page<ReviewItemDto> findReviewsForUserPage(long userId, int page, int pageSize);
 }

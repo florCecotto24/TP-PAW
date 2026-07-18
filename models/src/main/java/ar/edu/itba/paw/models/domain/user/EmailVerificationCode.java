@@ -11,7 +11,9 @@ import javax.persistence.Table;
 
 import ar.edu.itba.paw.models.domain.internal.EntityEquality;
 
-/** One-time email verification token row (maps {@code email_verification_codes}). */
+/** One-time email verification token row (maps {@code email_verification_codes}).
+ * Scalar {@code user_id} is intentional: ephemeral OTP rows are inserted/deleted by id only;
+ * navigating a {@code User} association would not be used by callers. */
 @Entity
 @Table(name = "email_verification_codes")
 public class EmailVerificationCode {

@@ -360,6 +360,8 @@ public class ReservationServiceImpl implements ReservationService {
     // Payment side → payment service
     // ---------------------------------------------------------------------------------------
 
+    // Deliberately NOT @Transactional: each cancellation commits in ExpiredPaymentProofRowCanceller
+    // (REQUIRES_NEW); an outer TX would nest connections and hold locks for the whole batch.
     @Override
     public void cancelExpiredPendingPaymentReservations() {
         paymentService.cancelExpiredPendingPaymentReservations();
@@ -426,16 +428,21 @@ public class ReservationServiceImpl implements ReservationService {
         return paymentService.findRefundReceiptContentForAdmin(reservationId);
     }
 
+    // Deliberately NOT @Transactional: each reminder is claimed in ReservationSweepRowProcessor
+    // (REQUIRES_NEW); an outer TX would nest connections.
     @Override
     public void dispatchDuePaymentProofReminderEmails() {
         paymentService.dispatchDuePaymentProofReminderEmails();
     }
 
+    // Deliberately NOT @Transactional: each reminder is claimed in ReservationSweepRowProcessor
+    // (REQUIRES_NEW); an outer TX would nest connections.
     @Override
     public void dispatchDueRefundProofReminderEmails() {
         paymentService.dispatchDueRefundProofReminderEmails();
     }
 
+    // Deliberately NOT @Transactional: each owner block commits in REQUIRES_NEW.
     @Override
     public void sweepRefundOverdueAndBlockOwners() {
         paymentService.sweepRefundOverdueAndBlockOwners();
@@ -452,16 +459,19 @@ public class ReservationServiceImpl implements ReservationService {
         schedulerService.dispatchReturnReminderEmails();
     }
 
+    // Deliberately NOT @Transactional: claim-then-mail-after-commit per row (REQUIRES_NEW).
     @Override
     public void dispatchReturnCheckoutEmails() {
         schedulerService.dispatchReturnCheckoutEmails();
     }
 
+    // Deliberately NOT @Transactional: claim-then-mail-after-commit per row (REQUIRES_NEW).
     @Override
     public void dispatchRiderReviewInviteEmails() {
         schedulerService.dispatchRiderReviewInviteEmails();
     }
 
+    // Deliberately NOT @Transactional: each auto-skip commits in REQUIRES_NEW.
     @Override
     public void dispatchReviewAutoSkips() {
         schedulerService.dispatchReviewAutoSkips();

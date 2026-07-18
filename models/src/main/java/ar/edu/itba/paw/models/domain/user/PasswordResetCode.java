@@ -11,7 +11,8 @@ import javax.persistence.Table;
 
 import ar.edu.itba.paw.models.domain.internal.EntityEquality;
 
-/** Password reset token row (maps {@code password_reset_codes}). */
+/** Password reset token row (maps {@code password_reset_codes}).
+ * Scalar {@code user_id} is intentional: ephemeral OTP rows are inserted/deleted by id only. */
 @Entity
 @Table(name = "password_reset_codes")
 public class PasswordResetCode {

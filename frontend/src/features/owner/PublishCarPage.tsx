@@ -1,8 +1,9 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { Alert, Button } from 'react-bootstrap';
 import { ApiError } from '../../api/client';
+import { getClientConfig } from '../../api/clientConfig';
 import { useSessionStore } from '../../session/sessionStore';
 import type { UserDto } from '../../api/types';
 import { paths, myCarDetail } from '../../routes/paths';
@@ -29,6 +30,11 @@ import {
   normalizeYearDigits,
   publishValidationI18nParams,
   validatePublishCarYear,
+  validatePublishDescription,
+  validatePublishMinimumRentalDays,
+  validatePublishNewBrandName,
+  validatePublishNewModelName,
+  validatePublishPlate,
 } from './publishCarValidation';
 import type {
   BrandDto,
@@ -43,7 +49,26 @@ import type {
 const VALIDATION_KEY_TO_I18N: Record<string, string> = {
   'validation.year.min': 'owner.publish.errors.yearMin',
   'validation.year.max': 'owner.publish.errors.yearMax',
+  'validation.plate.notBlank': 'owner.publish.errors.plateRequired',
+  'validation.plate.size': 'owner.publish.errors.plateSize',
 };
+
+/** Field keys that map to under-input Spring-style errors (not the top alert). */
+const FIELD_ERROR_KEYS = new Set([
+  'owner.publish.errors.plateRequired',
+  'owner.publish.errors.plateSize',
+  'owner.publish.errors.yearInvalid',
+  'owner.publish.errors.yearMin',
+  'owner.publish.errors.yearMax',
+  'owner.publish.errors.brandRequired',
+  'owner.publish.errors.brandSize',
+  'owner.publish.errors.modelRequired',
+  'owner.publish.errors.modelSize',
+  'owner.publish.errors.modelSelectRequired',
+  'owner.publish.errors.descriptionSize',
+  'owner.publish.errors.minimumRentalDaysInvalid',
+]);
+
 
 function normalizeValidationKey(raw: string | undefined): string {
   if (!raw) return '';
@@ -167,11 +192,20 @@ function PublishPrerequisites({
   async function onSaveCbu(e: FormEvent) {
     e.preventDefault();
     setCbuError(null);
-    if (!cbu.trim()) { setCbuError(t('owner.prereq.errors.cbuRequired')); return; }
+    const trimmed = cbu.trim();
+    const digits = getClientConfig().cbuRequiredDigits;
+    if (!trimmed) {
+      setCbuError(t('owner.prereq.errors.cbuRequired'));
+      return;
+    }
+    if (!new RegExp(`^\\d{${digits}}$`).test(trimmed)) {
+      setCbuError(t('profile.me.cbuInvalid', { digits }));
+      return;
+    }
     if (!userUri) return;
     setCbuBusy(true);
     try {
-      const res = await patchCbu(userUri, cbu.trim());
+      const res = await patchCbu(userUri, trimmed);
       onUserUpdated(res.data);
     } catch (err) {
       setCbuError(errorMessage(err, 'owner.prereq.errors.cbuSaveFailed'));
@@ -229,20 +263,38 @@ function PublishPrerequisites({
                     <i className="bi bi-bank me-1" aria-hidden="true" />
                     {t('owner.prereq.cbuLabel')}
                   </label>
-                  {cbuError && <div className="alert alert-danger py-2 small" role="alert">{cbuError}</div>}
                   <div className="d-flex gap-2">
                     <input
                       id="prereqCbu"
-                      className="form-control"
+                      className={`form-control${cbuError ? ' is-invalid' : ''}`}
                       inputMode="numeric"
+                      maxLength={getClientConfig().cbuRequiredDigits}
                       value={cbu}
                       placeholder={t('owner.prereq.cbuPlaceholder')}
-                      onChange={(e) => setCbu(e.target.value)}
+                      aria-invalid={cbuError ? true : undefined}
+                      aria-describedby={cbuError ? 'prereqCbuError' : undefined}
+                      onChange={(e) => {
+                        setCbu(e.target.value);
+                        setCbuError(null);
+                      }}
+                      onBlur={() => {
+                        const trimmed = cbu.trim();
+                        if (!trimmed) return;
+                        const digits = getClientConfig().cbuRequiredDigits;
+                        if (!new RegExp(`^\\d{${digits}}$`).test(trimmed)) {
+                          setCbuError(t('profile.me.cbuInvalid', { digits }));
+                        }
+                      }}
                     />
                     <Button type="submit" variant="primary" disabled={cbuBusy}>
                       {t('owner.prereq.cbuSave')}
                     </Button>
                   </div>
+                  {cbuError ? (
+                    <div id="prereqCbuError" className="text-danger d-block small mt-1" role="alert">
+                      {cbuError}
+                    </div>
+                  ) : null}
                 </form>
               )}
 
@@ -464,25 +516,91 @@ function PublishCarForm({
   const [minimumRentalDays, setMinimumRentalDays] = useState('1');
   const [pictures, setPictures] = useState<File[]>([]);
   const [insurance, setInsurance] = useState<File | null>(null);
+  const insuranceInputRef = useRef<HTMLInputElement>(null);
 
   const [error, setError] = useState<string | null>(null);
-  /** Error de año bajo el campo (paridad con `form:errors path="year"` + guard JS del JSP). */
+  /** Under-field errors (paridad con {@code form:errors path="…"}). */
+  const [plateError, setPlateError] = useState<string | null>(null);
   const [yearError, setYearError] = useState<string | null>(null);
+  const [newBrandError, setNewBrandError] = useState<string | null>(null);
+  const [newModelError, setNewModelError] = useState<string | null>(null);
+  const [brandSelectError, setBrandSelectError] = useState<string | null>(null);
+  const [modelSelectError, setModelSelectError] = useState<string | null>(null);
+  const [minDaysError, setMinDaysError] = useState<string | null>(null);
+  const [descriptionError, setDescriptionError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   /** Categoría solo al crear un modelo nuevo ("Otro…"); si el modelo ya existe en catálogo, viene de la BD. */
   const showCategory = modelSel === OTHER;
 
-  function yearErrorMessage(key: string | null): string | null {
+  function fieldErrorMessage(key: string | null): string | null {
     if (!key) return null;
     return t(key, publishValidationI18nParams());
   }
 
-  function applyYearValidation(raw: string): boolean {
-    const key = validatePublishCarYear(raw);
-    setYearError(yearErrorMessage(key));
+  function applyPlateValidation(raw: string): boolean {
+    const key = validatePublishPlate(raw);
+    setPlateError(fieldErrorMessage(key));
     return key == null;
   }
+
+  function applyYearValidation(raw: string): boolean {
+    const key = validatePublishCarYear(raw);
+    setYearError(fieldErrorMessage(key));
+    return key == null;
+  }
+
+  function applyNewBrandValidation(raw: string): boolean {
+    const key = validatePublishNewBrandName(raw);
+    setNewBrandError(fieldErrorMessage(key));
+    return key == null;
+  }
+
+  function applyNewModelValidation(raw: string): boolean {
+    const key = validatePublishNewModelName(raw);
+    setNewModelError(fieldErrorMessage(key));
+    return key == null;
+  }
+
+  function applyMinDaysValidation(raw: string): boolean {
+    const key = validatePublishMinimumRentalDays(raw);
+    setMinDaysError(fieldErrorMessage(key));
+    return key == null;
+  }
+
+  function applyDescriptionValidation(raw: string): boolean {
+    const key = validatePublishDescription(raw);
+    setDescriptionError(fieldErrorMessage(key));
+    return key == null;
+  }
+
+  function applyBrandSelectValidation(sel: string): boolean {
+    if (!sel) {
+      setBrandSelectError(fieldErrorMessage('owner.publish.errors.brandRequired'));
+      return false;
+    }
+    setBrandSelectError(null);
+    return true;
+  }
+
+  function applyModelSelectValidation(brand: string, model: string): boolean {
+    if (!brand || brand === OTHER) {
+      // New brand path: model must be "Otro" + name (validated separately).
+      if (brand === OTHER && model !== OTHER) {
+        setModelSelectError(fieldErrorMessage('owner.publish.errors.modelRequired'));
+        return false;
+      }
+      setModelSelectError(null);
+      return true;
+    }
+    if (!model) {
+      setModelSelectError(fieldErrorMessage('owner.publish.errors.modelSelectRequired'));
+      return false;
+    }
+    setModelSelectError(null);
+    return true;
+  }
+
 
   useEffect(() => {
     let active = true;
@@ -497,6 +615,8 @@ function PublishCarForm({
   useEffect(() => {
     setModelSel('');
     setModels([]);
+    setModelSelectError(null);
+    setNewModelError(null);
     if (!brandSel || brandSel === OTHER) return;
     const brand = brands.find((b) => b.links.self === brandSel);
     if (!brand) return;
@@ -545,7 +665,48 @@ function PublishCarForm({
     e.preventDefault();
     setError(null);
 
+    const brandSelOk = applyBrandSelectValidation(brandSel);
+    const modelSelOk = applyModelSelectValidation(brandSel, modelSel);
+    const newBrandOk = brandSel === OTHER ? applyNewBrandValidation(newBrandName) : true;
+    const newModelOk = modelSel === OTHER ? applyNewModelValidation(newModelName) : true;
+    const plateOk = applyPlateValidation(plate);
     const yearOk = applyYearValidation(year);
+    const minDaysOk = applyMinDaysValidation(minimumRentalDays);
+    const descriptionOk = applyDescriptionValidation(description);
+
+    if (!brandSelOk) {
+      document.getElementById('publishBrand')?.focus();
+      return;
+    }
+    if (brandSel === OTHER && !newBrandOk) {
+      document.getElementById('publishNewBrand')?.focus();
+      return;
+    }
+    if (!modelSelOk) {
+      document.getElementById('publishModel')?.focus();
+      return;
+    }
+    if (modelSel === OTHER && !newModelOk) {
+      document.getElementById('publishNewModel')?.focus();
+      return;
+    }
+    if (!plateOk) {
+      document.getElementById('publishPlate')?.focus();
+      return;
+    }
+    if (!yearOk) {
+      document.getElementById('publishYear')?.focus();
+      return;
+    }
+    if (!minDaysOk) {
+      document.getElementById('publishMinDays')?.focus();
+      return;
+    }
+    if (!descriptionOk) {
+      document.getElementById('publishDescription')?.focus();
+      return;
+    }
+
     const validationKey = firstPublishCarValidationError({
       brandSel,
       modelSel,
@@ -557,18 +718,12 @@ function PublishCarForm({
       pictures,
       insurance,
     });
-    if (!yearOk) {
-      document.getElementById('publishYear')?.focus();
-      return;
-    }
     if (validationKey) {
+      if (FIELD_ERROR_KEYS.has(validationKey)) {
+        // Already reflected under the matching field above.
+        return;
+      }
       setError(t(validationKey, publishValidationI18nParams()));
-      return;
-    }
-
-    const minDays = minimumRentalDays ? Number(minimumRentalDays) : 0;
-    if (!Number.isFinite(minDays) || minDays < 1) {
-      setError(t('owner.publish.errors.minimumRentalDaysInvalid'));
       return;
     }
 
@@ -601,19 +756,31 @@ function PublishCarForm({
       }
     } catch (err) {
       if (err instanceof ApiError && err.body?.errors?.length) {
-        const yearField = err.body.errors.find((fe) => fe.field === 'year');
-        if (yearField) {
-          const key = normalizeValidationKey(yearField.message);
+        let focused = false;
+        for (const fe of err.body.errors) {
+          const key = normalizeValidationKey(fe.message);
           const i18nKey = VALIDATION_KEY_TO_I18N[key];
-          setYearError(
-            i18nKey
-              ? t(i18nKey, publishValidationI18nParams())
-              : (yearField.message || t('owner.publish.errors.yearInvalid')),
-          );
-          document.getElementById('publishYear')?.focus();
-          const onlyYear = err.body.errors.every((fe) => fe.field === 'year');
-          if (onlyYear) return;
+          const message = i18nKey
+            ? t(i18nKey, publishValidationI18nParams())
+            : (fe.message || t('owner.publish.errors.failed'));
+          if (fe.field === 'year') {
+            setYearError(message);
+            if (!focused) {
+              document.getElementById('publishYear')?.focus();
+              focused = true;
+            }
+          } else if (fe.field === 'plate') {
+            setPlateError(message);
+            if (!focused) {
+              document.getElementById('publishPlate')?.focus();
+              focused = true;
+            }
+          }
         }
+        const onlyKnownFields = err.body.errors.every(
+          (fe) => fe.field === 'year' || fe.field === 'plate',
+        );
+        if (onlyKnownFields) return;
       }
       if (err instanceof Error && err.message.startsWith('owner.')) {
         setError(t(err.message));
@@ -651,12 +818,23 @@ function PublishCarForm({
                     searchPlaceholder={t('owner.publish.search')}
                     pendingLabel={t('owner.publish.pending')}
                     value={brandSel}
-                    onChange={setBrandSel}
+                    onChange={(next) => {
+                      setBrandSel(next);
+                      setBrandSelectError(null);
+                      setModelSelectError(null);
+                      setNewBrandError(null);
+                      applyBrandSelectValidation(next);
+                    }}
                     options={[
                       ...brands.map((b) => ({ value: b.links.self, label: b.name, pending: !b.validated })),
                       { value: OTHER, label: t('owner.publish.other') },
                     ]}
                   />
+                  {brandSelectError ? (
+                    <div id="publishBrandError" className="text-danger d-block small mt-1" role="alert">
+                      {brandSelectError}
+                    </div>
+                  ) : null}
                 </div>
 
                 {brandSel === OTHER && (
@@ -664,12 +842,24 @@ function PublishCarForm({
                     <label className="form-label required-label" htmlFor="publishNewBrand">{t('owner.publish.newBrandName')}</label>
                     <input
                       id="publishNewBrand"
-                      className="form-control"
+                      className={`form-control${newBrandError ? ' is-invalid' : ''}`}
                       value={newBrandName}
                       maxLength={carValidation.brandMaxLength}
-                      onChange={(e) => setNewBrandName(e.target.value)}
+                      aria-invalid={newBrandError ? true : undefined}
+                      aria-describedby={newBrandError ? 'publishNewBrandError' : undefined}
+                      onChange={(e) => {
+                        const next = e.target.value;
+                        setNewBrandName(next);
+                        applyNewBrandValidation(next);
+                      }}
+                      onBlur={() => applyNewBrandValidation(newBrandName)}
                       required
                     />
+                    {newBrandError ? (
+                      <div id="publishNewBrandError" className="text-danger d-block small mt-1" role="alert">
+                        {newBrandError}
+                      </div>
+                    ) : null}
                   </div>
                 )}
 
@@ -682,13 +872,22 @@ function PublishCarForm({
                     searchPlaceholder={t('owner.publish.search')}
                     pendingLabel={t('owner.publish.pending')}
                     value={modelSel}
-                    onChange={setModelSel}
+                    onChange={(next) => {
+                      setModelSel(next);
+                      setNewModelError(null);
+                      applyModelSelectValidation(brandSel, next);
+                    }}
                     disabled={!brandSel}
                     options={[
                       ...models.map((m) => ({ value: m.links.self, label: m.name, pending: !m.validated })),
                       { value: OTHER, label: t('owner.publish.other') },
                     ]}
                   />
+                  {modelSelectError ? (
+                    <div id="publishModelError" className="text-danger d-block small mt-1" role="alert">
+                      {modelSelectError}
+                    </div>
+                  ) : null}
                 </div>
 
                 {modelSel === OTHER && (
@@ -696,12 +895,24 @@ function PublishCarForm({
                     <label className="form-label required-label" htmlFor="publishNewModel">{t('owner.publish.newModelName')}</label>
                     <input
                       id="publishNewModel"
-                      className="form-control"
+                      className={`form-control${newModelError ? ' is-invalid' : ''}`}
                       value={newModelName}
                       maxLength={carValidation.modelMaxLength}
-                      onChange={(e) => setNewModelName(e.target.value)}
+                      aria-invalid={newModelError ? true : undefined}
+                      aria-describedby={newModelError ? 'publishNewModelError' : undefined}
+                      onChange={(e) => {
+                        const next = e.target.value;
+                        setNewModelName(next);
+                        applyNewModelValidation(next);
+                      }}
+                      onBlur={() => applyNewModelValidation(newModelName)}
                       required
                     />
+                    {newModelError ? (
+                      <div id="publishNewModelError" className="text-danger d-block small mt-1" role="alert">
+                        {newModelError}
+                      </div>
+                    ) : null}
                   </div>
                 )}
 
@@ -714,13 +925,25 @@ function PublishCarForm({
                   <label className="form-label required-label" htmlFor="publishPlate">{t('owner.publish.plate')}</label>
                   <input
                     id="publishPlate"
-                    className="form-control"
+                    className={`form-control${plateError ? ' is-invalid' : ''}`}
                     style={{ textTransform: 'uppercase' }}
                     value={plate}
                     maxLength={carValidation.plateMaxLength}
-                    onChange={(e) => setPlate(normalizePlate(e.target.value))}
+                    aria-invalid={plateError ? true : undefined}
+                    aria-describedby={plateError ? 'publishPlateError' : undefined}
+                    onChange={(e) => {
+                      const next = normalizePlate(e.target.value);
+                      setPlate(next);
+                      applyPlateValidation(next);
+                    }}
+                    onBlur={() => applyPlateValidation(plate)}
                     required
                   />
+                  {plateError ? (
+                    <div id="publishPlateError" className="text-danger d-block small mt-1" role="alert">
+                      {plateError}
+                    </div>
+                  ) : null}
                 </div>
 
                 <div className="mb-3">
@@ -788,24 +1011,48 @@ function PublishCarForm({
                     id="publishMinDays"
                     type="number"
                     min={1}
-                    className="form-control"
+                    className={`form-control${minDaysError ? ' is-invalid' : ''}`}
                     style={{ maxWidth: '10rem' }}
                     value={minimumRentalDays}
-                    onChange={(e) => setMinimumRentalDays(e.target.value)}
+                    aria-invalid={minDaysError ? true : undefined}
+                    aria-describedby={minDaysError ? 'publishMinDaysError' : undefined}
+                    onChange={(e) => {
+                      const next = e.target.value;
+                      setMinimumRentalDays(next);
+                      applyMinDaysValidation(next);
+                    }}
+                    onBlur={() => applyMinDaysValidation(minimumRentalDays)}
                     required
                   />
+                  {minDaysError ? (
+                    <div id="publishMinDaysError" className="text-danger d-block small mt-1" role="alert">
+                      {minDaysError}
+                    </div>
+                  ) : null}
                 </div>
 
                 <div className="mb-3">
                   <label className="form-label" htmlFor="publishDescription">{t('owner.publish.description')}</label>
                   <textarea
                     id="publishDescription"
-                    className="form-control"
+                    className={`form-control${descriptionError ? ' is-invalid' : ''}`}
                     rows={3}
                     maxLength={carValidation.descriptionMaxLength}
                     value={description}
-                    onChange={(e) => setDescription(e.target.value)}
+                    aria-invalid={descriptionError ? true : undefined}
+                    aria-describedby={descriptionError ? 'publishDescriptionError' : undefined}
+                    onChange={(e) => {
+                      const next = e.target.value;
+                      setDescription(next);
+                      applyDescriptionValidation(next);
+                    }}
+                    onBlur={() => applyDescriptionValidation(description)}
                   />
+                  {descriptionError ? (
+                    <div id="publishDescriptionError" className="text-danger d-block small mt-1" role="alert">
+                      {descriptionError}
+                    </div>
+                  ) : null}
                 </div>
 
                 {/* ── Fotos y seguro ──────────────────────────────── */}
@@ -818,6 +1065,7 @@ function PublishCarForm({
                 <div className="mb-4">
                   <label className="form-label d-block" htmlFor="publishInsurance">{t('owner.publish.insurance')}</label>
                   <input
+                    ref={insuranceInputRef}
                     id="publishInsurance"
                     type="file"
                     className="form-control"
@@ -832,6 +1080,24 @@ function PublishCarForm({
                       }
                     }}
                   />
+                  {insurance ? (
+                    <div className="d-flex align-items-center gap-2 mt-2">
+                      <span className="small text-secondary text-truncate" title={insurance.name}>
+                        {insurance.name}
+                      </span>
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-outline-danger flex-shrink-0"
+                        onClick={() => {
+                          setInsurance(null);
+                          if (insuranceInputRef.current) insuranceInputRef.current.value = '';
+                        }}
+                      >
+                        <i className="bi bi-trash me-1" aria-hidden="true" />
+                        {t('owner.publish.removeInsurance')}
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
 
                 <div className="d-flex justify-content-end mt-2">

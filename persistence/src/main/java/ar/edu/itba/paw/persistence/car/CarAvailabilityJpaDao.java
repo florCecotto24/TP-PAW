@@ -140,17 +140,6 @@ public class CarAvailabilityJpaDao implements CarAvailabilityDao {
     }
 
     @Override
-    public boolean existsAnyOfferedByCar(final long carId) {
-        final Number count = (Number) em.createNativeQuery(
-                        "SELECT COUNT(*) FROM car_availability la "
-                                + "WHERE la.car_id = :carId AND la.kind = 'offered' "
-                                + "LIMIT 1")
-                .setParameter("carId", carId)
-                .getSingleResult();
-        return count != null && count.intValue() > 0;
-    }
-
-    @Override
     public Map<Long, BigDecimal> findMinOfferedDayPriceByCarIds(final Collection<Long> carIds) {
         if (carIds == null || carIds.isEmpty()) {
             return Map.of();

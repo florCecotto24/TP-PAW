@@ -135,15 +135,18 @@ public class EmailServiceImpl implements EmailService {
 
     private Context buildReservationConfirmationMailContext(final ReservationMailPayload payload, final Locale mailLocale) {
         final Context ctx = buildReservationNotificationContext(payload, mailLocale);
-        ctx.setVariable("ctaUrlRider", mailPublicUrls.absolutePath("/my-reservations/" + payload.getReservationId()));
-        ctx.setVariable("ctaUrlOwner", mailPublicUrls.absolutePath("/my-cars/car/" + payload.getCarId()));
+        ctx.setVariable("ctaUrlRider", mailPublicUrls.absolutePathWithSelf(
+                "/my-reservations/" + payload.getReservationId(), "reservations", payload.getReservationId()));
+        ctx.setVariable("ctaUrlOwner", mailPublicUrls.absolutePathWithSelf(
+                "/my-cars/car/" + payload.getCarId(), "cars", payload.getCarId()));
         return ctx;
     }
 
     /** Rider-facing templates that deep-link into {@code GET /my-reservations/{id}}. */
     private Context buildRiderReservationDetailMailContext(final ReservationMailPayload payload, final Locale mailLocale) {
         final Context ctx = buildReservationNotificationContext(payload, mailLocale);
-        ctx.setVariable("ctaUrl", mailPublicUrls.absolutePath("/my-reservations/" + payload.getReservationId()));
+        ctx.setVariable("ctaUrl", mailPublicUrls.absolutePathWithSelf(
+                "/my-reservations/" + payload.getReservationId(), "reservations", payload.getReservationId()));
         return ctx;
     }
 
@@ -161,7 +164,8 @@ public class EmailServiceImpl implements EmailService {
             final Locale mailLocale,
             final Reservation.Status cancellationStatus) {
         final Context ctx = buildReservationNotificationContext(payload, mailLocale);
-        ctx.setVariable("ctaUrl", mailPublicUrls.absolutePath("/my-cars/car/" + payload.getCarId()));
+        ctx.setVariable("ctaUrl", mailPublicUrls.absolutePathWithSelf(
+                "/my-cars/car/" + payload.getCarId(), "cars", payload.getCarId()));
         ctx.setVariable("cancellationIntroOwner", ownerCancellationIntro(cancellationStatus, mailLocale));
         return ctx;
     }
@@ -405,7 +409,10 @@ public class EmailServiceImpl implements EmailService {
         ctx.setVariable("startDateFormatted", mailDispatch.formatWallDateTime(payload.getStartDate(), mailLocale));
         ctx.setVariable("endDateFormatted", mailDispatch.formatWallDateTime(payload.getEndDate(), mailLocale));
         ctx.setVariable("ctaUrl",
-                mailPublicUrls.absolutePath("/my-reservations/" + payload.getReservationId() + "?role=rider"));
+                mailPublicUrls.absolutePathWithSelf(
+                        "/my-reservations/" + payload.getReservationId() + "?role=rider",
+                        "reservations",
+                        payload.getReservationId()));
         final String to = payload.getRecipientEmail();
         try {
             mailDispatch.runMail(() -> {

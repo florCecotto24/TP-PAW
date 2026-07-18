@@ -71,6 +71,7 @@ export default function ReservationDetailPage() {
 
   const reservationUri = resolveResourceUri({
     stateUri: reservationSelfFromNav,
+    querySelf: searchParams.get('self'),
     routeId: id,
     collection: 'reservations',
   });
@@ -227,7 +228,7 @@ export default function ReservationDetailPage() {
       return;
     }
     void runAction(async () => {
-      await postReview(reviewsUri, reservation.links.self, {
+      await postReview(reservation.links.self, {
         rating: reviewRating,
         comment: reviewComment,
         image: reviewImage,

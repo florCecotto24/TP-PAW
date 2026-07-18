@@ -593,38 +593,6 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public void ensureAccountConfirmationPrerequisites(final String email, final Locale locale) {
-        if (email == null || email.isBlank()) {
-            return;
-        }
-        findByEmail(email.trim())
-                .ifPresent(u -> emailVerificationService.ensurePendingVerificationCode(
-                        u.getId(), u.getEmail(), locale));
-    }
-
-    @Override
-    @Transactional
-    public boolean requestAccountConfirmationResend(final String email, final Locale locale) {
-        if (email == null || email.isBlank()) {
-            return false;
-        }
-        final Optional<User> userOpt = findByEmail(email.trim());
-        if (userOpt.isEmpty()) {
-            return false;
-        }
-        final User user = userOpt.get();
-        emailVerificationService.resendVerificationCode(user.getId(), user.getEmail(), locale);
-        return true;
-    }
-
-    @Override
-    @Transactional
-    public long completeAccountConfirmation(final String email, final String code) {
-        return emailVerificationService.verifyEmailAndConsumeCode(email, code);
-    }
-
-    @Override
-    @Transactional
     public void blockUser(final long userId) {
         userDao.blockUser(userId);
     }
@@ -657,13 +625,6 @@ public class UserServiceImpl implements UserService {
                 .grantedByFullName(granting.getForename() + " " + granting.getSurname())
                 .targetUserId(targetUserId)
                 .build());
-    }
-
-    @Override
-    @Transactional
-    public User createUserWithEncodedPassword(
-            final String email, final String forename, final String surname, final String bcryptEncodedHash) {
-        return userDao.createUser(email, forename, surname, bcryptEncodedHash);
     }
 
     @Override

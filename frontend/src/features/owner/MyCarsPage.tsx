@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Pagination, SortBar, LoadingBlock, AuthenticatedImg } from '../../components/ryden';
+import { Pagination, SortBar, LoadingBlock, AuthenticatedCoverMedia } from '../../components/ryden';
 import { paths } from '../../routes/paths';
 import { myCarDetailTo } from '../../routes/navigationState';
 import { idFromUri } from './api';
@@ -25,10 +25,11 @@ function OwnerCarCardMedia({ coverUri, alt }: { coverUri?: string; alt: string }
   );
   if (!coverUri) return placeholder;
   return (
-    <AuthenticatedImg
+    <AuthenticatedCoverMedia
       src={coverUri}
       alt={alt}
       className="reservation-card__media"
+      style={{ objectFit: 'cover', backgroundColor: '#212529' }}
       fallback={placeholder}
     />
   );
@@ -167,10 +168,12 @@ export default function MyCarsPage() {
             {items.map((car: CarSummaryDto) => {
               const id = idFromUri(car.links.self);
               if (!id) return null;
+              const detailLink = myCarDetailTo(id, car.links.self);
               return (
                 <Link
                   key={car.links.self}
-                  to={myCarDetailTo(id, car.links.self)}
+                  to={detailLink.pathname}
+                  state={detailLink.state}
                   className="reservation-card text-decoration-none text-reset"
                 >
                   <article className="card border-0 shadow-sm rounded-4 overflow-hidden reservation-card__surface position-relative">

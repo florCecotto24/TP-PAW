@@ -2,14 +2,17 @@ import { useMemo, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Alert, Button, Form } from 'react-bootstrap';
-import { canonicalApiUserPath } from '../../api/uri';
+import { hrefToRelativeApiPath } from '../../api/uri';
 import { sessionClient, useSessionStore } from '../../session/sessionStore';
 import { apiErrorMessage } from './errorMessage';
 import { paths } from '../../routes/paths';
 
-/** Accept only same-origin API user URNs (`/users/{id}`) before POSTing credentials. */
-function isTrustedApiUserUri(userUri: string): boolean {
-  const trimmed = userUri.trim();
+/**
+ * Accept only same-origin API credentials URNs (`/users/{id}/credentials`) before POSTing.
+ * Prefer the hypermedia {@code links.credentials} from registration; reject open redirects.
+ */
+function isTrustedCredentialsUri(credentialsUri: string): boolean {
+  const trimmed = credentialsUri.trim();
   if (!trimmed) return false;
   if (/^[a-z][a-z0-9+.-]*:/i.test(trimmed) && !/^https?:\/\//i.test(trimmed)) {
     return false;
@@ -23,7 +26,8 @@ function isTrustedApiUserUri(userUri: string): boolean {
     }
   }
   try {
-    return /^\/users\/\d+$/.test(canonicalApiUserPath(trimmed));
+    const path = hrefToRelativeApiPath(trimmed);
+    return /^\/users\/\d+\/credentials$/.test(path);
   } catch {
     return false;
   }
@@ -32,18 +36,22 @@ function isTrustedApiUserUri(userUri: string): boolean {
 // /verificar-email — tras POST /users el servidor envía un OTP por mail.
 // Verificar = Basic auth email:otp (el OTP actúa como password); el backend
 // consume el código, marca emailVerified y devuelve JWT en headers.
-// Reenviar OTP: POST <userUri>/credentials (200 uniforme, sin verbos en la URL).
+// Reenviar OTP: POST links.credentials del user (descubierto en el 201 de registro).
 export default function VerifyEmailPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const login = useSessionStore((s) => s.login);
   const [params] = useSearchParams();
 
-  const rawUserUri = params.get('userUri');
-  const userUri = useMemo(
-    () => (rawUserUri && isTrustedApiUserUri(rawUserUri) ? canonicalApiUserPath(rawUserUri) : null),
-    [rawUserUri],
-  );
+  const rawCredentialsUri = params.get('credentialsUri');
+  const credentialsPath = useMemo(() => {
+    if (!rawCredentialsUri || !isTrustedCredentialsUri(rawCredentialsUri)) return null;
+    try {
+      return hrefToRelativeApiPath(rawCredentialsUri);
+    } catch {
+      return null;
+    }
+  }, [rawCredentialsUri]);
   const email = params.get('email') ?? '';
 
   const [code, setCode] = useState('');
@@ -77,14 +85,14 @@ export default function VerifyEmailPage() {
     setError(null);
     setInfo(null);
 
-    if (!userUri) {
+    if (!credentialsPath) {
       setError(t('auth.verify.missingUser'));
       return;
     }
 
     setResending(true);
     try {
-      await sessionClient.post(`${userUri}/credentials`, undefined, { anonymous: true });
+      await sessionClient.post(credentialsPath, undefined, { anonymous: true });
       setInfo(t('auth.verify.resent'));
     } catch (err) {
       setError(apiErrorMessage(t, err));
@@ -142,7 +150,7 @@ export default function VerifyEmailPage() {
               variant="outline-secondary"
               className="w-100 mb-3"
               onClick={onResend}
-              disabled={resending || !userUri}
+              disabled={resending || !credentialsPath}
             >
               {resending ? t('auth.verify.resending') : t('auth.verify.resend')}
             </Button>

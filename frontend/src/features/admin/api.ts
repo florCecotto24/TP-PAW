@@ -75,7 +75,7 @@ export async function patchCarStatus(
   status: Extract<CarStatus, 'admin_paused' | 'active'>,
 ): Promise<ApiResponse<CarDto>> {
   return sessionClient.patch<CarDto>(carSelfLink, { status }, {
-    accept: MediaTypes.car,
+    accept: MediaTypes.carPrivate,
     contentType: MediaTypes.car,
   });
 }

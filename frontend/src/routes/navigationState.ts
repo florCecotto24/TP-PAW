@@ -1,4 +1,12 @@
-import { carDetail, myCarDetail, myReservationDetail, publicProfile } from './paths';
+import {
+  adminReservationChat,
+  carDetail,
+  myCarDetail,
+  myReservationDetail,
+  publicProfile,
+  reservationConfirmation,
+} from './paths';
+import { hrefToRelativeApiPath } from '../api/uri';
 
 /** Optional React Router location state for hypermedia-backed navigation. */
 
@@ -12,6 +20,8 @@ export interface OwnerCarDetailLocationState {
 
 export interface NewReservationLocationState {
   carSelf?: string;
+  /** Canonical availability URN from bookable-segment links.availability. */
+  availabilityUri?: string;
 }
 
 export interface ReservationDetailLocationState {
@@ -37,13 +47,26 @@ export interface AppLinkTarget {
   state?: unknown;
 }
 
-/** SPA path to car detail; carries {@code links.self} when known so the target page can follow hypermedia. */
+/** Relative API path for {@code ?self=} (survives F5; validated by {@code resolveResourceUri}). */
+export function selfQueryValue(apiSelfUri: string): string {
+  return hrefToRelativeApiPath(apiSelfUri);
+}
+
+function mergeSelfQuery(
+  query: Record<string, string> | undefined,
+  apiSelfUri: string | null | undefined,
+): Record<string, string> | undefined {
+  if (!apiSelfUri) return query;
+  return { ...query, self: selfQueryValue(apiSelfUri) };
+}
+
+/** SPA path to car detail; carries {@code links.self} in state and {@code ?self=}. */
 export function carDetailTo(
   carId: string | number,
   carSelf?: string | null,
   query?: Record<string, string>,
 ): AppLinkTarget {
-  const pathname = carDetail(carId, query);
+  const pathname = carDetail(carId, mergeSelfQuery(query, carSelf));
   if (!carSelf) return { pathname };
   return { pathname, state: { carSelf } satisfies CarDetailLocationState };
 }
@@ -52,7 +75,7 @@ export function myCarDetailTo(
   carId: string | number,
   carSelf?: string | null,
 ): AppLinkTarget {
-  const pathname = myCarDetail(carId);
+  const pathname = myCarDetail(carId, mergeSelfQuery(undefined, carSelf));
   if (!carSelf) return { pathname };
   return { pathname, state: { carSelf } satisfies OwnerCarDetailLocationState };
 }
@@ -62,7 +85,7 @@ export function myReservationDetailTo(
   reservationSelf?: string | null,
   query?: Record<string, string>,
 ): AppLinkTarget {
-  const pathname = myReservationDetail(reservationId, query);
+  const pathname = myReservationDetail(reservationId, mergeSelfQuery(query, reservationSelf));
   if (!reservationSelf) return { pathname };
   return {
     pathname,
@@ -70,13 +93,42 @@ export function myReservationDetailTo(
   };
 }
 
+export function reservationConfirmationTo(
+  reservationId: string | number,
+  reservationSelf?: string | null,
+): AppLinkTarget {
+  const pathname = reservationConfirmation(reservationId, mergeSelfQuery(undefined, reservationSelf));
+  if (!reservationSelf) return { pathname };
+  return {
+    pathname,
+    state: { reservationSelf } satisfies ReservationConfirmationLocationState,
+  };
+}
+
 export function publicProfileTo(
   userId: string | number,
   userSelf?: string | null,
+  query?: Record<string, string>,
 ): AppLinkTarget {
-  const pathname = publicProfile(userId);
+  const pathname = publicProfile(userId, mergeSelfQuery(query, userSelf));
   if (!userSelf) return { pathname };
   return { pathname, state: { userSelf } satisfies PublicProfileLocationState };
+}
+
+export function adminReservationChatTo(
+  reservationId: string | number,
+  reservationSelf?: string | null,
+  messagesLink?: string | null,
+): AppLinkTarget {
+  const pathname = adminReservationChat(reservationId, mergeSelfQuery(undefined, reservationSelf));
+  if (!reservationSelf && !messagesLink) return { pathname };
+  return {
+    pathname,
+    state: {
+      ...(reservationSelf ? { reservationSelf } : {}),
+      ...(messagesLink ? { messagesLink } : {}),
+    } satisfies AdminReservationChatLocationState,
+  };
 }
 
 export function isAppLinkTarget(value: unknown): value is AppLinkTarget {

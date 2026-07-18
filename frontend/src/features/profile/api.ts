@@ -122,10 +122,11 @@ export async function fetchFavoritesPage(user: UserDto, pageIndex: number, pageS
   return { data: res.data ?? [], page: res.page, status: res.status };
 }
 
-/** DELETE membresía de favoritos (idempotente). OpenAPI: `/users/{id}/favorites/{carId}`. */
+/** DELETE membresía de favoritos (idempotente) vía favorites-item-template. */
 export async function removeFavorite(user: UserDto, carSelfLink: string): Promise<void> {
-  const base = favoritesPath(user);
-  await sessionClient.del(favoriteMembershipUri(base, carSelfLink));
+  const template = user.links?.['favorites-item-template'];
+  if (!template) throw new Error('profile.favorites.missingMembershipTemplate');
+  await sessionClient.del(favoriteMembershipUri(template, carSelfLink));
 }
 
 /** Path para listar los autos de un usuario (perfil público): GET /cars?ownerId=. */

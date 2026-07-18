@@ -10,8 +10,6 @@ import java.util.Optional;
 
 import ar.edu.itba.paw.models.domain.review.Review;
 import ar.edu.itba.paw.models.dto.Page;
-import ar.edu.itba.paw.models.dto.car.CarPublicReview;
-import ar.edu.itba.paw.models.dto.profile.ReviewItemDto;
 import ar.edu.itba.paw.persistence.review.ReviewDao;
 
 /**
@@ -28,22 +26,11 @@ public class RecordingReviewDao implements ReviewDao {
 
     private final Map<String, Boolean> existsReviewByKey = new HashMap<>();
     private final List<InsertedReview> inserted = new ArrayList<>();
-    private final Map<String, Page<CarPublicReview>> carPublicReviewsByKey = new HashMap<>();
-    private final Map<Long, Long> reviewCountByCarId = new HashMap<>();
 
     public List<InsertedReview> inserted() { return inserted; }
 
     public void stubExistsReview(final long reservationId, final boolean madeByRider, final boolean value) {
         existsReviewByKey.put(reservationId + ":" + madeByRider, value);
-    }
-
-    public void stubCarPublicReviews(
-            final long carId, final int page, final int pageSize, final Page<CarPublicReview> result) {
-        carPublicReviewsByKey.put(carId + ":" + page + ":" + pageSize, result);
-    }
-
-    public void stubReviewCountForCar(final long carId, final long count) {
-        reviewCountByCarId.put(carId, count);
     }
 
     @Override
@@ -59,12 +46,6 @@ public class RecordingReviewDao implements ReviewDao {
     }
 
     @Override
-    public Page<CarPublicReview> findCarPublicReviews(final long carId, final int page, final int pageSize) {
-        return carPublicReviewsByKey.getOrDefault(carId + ":" + page + ":" + pageSize,
-                new Page<>(List.of(), page, pageSize, 0L));
-    }
-
-    @Override
     public Page<Review> findPublicReviewsForCar(final long carId, final int page, final int pageSize) {
         return new Page<>(List.of(), page, pageSize, 0L);
     }
@@ -77,11 +58,6 @@ public class RecordingReviewDao implements ReviewDao {
     @Override
     public Optional<Review> findById(final long reviewId) {
         return Optional.empty();
-    }
-
-    @Override
-    public long countReviewsForCar(final long carId) {
-        return reviewCountByCarId.getOrDefault(carId, 0L);
     }
 
     @Override
@@ -104,24 +80,7 @@ public class RecordingReviewDao implements ReviewDao {
     public BigDecimal findAverageRatingForCar(final long carId) { return null; }
 
     @Override
-    public List<ReviewItemDto> findRecentReviewsForCounterparty(
-            final long counterpartyUserId, final boolean counterpartyIsOwner, final int limit) {
-        return List.of();
-    }
-
-    @Override
-    public long countReviewsForCounterparty(
-            final long counterpartyUserId, final boolean counterpartyIsOwner) {
-        return 0L;
-    }
-
-    @Override
     public Page<Review> findReviewsReceivedByUser(final long userId, final int page, final int pageSize) {
-        return new Page<>(List.of(), page, pageSize, 0L);
-    }
-
-    @Override
-    public Page<ReviewItemDto> findReviewsForUserPage(final long userId, final int page, final int pageSize) {
         return new Page<>(List.of(), page, pageSize, 0L);
     }
 }

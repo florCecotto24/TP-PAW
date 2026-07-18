@@ -33,7 +33,7 @@ public final class ApiIndexDto {
         dto.links.put("models", href(uriInfo, "models"));
         dto.links.put("neighborhoods", href(uriInfo, "neighborhoods"));
         dto.links.put("credentials", href(uriInfo, "credentials"));
-        dto.links.put("image", href(uriInfo, "image"));
+        // Image bytes are item-only ({@code GET /image/{id}}); no top-level collection href.
 
         dto.resources.put("users", ResourceDescriptor.of(href(uriInfo, "users"), itemTemplate(uriInfo, "users"),
                 List.of("page", "pageSize", "blocked", "role", "q")));
@@ -50,10 +50,11 @@ public final class ApiIndexDto {
         dto.resources.put("brands", ResourceDescriptor.of(href(uriInfo, "brands"),
                 List.of("validated", "page", "pageSize")));
         dto.resources.put("models", ResourceDescriptor.of(href(uriInfo, "models"),
-                List.of("validated")));
+                List.of("validated", "page", "pageSize")));
         dto.resources.put("neighborhoods", ResourceDescriptor.of(href(uriInfo, "neighborhoods"), List.of()));
         dto.resources.put("credentials", ResourceDescriptor.of(href(uriInfo, "credentials"), List.of()));
-        dto.resources.put("image", ResourceDescriptor.of(href(uriInfo, "image"), List.of()));
+        dto.resources.put("image", ResourceDescriptor.of(
+                null, itemTemplate(uriInfo, "image"), List.of()));
 
         return dto;
     }

@@ -1,11 +1,8 @@
 package ar.edu.itba.paw.services.car;
 
 
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalTime;
-import java.time.YearMonth;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -16,7 +13,6 @@ import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.domain.car.CarAvailability;
 import ar.edu.itba.paw.models.dto.car.AvailabilityCreateInput;
 import ar.edu.itba.paw.models.dto.car.BookableSegmentProjection;
-import ar.edu.itba.paw.models.util.time.AppTimezone;
 
 /**
  * Wall-calendar availability segments attached to a car ({@code car_availability} style persistence).
@@ -46,33 +42,8 @@ public interface CarAvailabilityService {
     /** All availability rows for {@code carId} whose window overlaps {@code [from, to]}, ordered by {@code createdAt} descending. */
     List<CarAvailability> findOverlappingRangeByCar(long carId, LocalDate from, LocalDate to);
 
-    /**
-     * Updates the minimum rental days for an already-published car.
-     * Validates that {@code minDays} does not exceed the shortest currently-effective offered period.
-     *
-     * @throws ar.edu.itba.paw.exception.car.CarValidationException when the new minimum exceeds a period
-     */
-    void updateMinimumRentalDays(long carId, int minDays);
-
     /** All availability segments for the car. */
     List<CarAvailability> findByCarId(long carId);
-
-    /**
-     * Returns only the currently-effective {@link CarAvailability.Kind#OFFERED} rows for the car —
-     * those that still "win" at least one calendar day under the "most recent {@code createdAt} wins" rule.
-     * Superseded rows (fully covered by newer rows of any kind) are excluded, as are
-     * {@link CarAvailability.Kind#WITHDRAWN} rows (internal bookkeeping).
-     * Intended for the owner's availability list view.
-     */
-    List<CarAvailability> findEffectiveOfferedByCar(long carId);
-
-    /**
-     * Paginated variant: returns effective OFFERED rows overlapping {@code month}.
-     * Uses a 1+1 SQL pattern (COUNT + SELECT) for the OFFERED rows, then a supplementary
-     * query to load all kinds for the month window to resolve effectiveness in memory.
-     * The total count is an upper bound (all OFFERED rows in the month, pre-filter).
-     */
-    Page<CarAvailability> findEffectiveOfferedByCarAndMonth(long carId, YearMonth month, int page, int pageSize);
 
     /**
      * Paginated effective OFFERED rows for the whole car (no month filter).
@@ -86,33 +57,12 @@ public interface CarAvailabilityService {
     Page<BookableSegmentProjection> getEffectiveSegmentsForOwnerCalendarInRangePaginated(
             long carId, LocalDate from, LocalDate to, int page, int pageSize);
 
-    /**
-     * Like {@link #getAllEffectiveSegmentsForOwnerCalendar(long)} but scoped to rows overlapping
-     * {@code [from, to]}. Used for the owner calendar to load a ±1 month window.
-     */
-    List<BookableSegmentProjection> getEffectiveSegmentsForOwnerCalendarInRange(long carId, LocalDate from, LocalDate to);
-
-    /**
-     * Returns {@code true} when the car has at least one OFFERED availability row.
-     * Lightweight existence check.
-     */
-    boolean existsAnyOfferedByCar(long carId);
-
     /** Batch load: rows for the given car ids whose {@code end_inclusive} is on or after {@code minEndDate}. */
     /**
      * Availability rows for the given car ids whose window reaches {@code minEndDate} or later.
      * When {@code minEndDate} is {@code null}, every row for those cars is returned.
      */
     List<CarAvailability> findByCarIdsEndingOnOrAfter(Collection<Long> carIds, LocalDate minEndDate);
-
-    /**
-     * Wall-calendar day ranges {@code [startInclusive, endInclusive]} held by active blocking
-     * reservations on the car (pending / accepted / started, where the rider currently has a
-     * claim on the days). Used by the owner publish flow to (a) disable those days in the
-     * Flatpickr picker, and (b) reject publish payloads that overlap them server-side.
-     * Reservations that already ended in the wall-zone past are excluded.
-     */
-    List<AvailabilityPeriod> findReservationBlockedWallRangesByCar(long carId);
 
     /**
      * Soft-deletes an availability period from the owner's calendar by inserting a brand new
@@ -137,28 +87,12 @@ public interface CarAvailabilityService {
     void parseAndApplyWithdrawRange(long carId, String fromInclusive, String untilInclusive);
 
     /**
-     * Computes the set of bookable wall-calendar days for the car.
-     * Availability OFFERED rows are expanded to days; blocking reservations are subtracted.
-     * The result is a compressed list of contiguous {@link AvailabilityPeriod} ranges.
-     */
-    List<AvailabilityPeriod> getBookableWallAvailabilityPeriodsByCar(long carId);
-
-    /**
-     * Batch variant of {@link #getBookableWallAvailabilityPeriodsByCar(long)}. Computes the
-     * bookable wall-day periods for every {@code carId} in a constant number of queries
-     * (rather than one per car). Used by scheduler / batch flows.
+     * Computes the bookable wall-day periods for every {@code carId} in a constant number of queries
+     * (rather than one per car). Availability OFFERED rows are expanded to days and blocking
+     * reservations are subtracted. Used by scheduler / batch flows.
      */
     Map<Long, List<AvailabilityPeriod>> getBookableWallAvailabilityPeriodsByCars(
             Collection<Long> carIds);
-
-    /**
-     * Like {@link #getBookableWallAvailabilityPeriodsByCar} but also clips the result based on the rider pickup
-     * lead time, returning only days reachable by a rider.
-     */
-    List<AvailabilityPeriod> getBookableWallAvailabilityPeriodsForRiderDatePickerByCar(
-            long carId,
-            LocalTime checkInTime,
-            Instant now);
 
     /**
      * Batch variant of the rider date-picker check: {@code true} when
@@ -175,53 +109,6 @@ public interface CarAvailabilityService {
      * and the rider pickup-lead policy relative to {@code now}.
      */
     List<BookableSegmentProjection> getBookableSegmentsForRiderDatePickerByCar(long carId, Instant now);
-
-    /**
-     * Same as {@link #getBookableSegmentsForRiderDatePickerByCar(long, Instant)} but excludes the
-     * reservation whose id matches {@code excludingReservationId} from the "blocking reservations"
-     * subtraction. Used by the rider-side edit flow so the days currently held by the reservation under
-     * edit are still considered bookable for that same reservation (rider can shrink/extend without
-     * conflicting against themselves).
-     */
-    List<BookableSegmentProjection> getBookableSegmentsForRiderDatePickerByCarExcluding(
-            long carId, Instant now, long excludingReservationId);
-
-    /**
-     * Returns the minimum effective day price across all future offered availability rows for the car.
-     * When {@code defaultPrice} is provided it seeds the minimum (used as a fallback when no availability rows exist).
-     */
-    BigDecimal resolveMinEffectiveDayPriceByCar(long carId, BigDecimal defaultPrice);
-
-    /**
-     * Returns {@code true} when not all future offered availability rows have the same price as {@code defaultPrice}.
-     */
-    boolean isCarPriceVariableByCar(long carId, BigDecimal defaultPrice);
-
-    /**
-     * Returns the most recent {@link CarAvailability} row for the car (highest {@code createdAt}).
-     * Useful to read the owner's last-published location and check-in/out times when {@code Listing} is gone.
-     */
-    Optional<CarAvailability> findMostRecentByCarId(long carId);
-
-    /**
-     * First wall-calendar day allowed for a new availability "from" field, taking the configured
-     * rider pickup lead time and the {@code checkInTime} into account.
-     */
-    LocalDate getPublicationMinAvailabilityFirstWallDay(LocalTime checkInTime, Instant now);
-
-    /**
-     * Max inclusive wall-calendar end date offset from {@code LocalDate.now(AppTimezone.WALL_ZONE)} for
-     * published availability ({@code app.listing.max-availability-forward-wall-days}).
-     */
-    int getConfiguredMaxAvailabilityForwardWallDays();
-
-    /**
-     * Returns all effective offered periods as {@link BookableSegmentProjection} without any
-     * time-based clipping. Each {@link CarAvailability} row is mapped directly to one segment
-     * (no adjacent-day merging). Intended for the owner-facing calendar that must show past
-     * and future availability together.
-     */
-    List<BookableSegmentProjection> getAllEffectiveSegmentsForOwnerCalendar(long carId);
 
     /**
      * Atomic owner-side "publish availability" flow used by {@code MyCarsController.createListing}.
@@ -265,15 +152,4 @@ public interface CarAvailabilityService {
      *         new start violates the rider pickup lead (and changed vs. the original start)
      */
     CarAvailability editAvailability(long ownerUserId, long carId, long availabilityId, AvailabilityCreateInput input, Instant now);
-
-    /**
-     * Atomic owner-side bulk replacement of all availability windows for a car used by
-     * {@code MyCarsController.editCar}. When the car has no existing rows, this delegates to
-     * {@link #createListing}. Otherwise it iterates the {@code input.periods()} list and edits
-     * each window in place, using the most-recent existing row as the "old" window and
-     * {@link AvailabilityCreateInput#effectivePriceAt(int)} to resolve the per-period price.
-     * Owner-blocked / CBU / model-pending guards are inherited from the underlying services.
-     * {@code minimumRentalDays = 1} is used when falling through to {@code createListing}.
-     */
-    void applyOwnerBulkEdit(long ownerUserId, long carId, AvailabilityCreateInput input, Instant now);
 }

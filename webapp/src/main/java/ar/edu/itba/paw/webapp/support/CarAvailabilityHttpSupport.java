@@ -37,21 +37,31 @@ public final class CarAvailabilityHttpSupport {
     private final CarService carService;
     private final CarAvailabilityService carAvailabilityService;
     private final FormValidationSupport formValidationSupport;
+    private final CarResourceAccess carResourceAccess;
+    private final PaginationSupport paginationSupport;
 
     public CarAvailabilityHttpSupport(
             final CarService carService,
             final CarAvailabilityService carAvailabilityService,
-            final FormValidationSupport formValidationSupport) {
+            final FormValidationSupport formValidationSupport,
+            final CarResourceAccess carResourceAccess,
+            final PaginationSupport paginationSupport) {
         this.carService = carService;
         this.carAvailabilityService = carAvailabilityService;
         this.formValidationSupport = formValidationSupport;
+        this.carResourceAccess = carResourceAccess;
+        this.paginationSupport = paginationSupport;
     }
 
     public Response list(
             final long carId,
             final String month,
-            final PaginationParams paging,
+            final int page,
+            final Integer pageSizeParam,
+            final RydenUserDetails viewer,
             final UriInfo uriInfo) {
+        carResourceAccess.requireViewableCar(carId, viewer);
+        final PaginationParams paging = paginationSupport.forAvailabilities(page, pageSizeParam);
         if (month != null && !month.isBlank()) {
             final YearMonth yearMonth = YearMonth.parse(month);
             final Page<BookableSegmentProjection> segmentPage =
@@ -98,7 +108,12 @@ public final class CarAvailabilityHttpSupport {
         return Response.created(location).entity(AvailabilityDto.from(availability, uriInfo)).build();
     }
 
-    public Response get(final long carId, final long availabilityId, final UriInfo uriInfo) {
+    public Response get(
+            final long carId,
+            final long availabilityId,
+            final RydenUserDetails viewer,
+            final UriInfo uriInfo) {
+        carResourceAccess.requireViewableCar(carId, viewer);
         final CarAvailability availability = carAvailabilityService.findByIdForCar(carId, availabilityId)
                 .orElseThrow(() -> new CarNotFoundException(carId));
         return Response.ok(AvailabilityDto.from(availability, uriInfo)).build();

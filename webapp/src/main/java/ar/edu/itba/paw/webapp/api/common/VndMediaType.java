@@ -18,6 +18,8 @@ public final class VndMediaType {
     /** Link-only collection for {@code GET /cars/{id}/similar} (follow each {@code self} for teasers). */
     public static final String CAR_SIMILAR_V1_JSON = "application/vnd.paw.car.similar.v1+json";
     public static final String CAR_V1_JSON = "application/vnd.paw.car.v1+json";
+    /** Owner/admin detail (includes licence plate). Same URN as {@link #CAR_V1_JSON}. */
+    public static final String CAR_PRIVATE_V1_JSON = "application/vnd.paw.car.private.v1+json";
     public static final String AVAILABILITY_V1_JSON = "application/vnd.paw.availability.v1+json";
     public static final String BRAND_V1_JSON = "application/vnd.paw.brand.v1+json";
     public static final String MODEL_V1_JSON = "application/vnd.paw.model.v1+json";
