@@ -13,7 +13,10 @@ import javax.ws.rs.core.UriInfo;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.springframework.stereotype.Component;
 
+import java.util.Optional;
+
 import ar.edu.itba.paw.models.dto.Page;
+import ar.edu.itba.paw.models.dto.file.BinaryContent;
 import ar.edu.itba.paw.models.dto.reservation.ReservationMessageDto;
 import ar.edu.itba.paw.services.reservation.ReservationMessageService;
 import ar.edu.itba.paw.services.user.AdminService;
@@ -24,7 +27,8 @@ import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
 import ar.edu.itba.paw.webapp.util.RestUriUtils;
 
 /**
- * HTTP orchestration for reservation chat (list/poll admin vs participant, multipart post).
+ * HTTP orchestration for reservation chat (list/poll admin vs participant, multipart post,
+ * attachment download).
  */
 @Component
 public final class ReservationMessageHttpSupport {
@@ -32,6 +36,7 @@ public final class ReservationMessageHttpSupport {
     private final ReservationMessageService reservationMessageService;
     private final AdminService adminService;
     private final ReservationResourceAccess reservationResourceAccess;
+    private final CurrentUserResolver currentUserResolver;
     private final PaginationSupport paginationSupport;
     private final FormValidationSupport formValidationSupport;
     private final BinaryPayloadSupport binaryPayloadSupport;
@@ -40,12 +45,14 @@ public final class ReservationMessageHttpSupport {
             final ReservationMessageService reservationMessageService,
             final AdminService adminService,
             final ReservationResourceAccess reservationResourceAccess,
+            final CurrentUserResolver currentUserResolver,
             final PaginationSupport paginationSupport,
             final FormValidationSupport formValidationSupport,
             final BinaryPayloadSupport binaryPayloadSupport) {
         this.reservationMessageService = reservationMessageService;
         this.adminService = adminService;
         this.reservationResourceAccess = reservationResourceAccess;
+        this.currentUserResolver = currentUserResolver;
         this.paginationSupport = paginationSupport;
         this.formValidationSupport = formValidationSupport;
         this.binaryPayloadSupport = binaryPayloadSupport;
@@ -101,6 +108,21 @@ public final class ReservationMessageHttpSupport {
                         RestUriUtils.reservationMessageUri(uriInfo, reservationId, saved.getId()))
                 .entity(MessageDto.fromDto(saved, uriInfo))
                 .build();
+    }
+
+    public Response downloadAttachment(final long reservationId, final long messageId) {
+        final Optional<BinaryContent> content;
+        if (reservationResourceAccess.isAdmin()) {
+            content = reservationMessageService.findMessageAttachmentContentForAdmin(
+                    reservationId, messageId);
+        } else {
+            final RydenUserDetails viewer = currentUserResolver.requirePrincipal();
+            content = reservationMessageService.findMessageAttachmentContentForParticipant(
+                    viewer.getUserId(), reservationId, messageId);
+        }
+        return content
+                .map(c -> CacheableBinaryResponses.sensitive(c, c.getFileName()))
+                .orElseThrow(NotFoundException::new);
     }
 
     private Response listAdmin(

@@ -3,7 +3,6 @@ package ar.edu.itba.paw.webapp.controller.user;
 import java.io.IOException;
 import java.io.InputStream;
 
-import java.util.Locale;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
@@ -14,45 +13,33 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import javax.ws.rs.NotFoundException;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.method.P;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Component;
 
-import ar.edu.itba.paw.exception.MessageKeys;
-import ar.edu.itba.paw.exception.user.UserNotFoundException;
-import ar.edu.itba.paw.models.domain.user.UserDocumentType;
-import ar.edu.itba.paw.models.dto.file.BinaryContent;
-import ar.edu.itba.paw.services.user.UserService;
-import ar.edu.itba.paw.webapp.support.BinaryPayloadSupport;
-import ar.edu.itba.paw.webapp.support.CacheableBinaryResponses;
+import ar.edu.itba.paw.webapp.support.UserDocumentHttpSupport;
 
 /**
- * Profile documents ({@code /users/{id}/documents/{documentType}}).
+ * Profile documents ({@code /users/{id}/documents/{documentType}}). HTTP routing only.
  *
  * Authorization is fully declarative here ({@code @PreAuthorize}, backed by the
  * {@code userResourceAccess}/{@code currentUserResolver} beans referenced by name in the
- * expressions) — this controller has no imperative checks left, so it no longer needs those
- * beans injected as fields.
+ * expressions).
  */
 @Path("/users/{id}/documents/{documentType}")
 @Component
 public class UserDocumentController {
 
-    private final UserService userService;
-    private final BinaryPayloadSupport binaryPayloadSupport;
+    private final UserDocumentHttpSupport userDocumentHttpSupport;
 
     @Context
     private HttpHeaders httpHeaders;
 
     @Autowired
-    public UserDocumentController(
-            final UserService userService,
-            final BinaryPayloadSupport binaryPayloadSupport) {
-        this.userService = userService;
-        this.binaryPayloadSupport = binaryPayloadSupport;
+    public UserDocumentController(final UserDocumentHttpSupport userDocumentHttpSupport) {
+        this.userDocumentHttpSupport = userDocumentHttpSupport;
     }
 
     @GET
@@ -60,12 +47,7 @@ public class UserDocumentController {
     public Response downloadDocument(
             @P("id") @PathParam("id") final long id,
             @PathParam("documentType") final String documentType) {
-        userService.getUserById(id)
-                .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
-        final UserDocumentType type = parseDocumentType(documentType);
-        return userService.findProfileDocumentContent(id, type)
-                .map(this::binaryResponse)
-                .orElseThrow(NotFoundException::new);
+        return userDocumentHttpSupport.download(id, documentType);
     }
 
     @PUT
@@ -75,16 +57,7 @@ public class UserDocumentController {
             @P("id") @PathParam("id") final long id,
             @PathParam("documentType") final String documentType,
             final InputStream body) throws IOException {
-        userService.getUserById(id)
-                .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
-        final UserDocumentType type = parseDocumentType(documentType);
-        final byte[] bytes = binaryPayloadSupport.readValidatedBody(body);
-        final String contentType = httpHeaders.getMediaType() != null
-                ? httpHeaders.getMediaType().toString()
-                : MediaType.APPLICATION_OCTET_STREAM;
-        userService.uploadProfileDocument(
-                id, type, type.name().toLowerCase(Locale.ROOT), contentType, bytes);
-        return Response.noContent().build();
+        return userDocumentHttpSupport.upload(id, documentType, body, httpHeaders);
     }
 
     @DELETE
@@ -92,25 +65,6 @@ public class UserDocumentController {
     public Response deleteDocument(
             @P("id") @PathParam("id") final long id,
             @PathParam("documentType") final String documentType) {
-        userService.getUserById(id)
-                .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
-        userService.clearProfileDocument(id, parseDocumentType(documentType));
-        return Response.noContent().build();
-    }
-
-    private Response binaryResponse(final BinaryContent content) {
-        // KYC documents are sensitive: never cache, never sniff, always download (see helper).
-        return CacheableBinaryResponses.sensitive(content, content.getFileName());
-    }
-
-    private static UserDocumentType parseDocumentType(final String raw) {
-        if (raw == null) {
-            throw new NotFoundException();
-        }
-        return switch (raw.toLowerCase(Locale.ROOT)) {
-            case "license" -> UserDocumentType.LICENSE;
-            case "identity" -> UserDocumentType.IDENTITY;
-            default -> throw new NotFoundException();
-        };
+        return userDocumentHttpSupport.delete(id, documentType);
     }
 }

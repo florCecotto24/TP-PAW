@@ -23,17 +23,12 @@ import org.springframework.security.access.method.P;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Component;
 
-import ar.edu.itba.paw.models.domain.reservation.Reservation;
-import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.webapp.api.common.VndMediaType;
-import ar.edu.itba.paw.webapp.dto.rest.CounterpartyContactDto;
 import ar.edu.itba.paw.webapp.form.reservation.ReservationCreateForm;
 import ar.edu.itba.paw.webapp.form.reservation.ReservationPatchForm;
-import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
 import ar.edu.itba.paw.webapp.support.CurrentUserResolver;
 import ar.edu.itba.paw.webapp.support.PaginationParams;
 import ar.edu.itba.paw.webapp.support.PaginationSupport;
-import ar.edu.itba.paw.webapp.support.ReservationDtoEnricher;
 import ar.edu.itba.paw.webapp.support.ReservationItemSupport;
 import ar.edu.itba.paw.webapp.support.ReservationListSupport;
 import ar.edu.itba.paw.webapp.validation.constraint.car.ValidCarPowertrainList;
@@ -53,7 +48,6 @@ public class ReservationController {
     private final PaginationSupport paginationSupport;
     private final ReservationListSupport reservationListSupport;
     private final ReservationItemSupport reservationItemSupport;
-    private final ReservationDtoEnricher reservationDtoEnricher;
 
     @Context
     private UriInfo uriInfo;
@@ -66,13 +60,11 @@ public class ReservationController {
             final CurrentUserResolver currentUserResolver,
             final PaginationSupport paginationSupport,
             final ReservationListSupport reservationListSupport,
-            final ReservationItemSupport reservationItemSupport,
-            final ReservationDtoEnricher reservationDtoEnricher) {
+            final ReservationItemSupport reservationItemSupport) {
         this.currentUserResolver = currentUserResolver;
         this.paginationSupport = paginationSupport;
         this.reservationListSupport = reservationListSupport;
         this.reservationItemSupport = reservationItemSupport;
-        this.reservationDtoEnricher = reservationDtoEnricher;
     }
 
     // A14 (audit): documented decision — a single collection whose visibility is a query-param
@@ -133,12 +125,8 @@ public class ReservationController {
     @Produces(VndMediaType.COUNTERPARTY_CONTACT_V1_JSON)
     @PreAuthorize("@reservationResourceAccess.canViewReservation(#id, @currentUserResolver.currentPrincipalOrNull())")
     public Response getCounterparty(@P("id") @PathParam("id") final long id) {
-        final RydenUserDetails viewer = currentUserResolver.currentPrincipalOrNull();
-        final Reservation reservation = reservationItemSupport.requireViewableReservation(id, viewer);
-        final User counterparty = reservationDtoEnricher
-                .resolveCounterparty(reservation, viewer.getUserId())
-                .orElseThrow(javax.ws.rs.NotFoundException::new);
-        return Response.ok(CounterpartyContactDto.from(counterparty, uriInfo)).build();
+        return reservationItemSupport.getCounterparty(
+                id, currentUserResolver.currentPrincipalOrNull(), uriInfo);
     }
 
     @POST

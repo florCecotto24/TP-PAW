@@ -257,7 +257,12 @@ public final class CarListSupport {
                 && !flexible;
     }
 
-    public Response similarCars(final long carId, final int limit, final UriInfo uriInfo) {
+    public Response similarCars(
+            final long carId,
+            final int limit,
+            final RydenUserDetails viewer,
+            final UriInfo uriInfo) {
+        carResourceAccess.requireViewableCar(carId, viewer);
         final int safeLimit = Math.max(1, Math.min(limit, 20));
         final List<CarCard> cards = carService.findSimilarCarCards(carId, safeLimit, null);
         if (cards.isEmpty()) {

@@ -9,10 +9,12 @@ import org.springframework.stereotype.Component;
 
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.models.domain.reservation.Reservation;
+import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.models.dto.reservation.ReservationCard;
 import ar.edu.itba.paw.services.reservation.ReservationService;
 import ar.edu.itba.paw.services.user.AdminService;
 import ar.edu.itba.paw.webapp.api.common.VndMediaType;
+import ar.edu.itba.paw.webapp.dto.rest.CounterpartyContactDto;
 import ar.edu.itba.paw.webapp.dto.rest.ReservationDto;
 import ar.edu.itba.paw.webapp.dto.rest.ReservationSummaryDto;
 import ar.edu.itba.paw.webapp.form.reservation.ReservationCreateForm;
@@ -102,6 +104,17 @@ public final class ReservationItemSupport {
                 fromWall,
                 untilWall);
         return Response.ok(toDto(updated, uriInfo)).build();
+    }
+
+    public Response getCounterparty(
+            final long reservationId,
+            final RydenUserDetails viewer,
+            final UriInfo uriInfo) {
+        final Reservation reservation = requireViewableReservation(reservationId, viewer);
+        final User counterparty = reservationDtoEnricher
+                .resolveCounterparty(reservation, viewer.getUserId())
+                .orElseThrow(NotFoundException::new);
+        return Response.ok(CounterpartyContactDto.from(counterparty, uriInfo)).build();
     }
 
     public Reservation requireViewableReservation(final long reservationId, final RydenUserDetails viewer) {

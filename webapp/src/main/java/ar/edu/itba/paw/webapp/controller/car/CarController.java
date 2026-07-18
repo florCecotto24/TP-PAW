@@ -31,22 +31,13 @@ import org.springframework.security.access.method.P;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Component;
 
-import ar.edu.itba.paw.exception.car.CarNotFoundException;
-import ar.edu.itba.paw.models.domain.car.Car;
-import ar.edu.itba.paw.services.car.CarService;
 import ar.edu.itba.paw.webapp.api.common.VndMediaType;
-import ar.edu.itba.paw.webapp.dto.rest.CarDto;
-import ar.edu.itba.paw.webapp.dto.rest.CarSummaryDto;
 import ar.edu.itba.paw.webapp.form.car.CarCreateForm;
 import ar.edu.itba.paw.webapp.form.car.CarPatchForm;
-import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
+import ar.edu.itba.paw.webapp.support.CarItemSupport;
 import ar.edu.itba.paw.webapp.support.CarListSupport;
 import ar.edu.itba.paw.webapp.support.CarPatchSupport;
 import ar.edu.itba.paw.webapp.support.CarPublishSupport;
-import ar.edu.itba.paw.webapp.support.CarRepresentationSupport;
-import ar.edu.itba.paw.webapp.support.CarRepresentationVersions;
-import ar.edu.itba.paw.webapp.support.CarResourceAccess;
-import ar.edu.itba.paw.webapp.support.ConditionalJsonResponses;
 import ar.edu.itba.paw.webapp.support.CurrentUserResolver;
 import ar.edu.itba.paw.webapp.support.PaginationParams;
 import ar.edu.itba.paw.webapp.support.PaginationSupport;
@@ -58,20 +49,18 @@ import ar.edu.itba.paw.webapp.validation.constraint.common.ValidYearMonth;
 
 /**
  * Cars resource ({@code /cars}, {@code /cars/{id}}).
- * HTTP routing only; list/publish/patch binding lives in {@code *Support} helpers.
+ * HTTP routing only; list/publish/patch/item binding lives in {@code *Support} helpers.
  */
 @Path("/cars")
 @Component
 public class CarController {
 
-    private final CarService carService;
     private final CurrentUserResolver currentUserResolver;
-    private final CarResourceAccess carResourceAccess;
     private final PaginationSupport paginationSupport;
     private final CarListSupport carListSupport;
     private final CarPublishSupport carPublishSupport;
     private final CarPatchSupport carPatchSupport;
-    private final CarRepresentationSupport carRepresentationSupport;
+    private final CarItemSupport carItemSupport;
 
     @Context
     private UriInfo uriInfo;
@@ -81,22 +70,18 @@ public class CarController {
 
     @Autowired
     public CarController(
-            final CarService carService,
             final CurrentUserResolver currentUserResolver,
-            final CarResourceAccess carResourceAccess,
             final PaginationSupport paginationSupport,
             final CarListSupport carListSupport,
             final CarPublishSupport carPublishSupport,
             final CarPatchSupport carPatchSupport,
-            final CarRepresentationSupport carRepresentationSupport) {
-        this.carService = carService;
+            final CarItemSupport carItemSupport) {
         this.currentUserResolver = currentUserResolver;
-        this.carResourceAccess = carResourceAccess;
         this.paginationSupport = paginationSupport;
         this.carListSupport = carListSupport;
         this.carPublishSupport = carPublishSupport;
         this.carPatchSupport = carPatchSupport;
-        this.carRepresentationSupport = carRepresentationSupport;
+        this.carItemSupport = carItemSupport;
     }
 
     // A14 (audit): documented decision — a single collection whose visibility is a query-param
@@ -202,22 +187,8 @@ public class CarController {
     @Path("/{id}")
     @Produces({VndMediaType.CAR_SUMMARY_V1_JSON, VndMediaType.CAR_V1_JSON})
     public Response getCar(@PathParam("id") final long id, @Context final Request request) {
-        final RydenUserDetails viewer = currentUserResolver.currentPrincipalOrNull();
-        final Car car = carResourceAccess.requireViewableCar(id, viewer);
-        if (carRepresentationSupport.acceptsCarSummary(httpHeaders)) {
-            return ConditionalJsonResponses.okOrNotModified(
-                    request,
-                    CarRepresentationVersions.etagValue(car, CarRepresentationVersions.SUMMARY),
-                    VndMediaType.CAR_SUMMARY_V1_JSON,
-                    () -> CarSummaryDto.from(car, uriInfo));
-        }
-        // Plate is a sensitive identifier: only expose it to the owner/admin, never on the public detail.
-        final boolean includePlate = carResourceAccess.isOwnerOrAdmin(car, viewer);
-        return ConditionalJsonResponses.okOrNotModified(
-                request,
-                CarRepresentationVersions.etagValue(car, CarRepresentationVersions.DETAIL),
-                VndMediaType.CAR_V1_JSON,
-                () -> CarDto.from(car, uriInfo, includePlate));
+        return carItemSupport.get(
+                id, currentUserResolver.currentPrincipalOrNull(), httpHeaders, request, uriInfo);
     }
 
     /**
@@ -230,8 +201,7 @@ public class CarController {
     public Response similarCars(
             @PathParam("id") final long id,
             @QueryParam("limit") @DefaultValue("4") final int limit) {
-        carResourceAccess.requireViewableCar(id, currentUserResolver.currentPrincipalOrNull());
-        return carListSupport.similarCars(id, limit, uriInfo);
+        return carListSupport.similarCars(id, limit, currentUserResolver.currentPrincipalOrNull(), uriInfo);
     }
 
     @PATCH
@@ -254,11 +224,6 @@ public class CarController {
     @Path("/{id}")
     @PreAuthorize("@carResourceAccess.isOwnerById(#id, @currentUserResolver.currentPrincipalOrNull())")
     public Response deactivateCar(@P("id") @PathParam("id") final long id) {
-        final Car car = carService.getCarById(id)
-                .orElseThrow(() -> new CarNotFoundException(id));
-        if (!carService.deactivateCar(car.getOwnerId(), id)) {
-            throw new CarNotFoundException(id);
-        }
-        return Response.noContent().build();
+        return carItemSupport.deactivate(id);
     }
 }

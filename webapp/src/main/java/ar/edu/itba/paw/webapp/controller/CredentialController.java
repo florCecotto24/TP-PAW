@@ -9,14 +9,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Component;
 
-import ar.edu.itba.paw.services.user.PasswordResetService;
 import ar.edu.itba.paw.webapp.api.common.VndMediaType;
 import ar.edu.itba.paw.webapp.form.user.ForgotPasswordRequestForm;
-import ar.edu.itba.paw.webapp.support.FormValidationSupport;
-import ar.edu.itba.paw.webapp.validation.ValidationGroups;
+import ar.edu.itba.paw.webapp.support.CredentialHttpSupport;
 
 /**
- * Top-level temporary credentials ({@code POST /credentials}).
+ * Top-level temporary credentials ({@code POST /credentials}). HTTP routing only.
  * Issues a password-reset OTP by email (anti-enumeration: always {@code 200 OK} with empty body).
  * Issuance is intentionally not IP-rate-limited; failed Basic OTP attempts
  * are rate-limited by {@code OtpAttemptLimiter}.
@@ -25,22 +23,16 @@ import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 @Component
 public final class CredentialController {
 
-    private final PasswordResetService passwordResetService;
-    private final FormValidationSupport formValidationSupport;
+    private final CredentialHttpSupport credentialHttpSupport;
 
     @Autowired
-    public CredentialController(
-            final PasswordResetService passwordResetService,
-            final FormValidationSupport formValidationSupport) {
-        this.passwordResetService = passwordResetService;
-        this.formValidationSupport = formValidationSupport;
+    public CredentialController(final CredentialHttpSupport credentialHttpSupport) {
+        this.credentialHttpSupport = credentialHttpSupport;
     }
 
     @POST
     @Consumes(VndMediaType.CREDENTIAL_V1_JSON)
     public Response requestPasswordResetCredential(final ForgotPasswordRequestForm form) {
-        formValidationSupport.validate(form, ValidationGroups.OnForgotPasswordRequest.class);
-        passwordResetService.initiatePasswordReset(form.getEmail(), LocaleContextHolder.getLocale());
-        return Response.ok().build();
+        return credentialHttpSupport.requestPasswordReset(form, LocaleContextHolder.getLocale());
     }
 }
