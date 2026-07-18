@@ -15,6 +15,7 @@ import ar.edu.itba.paw.models.email.reservation.OwnerBlockedEmailPayload;
 import ar.edu.itba.paw.models.email.reservation.RiderRefundProofReceivedEmailPayload;
 import ar.edu.itba.paw.models.email.listing.CarPausedByAdminOwnerEmailPayload;
 import ar.edu.itba.paw.models.email.listing.CarPausedMissingCbuOwnerEmailPayload;
+import ar.edu.itba.paw.models.email.listing.CarPausedMissingIdentityOwnerEmailPayload;
 import ar.edu.itba.paw.models.email.listing.CarRejectedByAdminOwnerEmailPayload;
 import ar.edu.itba.paw.models.email.listing.CarValidatedByAdminOwnerEmailPayload;
 import ar.edu.itba.paw.models.email.reservation.RiderReviewInviteEmailPayload;
@@ -82,6 +83,9 @@ public interface EmailService {
 
     /** Owner notified when an active listing was paused because CBU was removed or invalid. */
     void sendListingPausedDueToMissingCbu(CarPausedMissingCbuOwnerEmailPayload payload);
+
+    /** Owner notified when an active listing was paused because the identity document was removed. */
+    void sendListingPausedDueToMissingIdentity(CarPausedMissingIdentityOwnerEmailPayload payload);
 
     /** Owner notified when a platform administrator pauses their listing. */
     void sendCarPausedByAdmin(CarPausedByAdminOwnerEmailPayload payload);

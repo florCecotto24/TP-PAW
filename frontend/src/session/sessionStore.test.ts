@@ -134,12 +134,10 @@ describe('sessionStore', () => {
 
     // 3.Assert
     expect(res.status).toBe(200);
-    expect(fetchMock.mock.calls.length).toBeGreaterThanOrEqual(2);
-    const refreshCall = fetchMock.mock.calls.find(
-      (call) =>
-        ((call[1] as RequestInit).headers as Headers).get('Authorization') === 'Bearer refresh-old',
+    const authHeaders = fetchMock.mock.calls.map(
+      (call) => ((call[1] as RequestInit).headers as Headers).get('Authorization'),
     );
-    expect(refreshCall).toBeDefined();
+    expect(authHeaders).toContain('Bearer refresh-old');
 
     const state = useSessionStore.getState();
     expect(state.accessToken).toBe('access-2');
@@ -225,8 +223,10 @@ describe('sessionStore', () => {
     // 1.Arrange — anonymous store
     // 2.Act
     await persistLocaleToServer('en');
-    // 3.Assert
-    expect(fetchMock).not.toHaveBeenCalled();
+    // 3.Assert — no network; session stays anonymous
+    expect(useSessionStore.getState().status).toBe('anonymous');
+    expect(useSessionStore.getState().accessToken).toBeNull();
+    expect(fetchMock.mock.calls).toEqual([]);
   });
 
   it('testPersistLocaleToServerPatchesLatestLocaleWhenAuthenticated', async () => {
@@ -246,9 +246,10 @@ describe('sessionStore', () => {
     // 2.Act
     await persistLocaleToServer('en');
 
-    // 3.Assert
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    const init = fetchMock.mock.calls[0][1] as RequestInit;
+    // 3.Assert — PATCH body + user state (request transcript, not call-count probes)
+    expect(fetchMock.mock.calls).toHaveLength(1);
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(String(url)).toContain('/users/42');
     expect(init.method).toBe('PATCH');
     expect(JSON.parse(String(init.body))).toEqual({ latestLocale: 'en' });
     expect(useSessionStore.getState().currentUser?.latestLocale).toBe('en');

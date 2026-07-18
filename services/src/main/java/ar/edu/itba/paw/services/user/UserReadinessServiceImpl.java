@@ -36,6 +36,9 @@ public class UserReadinessServiceImpl implements UserReadinessService {
         return hasValidCbu(user) && user.getIdentityFileId().isPresent();
     }
 
+    /**
+     * Deliberately NOT {@code @Transactional}: pure CBU format check (no persistence).
+     */
     @Override
     public boolean isValidCbuFormat(final String cbuRaw) {
         return CbuRules.isValidFormat(cbuRaw);

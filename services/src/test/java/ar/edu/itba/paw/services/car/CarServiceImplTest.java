@@ -3,7 +3,10 @@ package ar.edu.itba.paw.services.car;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -20,6 +23,7 @@ import ar.edu.itba.paw.models.domain.file.StoredFile;
 import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.models.dto.car.CarCard;
 import ar.edu.itba.paw.models.dto.car.CarPriceMarketInsight;
+import ar.edu.itba.paw.models.email.listing.CarPausedMissingIdentityOwnerEmailPayload;
 import ar.edu.itba.paw.persistence.car.CarDao;
 
 import ar.edu.itba.paw.services.email.EmailService;
@@ -184,6 +188,8 @@ public class CarServiceImplTest {
                 .cbu("0000000000000000000000")
                 .blocked(true)
                 .build();
+        blockedOwner.setIdentityFile(StoredFile.identified(
+                5L, blockedOwner, "dni.pdf", "application/pdf", new byte[]{1}, null));
         final Car pausedCar = Car.builder()
                 .id(carId)
                 .owner(blockedOwner)
@@ -192,6 +198,8 @@ public class CarServiceImplTest {
                 .transmission(Car.Transmission.MANUAL)
                 .status(Car.Status.PAUSED)
                 .build();
+        pausedCar.setInsuranceFile(StoredFile.identified(
+                7L, blockedOwner, "policy.pdf", "application/pdf", new byte[]{1}, null));
         Mockito.when(carDao.getCarById(carId)).thenReturn(Optional.of(pausedCar));
         Mockito.when(userService.getUserById(ownerId)).thenReturn(Optional.of(blockedOwner));
         Mockito.when(userReadinessService.hasValidCbu(blockedOwner)).thenReturn(true);
@@ -262,7 +270,7 @@ public class CarServiceImplTest {
                 .build();
         Mockito.when(carDao.getCarById(carId)).thenReturn(Optional.of(adminPausedCar));
         Mockito.when(userService.getUserById(ownerId)).thenReturn(Optional.of(owner));
-        Mockito.when(userReadinessService.hasValidCbu(owner)).thenReturn(true);
+        Mockito.when(userReadinessService.meetsPublishingPrerequisites(owner)).thenReturn(true);
 
         // 2.Act
         carService.releaseAdminCarPause(carId);
@@ -294,7 +302,7 @@ public class CarServiceImplTest {
                 7L, owner, "policy.pdf", "application/pdf", new byte[]{1}, null));
         Mockito.when(carDao.getCarById(carId)).thenReturn(Optional.of(adminPausedCar));
         Mockito.when(userService.getUserById(ownerId)).thenReturn(Optional.of(owner));
-        Mockito.when(userReadinessService.hasValidCbu(owner)).thenReturn(false);
+        Mockito.when(userReadinessService.meetsPublishingPrerequisites(owner)).thenReturn(false);
 
         // 2.Act
         carService.releaseAdminCarPause(carId);
@@ -327,12 +335,69 @@ public class CarServiceImplTest {
                 7L, owner, "policy.pdf", "application/pdf", new byte[]{1}, null));
         Mockito.when(carDao.getCarById(carId)).thenReturn(Optional.of(adminPausedCar));
         Mockito.when(userService.getUserById(ownerId)).thenReturn(Optional.of(owner));
-        Mockito.when(userReadinessService.hasValidCbu(owner)).thenReturn(true);
+        Mockito.when(userReadinessService.meetsPublishingPrerequisites(owner)).thenReturn(true);
 
         // 2.Act
         carService.releaseAdminCarPause(carId);
 
         // 3.Assert
         Assertions.assertEquals(Car.Status.ACTIVE, adminPausedCar.getStatus());
+    }
+
+    @Test
+    public void testPauseCarsForMissingIdentityMovesActiveToLackDocAndMailsOwner() {
+        // 1.Arrange
+        final long ownerId = 42L;
+        final long carId = 99L;
+        final User owner = User.builder()
+                .id(ownerId)
+                .email("o@test.com")
+                .forename("O")
+                .surname("Owner")
+                .build();
+        final Car activeCar = Car.builder()
+                .id(carId)
+                .owner(owner)
+                .plate("AA000AA")
+                .powertrain(Car.Powertrain.GASOLINE)
+                .transmission(Car.Transmission.MANUAL)
+                .status(Car.Status.ACTIVE)
+                .build();
+        Mockito.when(carDao.findCarsByOwnerAndStatuses(
+                ownerId, List.of(Car.Status.ACTIVE)))
+                .thenReturn(List.of(activeCar));
+        Mockito.when(userService.getUserById(ownerId)).thenReturn(Optional.of(owner));
+        Mockito.when(userLocaleService.resolveMailLocale(ownerId)).thenReturn(new Locale("es"));
+        final AtomicBoolean statusUpdated = new AtomicBoolean(false);
+        Mockito.when(carDao.updateCarStatusIfCurrent(carId, Car.Status.LACK_DOC, Car.Status.ACTIVE))
+                .thenAnswer(inv -> {
+                    statusUpdated.set(true);
+                    return true;
+                });
+        final AtomicReference<CarPausedMissingIdentityOwnerEmailPayload> mailed = new AtomicReference<>();
+        Mockito.doAnswer(inv -> {
+            mailed.set(inv.getArgument(0));
+            return null;
+        }).when(emailService).sendListingPausedDueToMissingIdentity(Mockito.any());
+
+        // 2.Act
+        carService.pauseCarsForMissingIdentity(ownerId);
+
+        // 3.Assert
+        Assertions.assertTrue(statusUpdated.get());
+        Assertions.assertNotNull(mailed.get());
+        Assertions.assertEquals(carId, mailed.get().getCarId());
+        Assertions.assertEquals("o@test.com", mailed.get().getOwnerEmail());
+    }
+
+    @Test
+    public void testPauseCarsForMissingIdentityLeavesPausedUntouched() {
+        // 1.Arrange — only ACTIVE is queried; a PAUSED listing is never in the result set
+        final long ownerId = 42L;
+        Mockito.when(carDao.findCarsByOwnerAndStatuses(ownerId, List.of(Car.Status.ACTIVE)))
+                .thenReturn(List.of());
+
+        // 2.Act / 3.Assert — no status flip, no mail
+        Assertions.assertDoesNotThrow(() -> carService.pauseCarsForMissingIdentity(ownerId));
     }
 }

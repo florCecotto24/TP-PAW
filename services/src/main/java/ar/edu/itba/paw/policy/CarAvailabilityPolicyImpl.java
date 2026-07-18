@@ -56,6 +56,12 @@ public final class CarAvailabilityPolicyImpl implements CarAvailabilityPolicy {
             if (period == null || !period.isValidOrder()) {
                 continue;
             }
+            // Period end must not fall before the wall-calendar reference day (typically "today").
+            // Create is also covered by rider-lead on start; this catches edits that shrink an
+            // in-progress window so its end lands in the past.
+            if (period.getEndInclusive().isBefore(referenceWallDay)) {
+                throw new CarValidationException(MessageKeys.CAR_AVAILABILITY_INCLUDES_PAST_DATES);
+            }
             if (period.getStartInclusive().isAfter(latestAllowedInclusive)
                     || period.getEndInclusive().isAfter(latestAllowedInclusive)) {
                 throw new CarValidationException(

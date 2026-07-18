@@ -125,9 +125,10 @@ public class CarSearchServiceImpl implements CarSearchService {
         return builder.build();
     }
 
-    // Both buildOwnerCarSearchCriteria overloads are intentionally not @Transactional: they delegate
-    // to buildOwnerCarSearchCriteriaInternal, which only does enum/string normalization and
-    // OwnerCarSearchCriteria builder assembly — no DAO / EntityManager touch on this code path.
+    /**
+     * Deliberately NOT {@code @Transactional}: criteria builder only (enum/string normalization),
+     * no DAO / EntityManager on this path.
+     */
     @Override
     public OwnerCarSearchCriteria buildOwnerCarSearchCriteria(
             final long ownerId,
@@ -149,6 +150,9 @@ public class CarSearchServiceImpl implements CarSearchService {
                 carStatus, rating, textQuery, page, pageSize, sort, null, /* prioritizeRefundPending */ true);
     }
 
+    /**
+     * Deliberately NOT {@code @Transactional}: criteria builder only (no persistence).
+     */
     @Override
     public OwnerCarSearchCriteria buildOwnerCarSearchCriteria(
             final long ownerId,
@@ -170,10 +174,10 @@ public class CarSearchServiceImpl implements CarSearchService {
                 /* prioritizeRefundPending */ false);
     }
 
-    // Intentionally not @Transactional: pure clock arithmetic (now + lead hours) projected
-    // onto WALL_ZONE; reads only the singleton ReservationTimingPolicy bean. No DAO /
-    // EntityManager touch. Permitted exception per AGENTS.md "PR checks (transactionality)"
-    // line 240.
+    /**
+     * Deliberately NOT {@code @Transactional}: pure clock arithmetic (now + lead hours) on WALL_ZONE;
+     * reads only {@link ReservationTimingPolicy} — no DAO / EntityManager.
+     */
     @Override
     public LocalDate publicBrowseMinBookableWallDate() {
         return LocalDate.ofInstant(

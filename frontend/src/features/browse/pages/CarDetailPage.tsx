@@ -41,6 +41,8 @@ import type { AvailabilityDto, PictureDto, ReviewDto } from '../types';
 const GALLERY_MODAL_ID = 'carDetailGalleryModal';
 const GALLERY_CAROUSEL_ID = 'carDetailCarousel';
 const REVIEWS_CAROUSEL_ID = 'carDetailReviewsCarousel';
+/** Stable empty fallback so `useMemo` deps do not churn each render. */
+const EMPTY_REVIEW_ITEMS: ReviewDto[] = [];
 
 function minOfferedPrice(availabilities: AvailabilityDto[]): number | null {
   const prices = availabilities
@@ -116,7 +118,7 @@ export default function CarDetailPage() {
   const reviewsIsListView = reviewsView === 'list';
 
   const reviewsQuery = useCarReviewsPage(car?.links?.reviews, reviewPage, CAR_REVIEWS_PAGE_SIZE);
-  const reviewItems = reviewsQuery.data?.items ?? [];
+  const reviewItems = reviewsQuery.data?.items ?? EMPTY_REVIEW_ITEMS;
   const reviewTotal = reviewsQuery.data?.page.total;
   const reviewPageCount =
     reviewTotal != null ? Math.max(1, Math.ceil(reviewTotal / CAR_REVIEWS_PAGE_SIZE)) : 1;

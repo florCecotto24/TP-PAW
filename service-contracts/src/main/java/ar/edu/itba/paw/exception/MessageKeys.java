@@ -114,6 +114,7 @@ public final class MessageKeys {
     public static final String CAR_AVAILABILITY_PICKUP_STREET_NUMBER_MAX_DIGITS = "carAvailability.pickupStreetNumber.maxDigits";
     public static final String CAR_PUBLISH_CBU_REQUIRED = "car.publish.cbuRequired";
     public static final String CAR_ACTIVATE_CBU_REQUIRED = "car.activate.cbuRequired";
+    public static final String CAR_ACTIVATE_IDENTITY_REQUIRED = "car.activate.identityRequired";
     public static final String CAR_ACTIVATE_OWNER_BLOCKED = "car.activate.ownerBlocked";
     public static final String CAR_CREATE_MODEL_PENDING = "car.create.modelPending";
     // Owner-blocked guards for owner-side mutations that could re-introduce bookability.

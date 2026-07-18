@@ -27,6 +27,9 @@ import {
   type NewReservationLocationState,
 } from '../../../routes/navigationState';
 
+/** Stable empty fallback so `useMemo` deps do not churn each render. */
+const EMPTY_OFFERED: AvailabilityView[] = [];
+
 function billableDays(startIso: string, endIso: string): number {
   const a = new Date(startIso).getTime();
   const b = new Date(endIso).getTime();
@@ -82,7 +85,7 @@ export default function NewReservationPage() {
     enabled: !!userUri,
   });
 
-  const offered: AvailabilityView[] = availQuery.data ?? [];
+  const offered: AvailabilityView[] = availQuery.data ?? EMPTY_OFFERED;
   const initialAvailabilityId = searchParams.get('availabilityId') ?? '';
   const fromDateTimeParam =
     searchParams.get('fromDateTime') ?? searchParams.get('from') ?? '';

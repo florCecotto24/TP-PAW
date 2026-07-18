@@ -2,8 +2,6 @@
 
 import { getClientConfig, megabytesToBytes } from '../../api/clientConfig';
 
-export const UPLOAD_MAX_RETRIES = 1;
-
 const MIN_UPLOAD_TIMEOUT_MS = 120_000;
 const MS_PER_MEGABYTE = 5000;
 

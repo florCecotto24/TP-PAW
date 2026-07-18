@@ -25,6 +25,9 @@ public class CarListingPolicyServiceImpl implements CarListingPolicyService {
         this.userService = userService;
     }
 
+    /**
+     * Deliberately NOT {@code @Transactional}: pure in-memory default status filter (no persistence).
+     */
     @Override
     public List<Car.Status> resolveOwnerListingStatuses(
             final List<Car.Status> requestedStatuses, final boolean viewerIsSelfOrAdmin) {
@@ -43,6 +46,9 @@ public class CarListingPolicyServiceImpl implements CarListingPolicyService {
         }
     }
 
+    /**
+     * Deliberately NOT {@code @Transactional}: validates bytes/content-type in memory (no persistence).
+     */
     @Override
     public void assertInsurancePayloadValid(final String contentType, final byte[] data) {
         if (data == null || data.length == 0) {

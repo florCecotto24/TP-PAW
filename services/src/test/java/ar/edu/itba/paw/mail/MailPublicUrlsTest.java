@@ -32,8 +32,8 @@ class MailPublicUrlsTest {
         // 2.Act
         final String url = mailPublicUrls.absolutePath("/login");
 
-        // 3.Assert
-        Assertions.assertEquals("http://localhost:8080/login", url);
+        // 3.Assert — default includes context path (same as Jetty/Pampero /paw-2026a-08)
+        Assertions.assertEquals("http://localhost:8080/paw-2026a-08/login", url);
     }
 
     @Test

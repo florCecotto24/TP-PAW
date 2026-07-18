@@ -5,6 +5,7 @@ import java.util.List;
 
 import ar.edu.itba.paw.models.email.listing.CarPausedByAdminOwnerEmailPayload;
 import ar.edu.itba.paw.models.email.listing.CarPausedMissingCbuOwnerEmailPayload;
+import ar.edu.itba.paw.models.email.listing.CarPausedMissingIdentityOwnerEmailPayload;
 import ar.edu.itba.paw.models.email.listing.CarRejectedByAdminOwnerEmailPayload;
 import ar.edu.itba.paw.models.email.listing.CarValidatedByAdminOwnerEmailPayload;
 import ar.edu.itba.paw.models.email.reservation.OwnerBlockedEmailPayload;
@@ -34,6 +35,9 @@ public interface OwnerListingEmailService {
 
     /** See {@link EmailService#sendListingPausedDueToMissingCbu(CarPausedMissingCbuOwnerEmailPayload)}. */
     void sendListingPausedDueToMissingCbu(CarPausedMissingCbuOwnerEmailPayload payload);
+
+    /** See {@link EmailService#sendListingPausedDueToMissingIdentity(CarPausedMissingIdentityOwnerEmailPayload)}. */
+    void sendListingPausedDueToMissingIdentity(CarPausedMissingIdentityOwnerEmailPayload payload);
 
     /** See {@link EmailService#sendCarPausedByAdmin(CarPausedByAdminOwnerEmailPayload)}. */
     void sendCarPausedByAdmin(CarPausedByAdminOwnerEmailPayload payload);

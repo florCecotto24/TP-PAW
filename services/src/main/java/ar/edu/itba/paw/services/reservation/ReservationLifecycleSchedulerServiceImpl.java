@@ -213,6 +213,11 @@ public class ReservationLifecycleSchedulerServiceImpl implements ReservationLife
         LOGGER.atInfo().addArgument(oDone).log("Review auto-skip (owner) run: closed {} review(s)");
     }
 
+    /**
+     * Deliberately NOT {@code @Transactional}: orchestrates per-row work via
+     * {@link ReservationLifecycleRowProcessor} ({@code REQUIRES_NEW} each). An outer TX would
+     * hold locks across the whole batch.
+     */
     @Override
     public void transitionAcceptedReservationsToStarted() {
         final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);

@@ -1470,18 +1470,31 @@ paths:
         la reserva. El listado incluye cuerpo/adjuntos porque la UI de chat y
         el polling necesitan el contenido en la misma respuesta. Cada mensaje
         trae `links.self` → `GET /reservations/{id}/messages/{messageId}`.
+
+        **Solo lectura:** este GET no marca mensajes como leídos. El cliente
+        registra la lectura con `POST /reservations/{id}/message-receipts`
+        (link `message-receipts` en la reserva).
+
+        Con `afterId`, la respuesta es una ventana incremental (hasta el
+        `pageSize` de historial) **sin** headers `Link` ni `X-Total-Count`.
+        Sin `afterId`, la colección pagina con `Link` + `X-Total-Count`.
       parameters:
         - $ref: "#/components/parameters/page"
         - $ref: "#/components/parameters/pageSizeMessages"
         - name: afterId
           in: query
           schema: { type: integer, format: int64 }
-          description: Devuelve solo mensajes con id mayor (long-polling/refresh).
+          description: >
+            Devuelve solo mensajes con id mayor (poll). Ignora page/pageSize y
+            no emite headers de paginación.
       responses:
         "200":
-          description: Mensajes.
+          description: >
+            Mensajes. Sin `afterId`: headers `Link` + `X-Total-Count`.
+            Con `afterId`: array acotado sin esos headers.
           headers:
             Link: { $ref: "#/components/headers/Link-Pagination" }
+            X-Total-Count: { $ref: "#/components/headers/X-Total-Count" }
           content:
             application/vnd.paw.message.v1+json:
               schema:
@@ -1510,6 +1523,22 @@ paths:
             application/vnd.paw.message.v1+json:
               schema: { $ref: "#/components/schemas/MessageDto" }
         "403": { $ref: "#/components/responses/Forbidden" }
+
+  /reservations/{id}/message-receipts:
+    parameters:
+      - $ref: "#/components/parameters/idPath"
+    post:
+      tags: [reservations]
+      summary: Registrar lectura del chat (marcar mensajes del otro como seen)
+      description: >
+        Crea un recibo de lectura para el participante autenticado: marca como
+        `seen` los mensajes del counterparty aún no leídos. Separado del GET
+        de mensajes para que GET no mute estado (REST).
+        Descubrible vía `links.message-receipts` en la reserva.
+      responses:
+        "204": { description: Recibo registrado (idempotente si no había unread). }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /reservations/{id}/messages/{messageId}:
     parameters:
@@ -2034,6 +2063,10 @@ components:
       type: object
       description: Public SPA validation/upload limits (mirrors application.properties).
       properties:
+        links:
+          allOf:
+            - $ref: "#/components/schemas/Links"
+          description: self → GET /config.
         cbuRequiredDigits: { type: integer, minimum: 1 }
         maxBillableDays: { type: integer, minimum: 1 }
         pickupLeadHours: { type: integer, minimum: 0 }
@@ -2473,7 +2506,7 @@ components:
         links:
           allOf:
             - $ref: "#/components/schemas/Links"
-          description: self, car, rider, owner, counterparty, messages, reviews, payment-receipt, refund-receipt.
+          description: self, car, rider, owner, counterparty, messages, message-receipts, reviews, payment-receipt, refund-receipt.
 
     CounterpartyContactDto:
       type: object

@@ -18,6 +18,7 @@ import org.thymeleaf.context.Context;
 import ar.edu.itba.paw.exception.email.EmailMessagingException;
 import ar.edu.itba.paw.models.email.listing.CarPausedByAdminOwnerEmailPayload;
 import ar.edu.itba.paw.models.email.listing.CarPausedMissingCbuOwnerEmailPayload;
+import ar.edu.itba.paw.models.email.listing.CarPausedMissingIdentityOwnerEmailPayload;
 import ar.edu.itba.paw.models.email.listing.CarRejectedByAdminOwnerEmailPayload;
 import ar.edu.itba.paw.models.email.listing.CarValidatedByAdminOwnerEmailPayload;
 import ar.edu.itba.paw.models.email.reservation.OwnerBlockedEmailPayload;
@@ -46,6 +47,7 @@ public class OwnerListingEmailServiceImpl implements OwnerListingEmailService {
     private static final String OWNER_REFUND_PROOF_OBLIGATION_TEMPLATE = "html/owner-refund-proof-obligation";
     private static final String OWNER_BLOCKED_TEMPLATE = "html/owner-blocked";
     private static final String LISTING_PAUSED_MISSING_CBU_TEMPLATE = "html/car-paused-missing-cbu-owner";
+    private static final String LISTING_PAUSED_MISSING_IDENTITY_TEMPLATE = "html/car-paused-missing-identity-owner";
     private static final String LISTING_PAUSED_BY_ADMIN_TEMPLATE = "html/car-paused-by-admin-owner";
     private static final String LISTING_REJECTED_BY_ADMIN_TEMPLATE = "html/car-rejected-by-admin-owner";
     private static final String LISTING_VALIDATED_BY_ADMIN_TEMPLATE = "html/car-validated-by-admin-owner";
@@ -344,6 +346,39 @@ public class OwnerListingEmailServiceImpl implements OwnerListingEmailService {
         } catch (final EmailMessagingException | RuntimeException e) {
             LOGGER.atError().setCause(e).addArgument(carId)
                     .log("Failed to send car paused (missing CBU) email (car id={})");
+        }
+    }
+
+    @Override
+    @Async("mailTaskExecutor")
+    public void sendListingPausedDueToMissingIdentity(final CarPausedMissingIdentityOwnerEmailPayload payload) {
+        final String ownerEmail = payload.getOwnerEmail();
+        if (ownerEmail == null || ownerEmail.isBlank()) {
+            LOGGER.atWarn().log("Skipping listing-paused-identity email: missing recipient");
+            return;
+        }
+        final Locale locale = payload.getMessageLocale();
+        final String vehicleLabel = payload.getVehicleLabel();
+        final long carId = payload.getCarId();
+        final Context ctx = new Context(locale);
+        mailDispatch.setHtmlLangFromLocale(ctx, locale);
+        ctx.setVariable("ownerFullName", payload.getOwnerFullName());
+        ctx.setVariable("vehicleLabel", vehicleLabel);
+        ctx.setVariable("ctaUrl", mailPublicUrls.absolutePathWithSelf(
+                "/my-cars/car/" + carId, "cars", carId));
+        ctx.setVariable("profileUrl", mailPublicUrls.absolutePath("/profile"));
+        try {
+            mailDispatch.runMail(() -> {
+                final String htmlContent = htmlTemplateEngine.process(LISTING_PAUSED_MISSING_IDENTITY_TEMPLATE, ctx);
+                final String subject = emailMessageSource.getMessage(
+                        "mail.carPausedMissingIdentity.subject", new Object[] { vehicleLabel }, locale);
+                mailDispatch.sendEmail(ownerEmail, subject, htmlContent);
+            });
+            LOGGER.atInfo().addArgument(ownerEmail).addArgument(carId)
+                    .log("Car paused (missing identity) email sent to {} (car id={})");
+        } catch (final EmailMessagingException | RuntimeException e) {
+            LOGGER.atError().setCause(e).addArgument(carId)
+                    .log("Failed to send car paused (missing identity) email (car id={})");
         }
     }
 

@@ -4,7 +4,7 @@ import { ApiError } from '../../../api/client';
 import { MediaTypes } from '../../../api/mediaTypes';
 import { formatTime } from '../../../i18n/dateFormat';
 import { sessionClient } from '../../../session/sessionStore';
-import { idFromUri, listMessages, listMessagesLatestPage } from '../api';
+import { idFromUri, listMessages, listMessagesLatestPage, acknowledgeMessageReceipts } from '../api';
 import {
   CHAT_FILE_ACCEPT,
   chatLimits,
@@ -147,6 +147,7 @@ export default function ReservationChatPanel({
   const { t, i18n } = useTranslation();
   const { id: myId } = useCurrentUser();
   const messagesUri = reservation.links.messages;
+  const messageReceiptsUri = reservation.links['message-receipts'];
   const chatAvailable = isChatAvailable(reservation);
 
   const [messages, setMessages] = useState<MessageDto[]>([]);
@@ -171,6 +172,13 @@ export default function ReservationChatPanel({
   const { stickyDayKey, dayBarScrolling, showDayBar, registerSeparator, syncStickyToLastDay } =
     useReservationChatStickyDay(messagesRef, hasMessages);
 
+  const acknowledgeReceipts = useCallback(() => {
+    if (!messageReceiptsUri) return;
+    void acknowledgeMessageReceipts(messageReceiptsUri).catch(() => {
+      /* lectura en segundo plano: no bloquear el chat */
+    });
+  }, [messageReceiptsUri]);
+
   const loadLatest = useCallback(async () => {
     if (!messagesUri) return;
     try {
@@ -178,6 +186,7 @@ export default function ReservationChatPanel({
       setMessages(res.data ?? []);
       setPageLinks({ prev: res.page.prev, next: res.page.next });
       setLoadError(null);
+      acknowledgeReceipts();
     } catch (err) {
       if (err instanceof ApiError && err.code === 'reservation.chat.notAvailable') {
         setLoadError(null);
@@ -188,7 +197,7 @@ export default function ReservationChatPanel({
     } finally {
       setLoading(false);
     }
-  }, [messagesUri, t]);
+  }, [messagesUri, t, acknowledgeReceipts]);
 
   useEffect(() => {
     if (!chatAvailable || !messagesUri) {
@@ -210,6 +219,7 @@ export default function ReservationChatPanel({
           .then((res) => {
             if (res.data?.length) {
               setMessages((cur) => mergeMessages(cur, res.data as MessageDto[]));
+              acknowledgeReceipts();
             }
           })
           .catch(() => {
@@ -219,7 +229,7 @@ export default function ReservationChatPanel({
       });
     }, POLL_INTERVAL_MS);
     return () => window.clearInterval(timer);
-  }, [messagesUri, onLastPage, chatAvailable]);
+  }, [messagesUri, onLastPage, chatAvailable, acknowledgeReceipts]);
 
   useEffect(() => {
     if (onLastPage) {

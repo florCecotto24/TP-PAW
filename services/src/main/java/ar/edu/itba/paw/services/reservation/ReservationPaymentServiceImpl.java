@@ -389,7 +389,10 @@ public class ReservationPaymentServiceImpl implements ReservationPaymentService 
         LOGGER.atInfo().addArgument(queued).log("Due refund proof reminder run: queued {} email(s)");
     }
 
-    // Pure @Async mail dispatch (no DB writes): no transaction needed.
+    /**
+     * Deliberately NOT {@code @Transactional}: pure {@code @Async} mail dispatch (no DB writes).
+     * Payload composition happens in the caller’s transaction when needed.
+     */
     @Override
     public void sendOwnerRefundProofObligationEmail(final Reservation reservation, final boolean dueReminder) {
         mailComposer.sendOwnerRefundProofObligation(reservation, dueReminder);

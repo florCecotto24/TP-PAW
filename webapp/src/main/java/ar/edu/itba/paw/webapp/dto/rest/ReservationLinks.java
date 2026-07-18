@@ -41,6 +41,9 @@ public final class ReservationLinks {
                     .withRelated("rider", RestUriUtils.userUri(uriInfo, reservation.getRiderId()).toString())
                     .withRelated("owner", RestUriUtils.userUri(uriInfo, ownerId).toString())
                     .withRelated("messages", RestUriUtils.reservationMessagesUri(uriInfo, reservationId).toString())
+                    .withRelated(
+                            "message-receipts",
+                            RestUriUtils.reservationMessageReceiptsUri(uriInfo, reservationId).toString())
                     .withRelated("reviews", RestUriUtils.reservationReviewsUri(uriInfo, reservationId).toString())
                     .withRelated("counterparty",
                             RestUriUtils.reservationCounterpartyUri(uriInfo, reservationId).toString());

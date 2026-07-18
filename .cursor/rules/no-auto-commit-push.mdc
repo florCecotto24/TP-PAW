@@ -1,0 +1,11 @@
+---
+description: Never git commit or push unless the user explicitly asks to create a commit / push
+alwaysApply: true
+---
+
+# Git: no commit / no push by default
+
+- **Never** run `git commit` or `git push` unless the user explicitly asks to create a commit or to push.
+- Asking for a **commit message / commit name / “nombre del commit”** is **not** a request to commit. Only draft the message (or paste it ready to copy).
+- The user commits and pushes themselves unless they say otherwise clearly (e.g. “hacé el commit”, “commit these changes”, “create a commit”).
+- Do not stage-and-commit as a convenience after finishing work.

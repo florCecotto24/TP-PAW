@@ -172,6 +172,8 @@ public class WebAuthConfig {
                         .requestMatchers(
                                 ant(HttpMethod.GET, "/api"),
                                 ant(HttpMethod.GET, "/api/"),
+                                ant(HttpMethod.HEAD, "/api"),
+                                ant(HttpMethod.HEAD, "/api/"),
                                 ant(HttpMethod.GET, "/api/config"),
                                 ant(HttpMethod.GET, "/api/cars"),
                                 ant(HttpMethod.GET, "/api/cars/**"),

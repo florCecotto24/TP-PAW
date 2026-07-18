@@ -379,9 +379,23 @@ describe('openapi.yaml contract (frontend)', () => {
     expect(yaml).toContain('/neighborhoods/{id}:');
   });
 
+  it('testRuntimeOptionalPathsDocumentedInOpenApi', () => {
+    // 1.Arrange / 2.Act — T-06: paths used at runtime that needed contract coverage
+    // 3.Assert
+    expect(yaml).toContain('/cars/{id}/bookable-segments:');
+    expect(yaml).toContain('/reservations/{id}/counterparty:');
+    expect(yaml).toContain('/brands/{id}/models/{modelId}/price-insight:');
+    expect(yaml).toContain(MediaTypes.bookableSegment);
+    expect(yaml).toContain(MediaTypes.counterpartyContact);
+    expect(yaml).toContain(MediaTypes.priceMarketInsight);
+  });
+
   it('testClientConfigFallbackKeysMatchOpenApiSchema', () => {
     // 1.Arrange
     const topLevel = schemaProperties(yaml, 'ClientConfig');
+    // Hypermedia `links` is runtime-only; the SPA fallback mirrors policy fields, not HATEOAS.
+    const policyTopLevel = topLevel.filter((k) => k !== 'links');
+    expect(topLevel).toContain('links');
     const carKeys = [
       'brandMinLength',
       'brandMaxLength',
@@ -418,7 +432,7 @@ describe('openapi.yaml contract (frontend)', () => {
     ];
 
     // 2.Act / 3.Assert
-    expect(Object.keys(CLIENT_CONFIG_FALLBACK).sort()).toEqual(topLevel.sort());
+    expect(Object.keys(CLIENT_CONFIG_FALLBACK).sort()).toEqual(policyTopLevel.sort());
     expect(Object.keys(CLIENT_CONFIG_FALLBACK.car).sort()).toEqual(carKeys.sort());
     expect(Object.keys(CLIENT_CONFIG_FALLBACK.upload).sort()).toEqual(uploadKeys.sort());
     expect(Object.keys(CLIENT_CONFIG_FALLBACK.money).sort()).toEqual(moneyKeys.sort());

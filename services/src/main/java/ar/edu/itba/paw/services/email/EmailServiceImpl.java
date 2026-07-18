@@ -20,6 +20,7 @@ import ar.edu.itba.paw.models.email.admin.AdminInvitationEmailPayload;
 import ar.edu.itba.paw.models.email.admin.AdminPromotedEmailPayload;
 import ar.edu.itba.paw.models.email.listing.CarPausedByAdminOwnerEmailPayload;
 import ar.edu.itba.paw.models.email.listing.CarPausedMissingCbuOwnerEmailPayload;
+import ar.edu.itba.paw.models.email.listing.CarPausedMissingIdentityOwnerEmailPayload;
 import ar.edu.itba.paw.models.email.listing.CarRejectedByAdminOwnerEmailPayload;
 import ar.edu.itba.paw.models.email.listing.CarValidatedByAdminOwnerEmailPayload;
 import ar.edu.itba.paw.models.email.user.EmailVerificationCodeEmailPayload;
@@ -572,6 +573,11 @@ public class EmailServiceImpl implements EmailService {
     @Override
     public void sendListingPausedDueToMissingCbu(final CarPausedMissingCbuOwnerEmailPayload payload) {
         ownerListingEmailService.sendListingPausedDueToMissingCbu(payload);
+    }
+
+    @Override
+    public void sendListingPausedDueToMissingIdentity(final CarPausedMissingIdentityOwnerEmailPayload payload) {
+        ownerListingEmailService.sendListingPausedDueToMissingIdentity(payload);
     }
 
     @Override

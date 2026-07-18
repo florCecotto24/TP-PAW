@@ -15,6 +15,7 @@ import ar.edu.itba.paw.webapp.config.properties.AppValidationProperties;
  */
 public final class ClientConfigDto {
 
+    private LinksDto links;
     private int cbuRequiredDigits;
     private int maxBillableDays;
     private int pickupLeadHours;
@@ -35,8 +36,10 @@ public final class ClientConfigDto {
             final ReservationTimingPolicy reservationTiming,
             final CarGalleryUploadPolicy galleryUploadPolicy,
             final ChatAttachmentUploadPolicy chatAttachmentUploadPolicy,
-            final Environment environment) {
+            final Environment environment,
+            final String selfUri) {
         final ClientConfigDto dto = new ClientConfigDto();
+        dto.links = LinksDto.ofSelf(selfUri);
         dto.cbuRequiredDigits = CbuRules.REQUIRED_DIGIT_LENGTH;
         dto.maxBillableDays = reservationTiming.getMaxBillableDaysPerReservation();
         dto.pickupLeadHours = reservationTiming.getPickupLeadHours();
@@ -48,6 +51,14 @@ public final class ClientConfigDto {
         dto.review = ReviewLimits.from(validation);
         dto.listing = ListingLimits.from(validation);
         return dto;
+    }
+
+    public LinksDto getLinks() {
+        return links;
+    }
+
+    public void setLinks(final LinksDto links) {
+        this.links = links;
     }
 
     public int getCbuRequiredDigits() {

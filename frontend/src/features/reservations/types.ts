@@ -28,7 +28,7 @@ export interface ReservationSummaryDto {
 
 /**
  * Reserva (lectura completa). `links` trae: self, car, rider, owner, counterparty, messages,
- * reviews, payment-receipt, refund-receipt. Se navegan, no se arman a mano.
+ * message-receipts, reviews, payment-receipt, refund-receipt. Se navegan, no se arman a mano.
  */
 export interface ReservationDto {
   startDate: string; // date-time UTC

@@ -7,6 +7,7 @@ import ar.edu.itba.paw.models.email.admin.AdminInvitationEmailPayload;
 import ar.edu.itba.paw.models.email.admin.AdminPromotedEmailPayload;
 import ar.edu.itba.paw.models.email.listing.CarPausedByAdminOwnerEmailPayload;
 import ar.edu.itba.paw.models.email.listing.CarPausedMissingCbuOwnerEmailPayload;
+import ar.edu.itba.paw.models.email.listing.CarPausedMissingIdentityOwnerEmailPayload;
 import ar.edu.itba.paw.models.email.listing.CarRejectedByAdminOwnerEmailPayload;
 import ar.edu.itba.paw.models.email.listing.CarValidatedByAdminOwnerEmailPayload;
 import ar.edu.itba.paw.models.email.reservation.OwnerBlockedEmailPayload;
@@ -54,6 +55,7 @@ public class RecordingEmailService implements EmailService {
     private final List<OwnerBlockedEmailPayload> ownerBlocked = new ArrayList<>();
     private final List<RiderRefundProofReceivedEmailPayload> riderRefundProofReceived = new ArrayList<>();
     private final List<CarPausedMissingCbuOwnerEmailPayload> listingPausedMissingCbu = new ArrayList<>();
+    private final List<CarPausedMissingIdentityOwnerEmailPayload> listingPausedMissingIdentity = new ArrayList<>();
     private final List<CarPausedByAdminOwnerEmailPayload> carPausedByAdmin = new ArrayList<>();
     private final List<CarRejectedByAdminOwnerEmailPayload> carRejectedByAdmin = new ArrayList<>();
     private final List<CarValidatedByAdminOwnerEmailPayload> carValidatedByAdmin = new ArrayList<>();
@@ -80,6 +82,9 @@ public class RecordingEmailService implements EmailService {
     public List<OwnerBlockedEmailPayload> ownerBlocked() { return ownerBlocked; }
     public List<RiderRefundProofReceivedEmailPayload> riderRefundProofReceived() { return riderRefundProofReceived; }
     public List<CarPausedMissingCbuOwnerEmailPayload> listingPausedMissingCbu() { return listingPausedMissingCbu; }
+    public List<CarPausedMissingIdentityOwnerEmailPayload> listingPausedMissingIdentity() {
+        return listingPausedMissingIdentity;
+    }
     public List<CarPausedByAdminOwnerEmailPayload> carPausedByAdmin() { return carPausedByAdmin; }
     public List<CarRejectedByAdminOwnerEmailPayload> carRejectedByAdmin() { return carRejectedByAdmin; }
     public List<CarValidatedByAdminOwnerEmailPayload> carValidatedByAdmin() { return carValidatedByAdmin; }
@@ -156,6 +161,11 @@ public class RecordingEmailService implements EmailService {
     @Override
     public void sendListingPausedDueToMissingCbu(final CarPausedMissingCbuOwnerEmailPayload p) {
         listingPausedMissingCbu.add(p);
+    }
+
+    @Override
+    public void sendListingPausedDueToMissingIdentity(final CarPausedMissingIdentityOwnerEmailPayload p) {
+        listingPausedMissingIdentity.add(p);
     }
 
     @Override

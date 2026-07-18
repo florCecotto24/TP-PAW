@@ -187,6 +187,8 @@ export const ownerI18n = {
         ownerBlockedHint: 'Tu cuenta está bloqueada porque no se subió a tiempo un comprobante de devolución. Subí los comprobantes faltantes desde "Mis reservas" para desbloquear tu cuenta automáticamente; hasta entonces este auto no puede reservarse.',
         missingCbuHint: 'Pausamos este auto porque no hay un CBU válido en tu perfil para cobros. Agregá tu CBU en el perfil para reactivarlo.',
         missingCbuCta: 'Ir al perfil para cargar CBU',
+        missingIdentityHint: 'Pausamos este auto porque no hay un documento de identidad en tu perfil. Subilo en el perfil para reactivarlo.',
+        missingIdentityCta: 'Ir al perfil para cargar identidad',
         adminPausedHint: 'Este auto fue suspendido por un administrador. Contactá a soporte.',
         finishedHint: 'Este auto ha sido desactivado permanentemente.',
         errors: {
@@ -460,6 +462,8 @@ export const ownerI18n = {
         ownerBlockedHint: 'Your account is blocked because a return receipt was not uploaded on time. Upload the missing receipts from "My reservations" to unblock your account automatically; until then this car cannot be booked.',
         missingCbuHint: 'We paused this car because your profile has no valid CBU for payouts. Add your CBU in your profile to reactivate it.',
         missingCbuCta: 'Go to profile to add CBU',
+        missingIdentityHint: 'We paused this car because your profile has no identity document. Upload it in your profile to reactivate it.',
+        missingIdentityCta: 'Go to profile to upload identity',
         adminPausedHint: 'This car was suspended by an administrator. Contact support.',
         finishedHint: 'This car has been permanently deactivated.',
         errors: {

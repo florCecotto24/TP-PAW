@@ -27,6 +27,14 @@ public interface ReservationMessageService {
     List<ReservationMessageDto> pollMessagesForParticipant(
             long viewerUserId, long reservationId, long afterMessageId);
 
+    /**
+     * Marks messages from the counterparty as seen for the viewer. Must not be folded into
+     * GET/poll — those stay read-only (REST: GET must not mutate).
+     *
+     * @return how many rows flipped to seen
+     */
+    int markMessagesSeenForParticipant(long viewerUserId, long reservationId);
+
     ReservationMessageDto postMessage(long senderUserId, long reservationId, String body);
 
     ReservationMessageDto postMessageWithAttachment(

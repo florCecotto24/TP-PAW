@@ -349,9 +349,17 @@ describe('hypermedia contract (frontend)', () => {
 
     it('testLoginAbsorbsAuthenticatedUserLinkAndTokenHeaders', async () => {
       // 1.Arrange
-      const onTokens = vi.fn();
-      const onAuthenticatedUser = vi.fn();
-      const c = new HypermediaClient({ ...accessors, onTokens, onAuthenticatedUser });
+      let receivedTokens: { access: string; refresh: string } | null = null;
+      let authenticatedUser: string | null = null;
+      const c = new HypermediaClient({
+        ...accessors,
+        onTokens: (access, refresh) => {
+          receivedTokens = { access, refresh };
+        },
+        onAuthenticatedUser: (uri) => {
+          authenticatedUser = uri;
+        },
+      });
       fetchMock.mockResolvedValueOnce(
         makeResponse(
           200,
@@ -370,8 +378,8 @@ describe('hypermedia contract (frontend)', () => {
       // 3.Assert
       const init = fetchMock.mock.calls[0][1] as RequestInit;
       expect((init.headers as Headers).get('Authorization')).toMatch(/^Basic /);
-      expect(onTokens).toHaveBeenCalledWith('a1', 'r1');
-      expect(onAuthenticatedUser).toHaveBeenCalledWith('/users/42');
+      expect(receivedTokens).toEqual({ access: 'a1', refresh: 'r1' });
+      expect(authenticatedUser).toBe('/users/42');
     });
 
     it('testFollowRewritesAuthenticatedUserLinksMissingApiSegment', async () => {
@@ -403,7 +411,6 @@ describe('hypermedia contract (frontend)', () => {
       });
 
       // 3.Assert
-      expect(fetchMock).toHaveBeenCalledTimes(1);
       expect(fetchMock.mock.calls[0][0]).toBe(devOriginUrl('/webapp/api/cars?page=2'));
     });
 
@@ -472,13 +479,13 @@ describe('hypermedia contract (frontend)', () => {
       // 2.Act
       await c.get('/cars/1', { accept: 'application/vnd.paw.car.v1+json' });
 
-      // 3.Assert
-      expect(fetchMock).toHaveBeenCalledTimes(2);
-      const refreshInit = fetchMock.mock.calls[0][1] as RequestInit;
-      expect((refreshInit.headers as Headers).get('Authorization')).toBe(`Bearer ${validRefresh}`);
-      const mainInit = fetchMock.mock.calls[1][1] as RequestInit;
-      expect((mainInit.headers as Headers).get('Authorization')).toBe('Bearer fresh-access');
-      expect(onTokens).toHaveBeenCalledWith('fresh-access', 'fresh-refresh');
+      // 3.Assert — refresh then GET with rotated tokens (HTTP transcript)
+      const authSequence = fetchMock.mock.calls.map(
+        (call) => ((call[1] as RequestInit).headers as Headers).get('Authorization'),
+      );
+      expect(authSequence).toEqual([`Bearer ${validRefresh}`, 'Bearer fresh-access']);
+      expect(storedAccess).toBe('fresh-access');
+      expect(storedRefresh).toBe('fresh-refresh');
       vi.useRealTimers();
     });
 

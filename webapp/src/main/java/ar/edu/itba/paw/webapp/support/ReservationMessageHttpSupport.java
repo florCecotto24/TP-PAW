@@ -28,7 +28,7 @@ import ar.edu.itba.paw.webapp.util.RestUriUtils;
 
 /**
  * HTTP orchestration for reservation chat (list/poll admin vs participant, multipart post,
- * attachment download).
+ * attachment download, read receipts).
  */
 @Component
 public final class ReservationMessageHttpSupport {
@@ -123,6 +123,12 @@ public final class ReservationMessageHttpSupport {
         return content
                 .map(c -> CacheableBinaryResponses.sensitive(c, c.getFileName()))
                 .orElseThrow(NotFoundException::new);
+    }
+
+    /** Marks counterparty messages as seen for the authenticated participant ({@code 204}). */
+    public Response createReceipt(final long reservationId, final RydenUserDetails viewer) {
+        reservationMessageService.markMessagesSeenForParticipant(viewer.getUserId(), reservationId);
+        return Response.noContent().build();
     }
 
     private Response listAdmin(

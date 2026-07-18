@@ -35,6 +35,7 @@ import ar.edu.itba.paw.models.dto.car.CarPriceMarketInsight;
 import ar.edu.itba.paw.models.dto.car.ConsumerCarCardMarketContext;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.email.listing.CarPausedMissingCbuOwnerEmailPayload;
+import ar.edu.itba.paw.models.email.listing.CarPausedMissingIdentityOwnerEmailPayload;
 import ar.edu.itba.paw.models.security.UserRole;
 import ar.edu.itba.paw.models.util.rules.CbuRules;
 import ar.edu.itba.paw.models.util.search.CarSearchCriteria;
@@ -213,13 +214,15 @@ public class CarServiceImpl implements CarService {
                 throw new CarValidationException(
                         MessageKeys.CAR_ACTIVATE_CBU_REQUIRED, CbuRules.REQUIRED_DIGIT_LENGTH);
             }
+            if (ownerRow.get().getIdentityFileId().isEmpty()) {
+                throw new CarValidationException(MessageKeys.CAR_ACTIVATE_IDENTITY_REQUIRED);
+            }
             // Blocked owners (e.g. unpaid refund proofs) cannot resume their own listings.
             if (ownerRow.get().isBlocked()) {
                 throw new CarValidationException(MessageKeys.CAR_ACTIVATE_OWNER_BLOCKED);
             }
-            // Defense-in-depth: PAUSED should imply documentation is present (clearCarInsuranceDocument
-            // demotes ACTIVE/PAUSED to LACK_DOC when insurance is removed), but mirror the explicit
-            // check in resumeCarsForRestoredCbu so we never let an undocumented car reach ACTIVE.
+            // Defense-in-depth: PAUSED may still lack docs (clearing insurance/CBU/identity only demotes
+            // ACTIVE → LACK_DOC so owner intent is preserved). Re-check insurance before promoting.
             if (car.getInsuranceFileId().isEmpty()) {
                 throw new CarValidationException(MessageKeys.CAR_INSURANCE_INVALID);
             }
@@ -344,12 +347,17 @@ public class CarServiceImpl implements CarService {
         return carDao.searchCarCards(criteria);
     }
 
+    /**
+     * Deliberately NOT {@code @Transactional}: delegates to criteria builder (no persistence here).
+     */
     @Override
     public CarSearchCriteria buildSearchCriteria(final CarSearchRequest request) {
         return carSearchService.buildSearchCriteria(request);
     }
 
-    // Both buildOwnerCarSearchCriteria overloads are intentionally not @Transactional: they delegate
+    /**
+     * Deliberately NOT {@code @Transactional}: delegates to criteria builder (no persistence here).
+     */
     @Override
     public OwnerCarSearchCriteria buildOwnerCarSearchCriteria(
             final long ownerId,
@@ -369,6 +377,9 @@ public class CarServiceImpl implements CarService {
                 carStatus, rating, textQuery, page, pageSize, sort);
     }
 
+    /**
+     * Deliberately NOT {@code @Transactional}: delegates to criteria builder (no persistence here).
+     */
     @Override
     public OwnerCarSearchCriteria buildOwnerCarSearchCriteria(
             final long ownerId,
@@ -390,8 +401,7 @@ public class CarServiceImpl implements CarService {
     }
 
     /**
-     * Default status filter for owner car listings when the client omits {@code status}.
-     * Pure in-memory policy (no persistence) — intentionally without {@code @Transactional}.
+     * Deliberately NOT {@code @Transactional}: pure in-memory policy (no persistence).
      */
     @Override
     public List<Car.Status> resolveOwnerListingStatuses(
@@ -445,8 +455,54 @@ public class CarServiceImpl implements CarService {
     @Override
     @Transactional
     public void pauseCarsForMissingCbu(final long ownerId) {
+        pauseActiveCarsToLackDoc(ownerId, (owner, car, locale) ->
+                emailService.sendListingPausedDueToMissingCbu(CarPausedMissingCbuOwnerEmailPayload.builder()
+                        .messageLocale(locale)
+                        .ownerEmail(owner.getEmail())
+                        .ownerFullName(owner.getForename() + " " + owner.getSurname())
+                        .vehicleLabel(carLabel(car))
+                        .carId(car.getId())
+                        .build()));
+    }
+
+    @Override
+    @Transactional
+    public void resumeCarsForRestoredCbu(final long ownerId) {
+        resumeEligibleLackDocCars(ownerId);
+    }
+
+    @Override
+    @Transactional
+    public void pauseCarsForMissingIdentity(final long ownerId) {
+        pauseActiveCarsToLackDoc(ownerId, (owner, car, locale) ->
+                emailService.sendListingPausedDueToMissingIdentity(CarPausedMissingIdentityOwnerEmailPayload.builder()
+                        .messageLocale(locale)
+                        .ownerEmail(owner.getEmail())
+                        .ownerFullName(owner.getForename() + " " + owner.getSurname())
+                        .vehicleLabel(carLabel(car))
+                        .carId(car.getId())
+                        .build()));
+    }
+
+    @Override
+    @Transactional
+    public void resumeCarsForRestoredIdentity(final long ownerId) {
+        resumeEligibleLackDocCars(ownerId);
+    }
+
+    @FunctionalInterface
+    private interface ListingPausedMailSender {
+        void send(User owner, Car car, Locale locale);
+    }
+
+    /**
+     * Demotes only {@link Car.Status#ACTIVE} listings to {@link Car.Status#LACK_DOC}.
+     * PAUSED / ADMIN_PAUSED / DEACTIVATED stay put so restoring docs cannot reopen a listing
+     * the owner (or admin) intentionally left off the market.
+     */
+    private void pauseActiveCarsToLackDoc(final long ownerId, final ListingPausedMailSender mailSender) {
         final List<Car> active = carDao.findCarsByOwnerAndStatuses(
-                ownerId, List.of(Car.Status.ACTIVE, Car.Status.PAUSED));
+                ownerId, List.of(Car.Status.ACTIVE));
         if (active.isEmpty()) {
             return;
         }
@@ -458,33 +514,24 @@ public class CarServiceImpl implements CarService {
         if (ownerEmail == null || ownerEmail.isBlank()) {
             return;
         }
-        final String ownerFullName = owner.getForename() + " " + owner.getSurname();
         final Locale ownerMailLocale = userLocaleService.resolveMailLocale(ownerId);
         for (final Car car : active) {
-            final Car.Status current = car.getStatus();
             carDao.lockForReservationWrite(car.getId());
-            if (!carDao.updateCarStatusIfCurrent(car.getId(), Car.Status.LACK_DOC, current)) {
+            if (!carDao.updateCarStatusIfCurrent(car.getId(), Car.Status.LACK_DOC, Car.Status.ACTIVE)) {
                 continue;
             }
-            final String label = carLabel(car);
-            emailService.sendListingPausedDueToMissingCbu(CarPausedMissingCbuOwnerEmailPayload.builder()
-                    .messageLocale(ownerMailLocale)
-                    .ownerEmail(ownerEmail)
-                    .ownerFullName(ownerFullName)
-                    .vehicleLabel(label)
-                    .carId(car.getId())
-                    .build());
+            mailSender.send(owner, car, ownerMailLocale);
         }
     }
 
-    @Override
-    @Transactional
-    public void resumeCarsForRestoredCbu(final long ownerId) {
+    private void resumeEligibleLackDocCars(final long ownerId) {
         final List<Car> toResume = carDao.findCarsByOwnerAndStatuses(ownerId, List.of(Car.Status.LACK_DOC));
+        final User owner = userService.getUserById(ownerId).orElse(null);
+        if (owner == null || !userReadinessService.meetsPublishingPrerequisites(owner)) {
+            return;
+        }
         for (final Car car : toResume) {
-            // Only re-activate when the insurance document is also present; if the car was in
-            // LACK_DOC because of missing insurance (not just missing CBU), restoring the CBU
-            // alone is not enough to make it active.
+            // Only re-activate when insurance is also present; missing insurance alone keeps LACK_DOC.
             if (car.getInsuranceFileId().isPresent()) {
                 carDao.lockForReservationWrite(car.getId());
                 carDao.updateCarStatusIfCurrent(car.getId(), Car.Status.ACTIVE, Car.Status.LACK_DOC);
@@ -523,7 +570,7 @@ public class CarServiceImpl implements CarService {
         final Car locked = carDao.getCarById(carId).orElse(car);
         if (locked.getStatus() == Car.Status.LACK_DOC) {
             final User owner = userService.getUserById(ownerId).orElse(null);
-            if (owner != null && userReadinessService.hasValidCbu(owner)) {
+            if (owner != null && userReadinessService.meetsPublishingPrerequisites(owner)) {
                 carDao.updateCarStatusIfCurrent(carId, Car.Status.ACTIVE, Car.Status.LACK_DOC);
             }
         }
@@ -544,7 +591,9 @@ public class CarServiceImpl implements CarService {
             storedFileService.deleteById(previousInsuranceId);
         }
         final Car locked = carDao.getCarById(carId).orElse(car);
-        if (locked.getStatus() == Car.Status.ACTIVE || locked.getStatus() == Car.Status.PAUSED) {
+        // Only ACTIVE → LACK_DOC. PAUSED / ADMIN_PAUSED / DEACTIVATED keep their status;
+        // toggle / admin release still re-check docs before returning to the market.
+        if (locked.getStatus() == Car.Status.ACTIVE) {
             carDao.setCarStatus(carId, Car.Status.LACK_DOC);
         }
     }
@@ -625,14 +674,14 @@ public class CarServiceImpl implements CarService {
         }
         // markCarAsAdminPaused accepts every non-DEACTIVATED status (including LACK_DOC), so we cannot
         // assume the car had valid documentation when it was paused. The Car.Status javadoc reserves
-        // ACTIVE for listings with all required documents, so re-check insurance and the owner's CBU
-        // before promoting; otherwise drop back to LACK_DOC and let the regular re-activation path
-        // (insurance upload / CBU restored) bring the car back online once the owner completes them.
+        // ACTIVE for listings with all required documents, so re-check insurance and publishing
+        // prerequisites (CBU + identity) before promoting; otherwise drop back to LACK_DOC and let
+        // the regular re-activation path bring the car back online once the owner completes them.
         final boolean hasInsurance = car.getInsuranceFileId().isPresent();
-        final boolean hasValidCbu = userService.getUserById(car.getOwnerId())
-                .map(userReadinessService::hasValidCbu)
+        final boolean publishingReady = userService.getUserById(car.getOwnerId())
+                .map(userReadinessService::meetsPublishingPrerequisites)
                 .orElse(false);
-        if (hasInsurance && hasValidCbu) {
+        if (hasInsurance && publishingReady) {
             car.setStatus(Car.Status.ACTIVE);
         } else {
             car.setStatus(Car.Status.LACK_DOC);

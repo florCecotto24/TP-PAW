@@ -11,6 +11,7 @@ import java.util.stream.Collectors;
 import javax.crypto.SecretKey;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.core.UriBuilder;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -165,8 +166,13 @@ public final class JwtTokenService implements TokenService {
      */
     private static String buildUserUri(final HttpServletRequest request, final long userId) {
         final String context = request.getContextPath() == null ? "" : request.getContextPath();
-        final String base = context.endsWith("/") ? context.substring(0, context.length() - 1) : context;
-        return base + "/api/users/" + userId;
+        // Host-relative path via UriBuilder (same policy as RestUriUtils): avoid baking a wrong origin.
+        return UriBuilder.fromPath(context)
+                .path("api")
+                .path("users")
+                .path(Long.toString(userId))
+                .build()
+                .toString();
     }
 
     private static SecretKey resolveSigningKey(final String configuredSecret, final Environment environment) {

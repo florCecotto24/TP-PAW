@@ -130,7 +130,7 @@ public class ReservationMessageServiceImpl implements ReservationMessageService 
     }
 
     @Override
-    @Transactional
+    @Transactional(readOnly = true)
     public Page<ReservationMessageDto> getMessagesForParticipant(
             final long viewerUserId, final long reservationId, final Integer page, final Integer size) {
         final Reservation reservation = findParticipantReservation(viewerUserId, reservationId)
@@ -138,7 +138,6 @@ public class ReservationMessageServiceImpl implements ReservationMessageService 
         if (!isChatAvailable(reservation)) {
             throw new ReservationMessageException(MessageKeys.RESERVATION_CHAT_NOT_AVAILABLE);
         }
-        reservationMessageDao.markSeenByRecipient(reservationId, viewerUserId);
         final int maxPageSize = chatPolicy.getHistoryPageSize();
         final int safeSize = resolveHistoryPageSize(size, maxPageSize);
         final long totalItems = reservationMessageDao.countByReservationId(reservationId);
@@ -161,7 +160,7 @@ public class ReservationMessageServiceImpl implements ReservationMessageService 
     }
 
     @Override
-    @Transactional
+    @Transactional(readOnly = true)
     public List<ReservationMessageDto> pollMessagesForParticipant(
             final long viewerUserId, final long reservationId, final long afterMessageId) {
         final Reservation reservation = findParticipantReservation(viewerUserId, reservationId)
@@ -169,7 +168,6 @@ public class ReservationMessageServiceImpl implements ReservationMessageService 
         if (!isChatAvailable(reservation)) {
             throw new ReservationMessageException(MessageKeys.RESERVATION_CHAT_NOT_AVAILABLE);
         }
-        reservationMessageDao.markSeenByRecipient(reservationId, viewerUserId);
         final long safeAfterId = Math.max(0L, afterMessageId);
         final int limit = chatPolicy.getHistoryPageSize();
         return reservationMessageDao
@@ -177,6 +175,17 @@ public class ReservationMessageServiceImpl implements ReservationMessageService 
                 .stream()
                 .map(this::toDto)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public int markMessagesSeenForParticipant(final long viewerUserId, final long reservationId) {
+        final Reservation reservation = findParticipantReservation(viewerUserId, reservationId)
+                .orElseThrow(() -> new ReservationMessageException(MessageKeys.RESERVATION_CHAT_NOT_PARTICIPANT));
+        if (!isChatAvailable(reservation)) {
+            throw new ReservationMessageException(MessageKeys.RESERVATION_CHAT_NOT_AVAILABLE);
+        }
+        return reservationMessageDao.markSeenByRecipient(reservationId, viewerUserId);
     }
 
     @Override

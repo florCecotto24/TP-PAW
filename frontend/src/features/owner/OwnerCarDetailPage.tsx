@@ -308,6 +308,7 @@ export default function OwnerCarDetailPage() {
   // también en admin_paused, lo cual no refleja el JSP de referencia.
   const canDeactivate = car.status !== 'deactivated' && car.status !== 'admin_paused';
   const missingCbu = car.status === 'lack_doc' && !hasCbu(currentUser);
+  const missingIdentity = car.status === 'lack_doc' && !currentUser?.identityUploaded;
   const publicCarLink = id ? carDetailTo(id, car.links.self) : null;
 
   return (
@@ -587,6 +588,16 @@ export default function OwnerCarDetailPage() {
                   <Link to={paths.profile} className="btn btn-primary w-100">
                     <i className="bi bi-person-fill me-2" aria-hidden="true" />
                     {t('owner.detail.missingCbuCta')}
+                  </Link>
+                </div>
+              )}
+
+              {missingIdentity && (
+                <div>
+                  <p className="text-secondary small mb-2">{t('owner.detail.missingIdentityHint')}</p>
+                  <Link to={paths.profile} className="btn btn-primary w-100">
+                    <i className="bi bi-person-fill me-2" aria-hidden="true" />
+                    {t('owner.detail.missingIdentityCta')}
                   </Link>
                 </div>
               )}

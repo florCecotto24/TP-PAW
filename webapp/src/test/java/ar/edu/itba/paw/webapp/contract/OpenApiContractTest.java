@@ -502,6 +502,30 @@ class OpenApiContractTest {
     }
 
     @Test
+    void testRuntimeOptionalPathsDocumented() {
+        // 1.Arrange — T-06: bookable-segments, counterparty, price-insight (runtime paths)
+        // openapiYaml from @BeforeAll
+
+        // 2.Act
+        final Set<String> bookable = OpenApiContractSupport.operationResponseStatusCodes(
+                openapiYaml, "/cars/{id}/bookable-segments", "get");
+        final Set<String> counterparty = OpenApiContractSupport.operationResponseStatusCodes(
+                openapiYaml, "/reservations/{id}/counterparty", "get");
+        final Set<String> priceInsight = OpenApiContractSupport.operationResponseStatusCodes(
+                openapiYaml, "/brands/{id}/models/{modelId}/price-insight", "get");
+
+        // 3.Assert
+        assertTrue(bookable.contains("200"));
+        assertTrue(bookable.contains("204"));
+        assertTrue(counterparty.contains("200"));
+        assertTrue(priceInsight.contains("200"));
+        assertTrue(priceInsight.contains("204"));
+        assertTrue(openapiYaml.contains(VndMediaType.BOOKABLE_SEGMENT_V1_JSON));
+        assertTrue(openapiYaml.contains(VndMediaType.COUNTERPARTY_CONTACT_V1_JSON));
+        assertTrue(openapiYaml.contains(VndMediaType.PRICE_MARKET_INSIGHT_V1_JSON));
+    }
+
+    @Test
     void testHateoasUtilityGetEndpointsDocumented() {
         // 1.Arrange — openapiYaml from @BeforeAll
 

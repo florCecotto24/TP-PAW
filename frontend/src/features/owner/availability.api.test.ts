@@ -8,6 +8,13 @@ import {
   updateAvailability,
 } from './api';
 
+type HttpOp =
+  | { op: 'del'; path: string; opts: unknown }
+  | { op: 'patch'; path: string; body: unknown; opts: unknown }
+  | { op: 'request'; path: string; opts: unknown };
+
+const httpOps: HttpOp[] = [];
+
 vi.mock('../../session/sessionStore', () => ({
   sessionClient: {
     del: vi.fn(),
@@ -48,12 +55,22 @@ const persisted: AvailabilityDto = {
 
 describe('owner availability hypermedia', () => {
   beforeEach(() => {
+    httpOps.length = 0;
     vi.mocked(sessionClient.del).mockReset();
     vi.mocked(sessionClient.patch).mockReset();
     vi.mocked(sessionClient.request).mockReset();
-    vi.mocked(sessionClient.del).mockResolvedValue({ data: undefined, status: 204, page: {}, location: null, headers: new Headers() });
-    vi.mocked(sessionClient.patch).mockResolvedValue({ data: persisted, status: 200, page: {}, location: null, headers: new Headers() });
-    vi.mocked(sessionClient.request).mockResolvedValue({ data: persisted, status: 201, page: {}, location: null, headers: new Headers() });
+    vi.mocked(sessionClient.del).mockImplementation(async (path, opts) => {
+      httpOps.push({ op: 'del', path: String(path), opts });
+      return { data: undefined, status: 204, page: {}, location: null, headers: new Headers() };
+    });
+    vi.mocked(sessionClient.patch).mockImplementation(async (path, body, opts) => {
+      httpOps.push({ op: 'patch', path: String(path), body, opts });
+      return { data: persisted, status: 200, page: {}, location: null, headers: new Headers() };
+    });
+    vi.mocked(sessionClient.request).mockImplementation(async (path, opts) => {
+      httpOps.push({ op: 'request', path: String(path), opts });
+      return { data: persisted, status: 201, page: {}, location: null, headers: new Headers() };
+    });
   });
 
   it('testAvailabilityIdentityUsesRangeWhenSelfMissing', () => {
@@ -63,23 +80,32 @@ describe('owner availability hypermedia', () => {
   });
 
   it('testDeleteProjectionUsesCollectionFromUntil', async () => {
-    // 1.Arrange
-    // 2.Act
+    // 1.Arrange / 2.Act
     await deleteAvailability(car, projection);
     // 3.Assert
-    expect(sessionClient.del).toHaveBeenCalledWith('/cars/7/availabilities', {
-      accept: MediaTypes.availability,
-      query: { from: '2026-08-01', until: '2026-08-10' },
-    });
+    expect(httpOps).toEqual([
+      {
+        op: 'del',
+        path: '/cars/7/availabilities',
+        opts: {
+          accept: MediaTypes.availability,
+          query: { from: '2026-08-01', until: '2026-08-10' },
+        },
+      },
+    ]);
   });
 
   it('testDeletePersistedUsesSelf', async () => {
     // 1.Arrange / 2.Act
     await deleteAvailability(car, persisted);
     // 3.Assert
-    expect(sessionClient.del).toHaveBeenCalledWith('/cars/7/availabilities/3', {
-      accept: MediaTypes.availability,
-    });
+    expect(httpOps).toEqual([
+      {
+        op: 'del',
+        path: '/cars/7/availabilities/3',
+        opts: { accept: MediaTypes.availability },
+      },
+    ]);
   });
 
   it('testUpdateProjectionDeletesThenCreates', async () => {
@@ -94,11 +120,12 @@ describe('owner availability hypermedia', () => {
       checkOutTime: '20:00',
     };
     // 2.Act
-    await updateAvailability(projection, car, body);
-    // 3.Assert
-    expect(sessionClient.del).toHaveBeenCalled();
-    expect(sessionClient.request).toHaveBeenCalled();
-    expect(sessionClient.patch).not.toHaveBeenCalled();
+    const result = await updateAvailability(projection, car, body);
+    // 3.Assert — transcript is delete + create; no patch entry
+    expect(result.data).toEqual(persisted);
+    expect(httpOps.map((o) => o.op)).toEqual(['del', 'request']);
+    expect(httpOps[0]).toMatchObject({ op: 'del', path: '/cars/7/availabilities' });
+    expect(httpOps[1]).toMatchObject({ op: 'request', path: '/cars/7/availabilities' });
   });
 
   it('testUpdatePersistedPatchesSelf', async () => {
@@ -113,16 +140,19 @@ describe('owner availability hypermedia', () => {
       checkOutTime: '20:00',
     };
     // 2.Act
-    await updateAvailability(persisted, car, body);
+    const result = await updateAvailability(persisted, car, body);
     // 3.Assert
-    expect(sessionClient.patch).toHaveBeenCalledWith(
-      '/cars/7/availabilities/3',
-      body,
+    expect(result.data).toEqual(persisted);
+    expect(httpOps).toEqual([
       {
-        accept: MediaTypes.availability,
-        contentType: MediaTypes.availability,
+        op: 'patch',
+        path: '/cars/7/availabilities/3',
+        body,
+        opts: {
+          accept: MediaTypes.availability,
+          contentType: MediaTypes.availability,
+        },
       },
-    );
-    expect(sessionClient.del).not.toHaveBeenCalled();
+    ]);
   });
 });

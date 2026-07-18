@@ -3,7 +3,9 @@ package ar.edu.itba.paw.webapp.controller;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
+import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.UriInfo;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
@@ -29,6 +31,9 @@ public final class ClientConfigController {
     private final ChatAttachmentUploadPolicy chatAttachmentUploadPolicy;
     private final Environment environment;
 
+    @Context
+    private UriInfo uriInfo;
+
     @Autowired
     public ClientConfigController(
             final AppValidationProperties appValidationProperties,
@@ -48,12 +53,14 @@ public final class ClientConfigController {
     @GET
     @Produces(VndMediaType.CLIENT_CONFIG_V1_JSON)
     public Response config() {
+        final String selfUri = uriInfo.getBaseUriBuilder().path("config").build().toString();
         return Response.ok(ClientConfigDto.from(
                 appValidationProperties,
                 appMoneyProperties,
                 reservationTimingPolicy,
                 carGalleryUploadPolicy,
                 chatAttachmentUploadPolicy,
-                environment)).build();
+                environment,
+                selfUri)).build();
     }
 }

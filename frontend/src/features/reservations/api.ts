@@ -299,6 +299,14 @@ export async function listMessagesLatestPage(
   return listMessages(messagesUri, { page: lastPage, pageSize });
 }
 
+/**
+ * Registra lectura del chat (POST message-receipts). Separado del GET para no mutar en lectura.
+ * Idempotente; fallos silenciosos (p.ej. chat cerrado) no bloquean la UI.
+ */
+export async function acknowledgeMessageReceipts(messageReceiptsUri: string): Promise<void> {
+  await sessionClient.post(messageReceiptsUri);
+}
+
 /** Envía un mensaje (multipart: body + file opcional). */
 export async function sendMessage(
   messagesUri: string,

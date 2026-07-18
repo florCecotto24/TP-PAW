@@ -6,7 +6,6 @@ import { sessionClient, useSessionStore } from '../../session/sessionStore';
 import {
   chatLimits,
   computeUploadTimeoutMs,
-  UPLOAD_MAX_RETRIES,
 } from './chatAttachment';
 import type { MessageDto } from './types';
 
@@ -143,18 +142,5 @@ export async function sendChatMessage(
   const timeoutMs = file ? computeUploadTimeoutMs(maxMb) : 60_000;
   const uploadOpts = { timeoutMs, onProgress: options?.onProgress };
 
-  let lastError: unknown;
-  for (let attempt = 0; attempt <= UPLOAD_MAX_RETRIES; attempt++) {
-    try {
-      return await postWithRefreshRetry(messagesUri, payload, contentType, uploadOpts);
-    } catch (err) {
-      lastError = err;
-      // Timeout after send is ambiguous (server may have persisted) — do not retry (N-38).
-      // Only retry clear pre-response network failures once.
-      const retriable = err instanceof Error && err.message === 'network';
-      if (retriable && attempt < UPLOAD_MAX_RETRIES) continue;
-      throw err;
-    }
-  }
-  throw lastError;
+  return await postWithRefreshRetry(messagesUri, payload, contentType, uploadOpts);
 }

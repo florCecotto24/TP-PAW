@@ -207,15 +207,34 @@ public interface CarService {
     List<CarModelPriceSample> findActiveDayPricesForBrandModelPairs(List<String> brands, List<String> models);
 
     /**
-     * For each car of the owner whose status is {@link Car.Status#ACTIVE} or {@link Car.Status#PAUSED},
+     * For each car of the owner whose status is {@link Car.Status#ACTIVE},
      * transitions it to {@link Car.Status#LACK_DOC} and sends one email per affected car to the owner.
+     * {@link Car.Status#PAUSED}, {@link Car.Status#ADMIN_PAUSED} and {@link Car.Status#DEACTIVATED}
+     * are left unchanged so the owner's prior intent is preserved when docs are restored.
      */
     void pauseCarsForMissingCbu(long ownerId);
 
     /**
-     * Re-activates cars that were paused only for missing CBU, after a valid CBU is stored.
+     * Re-activates cars that were demoted only for missing CBU ({@link Car.Status#LACK_DOC} →
+     * {@link Car.Status#ACTIVE}), after a valid CBU is stored.
      */
     void resumeCarsForRestoredCbu(long ownerId);
+
+    /**
+     * For each car of the owner whose status is {@link Car.Status#ACTIVE},
+     * transitions it to {@link Car.Status#LACK_DOC} and sends one email per affected car to the owner
+     * when the identity document is cleared from the profile.
+     * {@link Car.Status#PAUSED}, {@link Car.Status#ADMIN_PAUSED} and {@link Car.Status#DEACTIVATED}
+     * are left unchanged.
+     */
+    void pauseCarsForMissingIdentity(long ownerId);
+
+    /**
+     * Re-activates cars demoted for missing identity ({@link Car.Status#LACK_DOC} →
+     * {@link Car.Status#ACTIVE}) after an identity document is stored again
+     * (still requires insurance and a valid CBU).
+     */
+    void resumeCarsForRestoredIdentity(long ownerId);
 
     /**
      * Stores an insurance document for the car (one slot per car). Re-uploading replaces any previous file.
@@ -224,7 +243,11 @@ public interface CarService {
      */
     void uploadValidatedCarInsuranceDocument(long ownerId, long carId, String originalFilename, String contentType, byte[] data);
 
-    /** Clears the insurance file reference for the car, optionally moving the car back to {@link Car.Status#LACK_DOC}. */
+    /**
+     * Clears the insurance file reference for the car. When the car is {@link Car.Status#ACTIVE},
+     * demotes it to {@link Car.Status#LACK_DOC}; {@link Car.Status#PAUSED} and other non-market
+     * statuses are left as-is.
+     */
     void clearCarInsuranceDocument(long ownerId, long carId);
 
     /**

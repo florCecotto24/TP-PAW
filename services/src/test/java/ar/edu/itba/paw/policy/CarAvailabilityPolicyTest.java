@@ -132,6 +132,34 @@ class CarAvailabilityPolicyTest {
     }
 
     @Test
+    void testValidateAvailabilityWithinPublishHorizonThrowsWhenEndIsBeforeReferenceDay() {
+        // 1.Arrange — A10: period end must not be before today (reference wall day)
+        final CarAvailabilityPolicy policy = new CarAvailabilityPolicyImpl(environment);
+        final LocalDate today = LocalDate.of(2026, 5, 3);
+        final List<AvailabilityPeriod> periods = List.of(
+                new AvailabilityPeriod(today.minusDays(10), today.minusDays(1)));
+
+        // 2.Act
+        final CarValidationException ex = Assertions.assertThrows(CarValidationException.class,
+                () -> policy.validateAvailabilityWithinPublishHorizon(today, periods));
+
+        // 3.Assert
+        Assertions.assertEquals(MessageKeys.CAR_AVAILABILITY_INCLUDES_PAST_DATES, ex.getMessageCode());
+    }
+
+    @Test
+    void testValidateAvailabilityWithinPublishHorizonAcceptsEndOnReferenceDay() {
+        // 1.Arrange
+        final CarAvailabilityPolicy policy = new CarAvailabilityPolicyImpl(environment);
+        final LocalDate today = LocalDate.of(2026, 5, 3);
+        final List<AvailabilityPeriod> periods = List.of(
+                new AvailabilityPeriod(today.minusDays(5), today));
+
+        // 2.Act / 3.Assert
+        Assertions.assertDoesNotThrow(() -> policy.validateAvailabilityWithinPublishHorizon(today, periods));
+    }
+
+    @Test
     void testValidateAvailabilityWithinPublishHorizonSkipsInvalidOrderedPeriods() {
         // 1.Arrange: end-before-start period would normally be beyond horizon, but the policy must skip it.
         Mockito.when(environment.getProperty(NEW_KEY, Integer.class)).thenReturn(10);

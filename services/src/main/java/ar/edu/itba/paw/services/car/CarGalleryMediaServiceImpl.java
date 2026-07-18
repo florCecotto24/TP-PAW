@@ -33,6 +33,9 @@ public class CarGalleryMediaServiceImpl implements CarGalleryMediaService {
         this.carPictureService = carPictureService;
     }
 
+    /**
+     * Deliberately NOT {@code @Transactional}: pure in-memory count over upload DTOs (no persistence).
+     */
     @Override
     public int countNonEmptyGalleryUploads(final List<GalleryMediaUpload> galleryMedia) {
         if (galleryMedia == null || galleryMedia.isEmpty()) {
@@ -47,6 +50,9 @@ public class CarGalleryMediaServiceImpl implements CarGalleryMediaService {
         return count;
     }
 
+    /**
+     * Deliberately NOT {@code @Transactional}: pure in-memory content-type scan (no persistence).
+     */
     @Override
     public boolean hasNonEmptyImageUpload(final List<GalleryMediaUpload> galleryMedia) {
         if (galleryMedia == null || galleryMedia.isEmpty()) {

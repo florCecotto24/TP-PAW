@@ -301,6 +301,17 @@ public final class RestUriUtils {
                 .build();
     }
 
+    /**
+     * Collection of read receipts for a reservation chat. {@code POST} marks counterparty
+     * messages as seen for the caller (GET on messages must stay read-only).
+     */
+    public static URI reservationMessageReceiptsUri(final UriInfo uriInfo, final long reservationId) {
+        return uriInfo.getBaseUriBuilder()
+                .path("reservations").path(String.valueOf(reservationId))
+                .path("message-receipts")
+                .build();
+    }
+
     public static URI reservationMessageUri(
             final UriInfo uriInfo, final long reservationId, final long messageId) {
         return uriInfo.getBaseUriBuilder()

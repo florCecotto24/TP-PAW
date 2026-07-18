@@ -554,7 +554,9 @@ public class UserServiceImpl implements UserService {
         return userProfileMediaService.findProfileDocumentContent(userId, documentType);
     }
 
-    // Intentionally not @Transactional: pure static-format validation delegating to CbuRules
+    /**
+     * Deliberately NOT {@code @Transactional}: pure static-format validation (CbuRules), no persistence.
+     */
     @Override
     public boolean isValidCbuFormat(final String cbuRaw) {
         return userReadinessService.isValidCbuFormat(cbuRaw);
@@ -719,6 +721,7 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public void updateIdentityDocumentFk(final long userId, final long storedFileId, final boolean validated) {
         userDao.updateIdentityDocument(userId, storedFileId, validated);
+        carService.resumeCarsForRestoredIdentity(userId);
     }
 
     @Override
@@ -731,6 +734,7 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public void clearIdentityDocumentFk(final long userId) {
         userDao.clearIdentityDocument(userId);
+        carService.pauseCarsForMissingIdentity(userId);
     }
 
     @Override
