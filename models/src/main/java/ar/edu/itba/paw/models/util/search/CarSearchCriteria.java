@@ -33,10 +33,10 @@ public final class CarSearchCriteria extends BaseSearchCriteria {
     /** Minimum contiguous free-window length for flexible search; null means "any availability". */
     private final Integer flexibleDays;
     /**
-     * When set, only cars whose min offered day price falls in that market band
-     * vs the peer brand/model average (same thresholds as consumer badges).
+     * When non-empty, only cars whose min offered day price falls in any of these market bands
+     * (OR) vs the peer brand/model average (same thresholds as consumer badges).
      */
-    private final PriceMarketPosition priceMarketPosition;
+    private final List<PriceMarketPosition> priceMarketPositions;
 
     private CarSearchCriteria(final Builder b) {
         super(b.page, b.uiPageSize, b.carTypes, b.transmissions, b.powertrains,
@@ -49,7 +49,8 @@ public final class CarSearchCriteria extends BaseSearchCriteria {
         this.neighborhoodIds = normalizeIdList(b.neighborhoodIds);
         this.flexibleMonth = b.flexibleMonth;
         this.flexibleDays = b.flexibleDays;
-        this.priceMarketPosition = b.priceMarketPosition;
+        this.priceMarketPositions = b.priceMarketPositions == null
+                ? List.of() : List.copyOf(b.priceMarketPositions);
     }
 
     public static Builder builder() {
@@ -80,7 +81,7 @@ public final class CarSearchCriteria extends BaseSearchCriteria {
         private List<Long> neighborhoodIds = List.of();
         private YearMonth flexibleMonth;
         private Integer flexibleDays;
-        private PriceMarketPosition priceMarketPosition;
+        private List<PriceMarketPosition> priceMarketPositions = List.of();
 
         public Builder query(final String query) {
             this.query = query;
@@ -168,8 +169,8 @@ public final class CarSearchCriteria extends BaseSearchCriteria {
             return this;
         }
 
-        public Builder priceMarketPosition(final PriceMarketPosition priceMarketPosition) {
-            this.priceMarketPosition = priceMarketPosition;
+        public Builder priceMarketPositions(final List<PriceMarketPosition> priceMarketPositions) {
+            this.priceMarketPositions = priceMarketPositions == null ? List.of() : List.copyOf(priceMarketPositions);
             return this;
         }
 
@@ -239,8 +240,8 @@ public final class CarSearchCriteria extends BaseSearchCriteria {
         return flexibleDays;
     }
 
-    public PriceMarketPosition getPriceMarketPosition() {
-        return priceMarketPosition;
+    public List<PriceMarketPosition> getPriceMarketPositions() {
+        return priceMarketPositions;
     }
 
     /**

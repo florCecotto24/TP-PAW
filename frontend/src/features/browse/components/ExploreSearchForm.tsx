@@ -35,11 +35,11 @@ const EMPTY_INITIAL: SearchFilters = {};
 
 function toMulti(filters: SearchFilters): MultiFilters {
   const out: MultiFilters = {};
-  if (filters.category) out.category = [filters.category];
-  if (filters.transmission) out.transmission = [filters.transmission];
-  if (filters.powertrain) out.powertrain = [filters.powertrain];
-  if (filters.rating != null) out.rating = [String(filters.rating)];
-  if (filters.priceMarket) out.priceMarket = [filters.priceMarket];
+  if (filters.category?.length) out.category = [...filters.category];
+  if (filters.transmission?.length) out.transmission = [...filters.transmission];
+  if (filters.powertrain?.length) out.powertrain = [...filters.powertrain];
+  if (filters.rating?.length) out.rating = [...filters.rating];
+  if (filters.priceMarket?.length) out.priceMarket = [...filters.priceMarket];
   return out;
 }
 
@@ -48,18 +48,22 @@ function fromMulti(
   multi: MultiFilters,
   neighborhoodIds: Array<number | string>,
 ): SearchFilters {
+  const priceMarket = (multi.priceMarket ?? []).filter((v): v is NonNullable<SearchFilters['priceMarket']>[number] =>
+    (['below_market', 'at_market', 'above_market'] as const).includes(
+      v as 'below_market' | 'at_market' | 'above_market',
+    ),
+  );
+  const ids = neighborhoodIds
+    .map((id) => Number(id))
+    .filter((id) => Number.isInteger(id) && id > 0);
   return {
     ...base,
-    category: multi.category?.[0] as CarType | undefined,
-    transmission: multi.transmission?.[0] as Transmission | undefined,
-    powertrain: multi.powertrain?.[0] as Powertrain | undefined,
-    rating: multi.rating?.[0] ? Number(multi.rating[0]) : undefined,
-    priceMarket: (['below_market', 'at_market', 'above_market'] as const).includes(
-      multi.priceMarket?.[0] as 'below_market' | 'at_market' | 'above_market',
-    )
-      ? (multi.priceMarket![0] as SearchFilters['priceMarket'])
-      : undefined,
-    neighborhoodId: neighborhoodIds[0] != null ? Number(neighborhoodIds[0]) : undefined,
+    category: multi.category?.length ? (multi.category as CarType[]) : undefined,
+    transmission: multi.transmission?.length ? (multi.transmission as Transmission[]) : undefined,
+    powertrain: multi.powertrain?.length ? (multi.powertrain as Powertrain[]) : undefined,
+    rating: multi.rating?.length ? multi.rating : undefined,
+    priceMarket: priceMarket.length ? priceMarket : undefined,
+    neighborhoodIds: ids.length ? ids : undefined,
   };
 }
 
@@ -86,7 +90,7 @@ export default function ExploreSearchForm({
   const [priceMax, setPriceMax] = useState(initial.priceMax != null ? String(initial.priceMax) : '');
   const [selectedFilters, setSelectedFilters] = useState<MultiFilters>(() => toMulti(initial));
   const [neighborhoodIds, setNeighborhoodIds] = useState<Array<number | string>>(
-    initial.neighborhoodId != null ? [initial.neighborhoodId] : [],
+    () => initial.neighborhoodIds ?? [],
   );
   const [flexible, setFlexible] = useState(Boolean(initial.flexible));
   const [flexMonth, setFlexMonth] = useState(initial.flexMonth ?? '');
@@ -103,7 +107,7 @@ export default function ExploreSearchForm({
     setPriceMin(initial.priceMin != null ? String(initial.priceMin) : '');
     setPriceMax(initial.priceMax != null ? String(initial.priceMax) : '');
     setSelectedFilters(toMulti(initial));
-    setNeighborhoodIds(initial.neighborhoodId != null ? [initial.neighborhoodId] : []);
+    setNeighborhoodIds(initial.neighborhoodIds ?? []);
     setFlexible(Boolean(initial.flexible));
     setFlexMonth(initial.flexMonth ?? '');
     setFlexDays(initial.flexDays != null ? String(initial.flexDays) : '');

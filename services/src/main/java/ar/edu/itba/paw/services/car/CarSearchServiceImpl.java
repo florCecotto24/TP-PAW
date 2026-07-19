@@ -44,6 +44,9 @@ public class CarSearchServiceImpl implements CarSearchService {
 
     private static final Set<String> RATING_BANDS = Set.of("UNDER_2", "2_TO_3", "3_TO_4", "OVER_4");
 
+    /** UI-supplied minimum-rating floors: {@code rating=3&rating=4&rating=5}. */
+    private static final Set<String> RATING_FLOORS = Set.of("3", "4", "5");
+
     private final ReservationTimingPolicy reservationTimingPolicy;
     private final LocationService locationService;
 
@@ -94,7 +97,7 @@ public class CarSearchServiceImpl implements CarSearchService {
                 .browseWallDate(browseWallDate)
                 .excludeOwnerUserId(null)
                 .neighborhoodIds(mergedNeighborhoodIds)
-                .priceMarketPosition(request.getPriceMarketPosition());
+                .priceMarketPositions(request.getPriceMarketPositions());
         if (flexible && flexMonth != null && !flexMonth.isBlank()) {
             java.time.YearMonth parsedMonth = null;
             try {
@@ -312,8 +315,12 @@ public class CarSearchServiceImpl implements CarSearchService {
             if (s == null || s.isBlank()) {
                 continue;
             }
-            final String u = s.trim().toUpperCase(Locale.ROOT);
-            if (RATING_BANDS.contains(u)) {
+            String u = s.trim().toUpperCase(Locale.ROOT);
+            // Tolerate decimal floors from the UI (e.g. "3.0" -> "3").
+            if (u.endsWith(".0")) {
+                u = u.substring(0, u.length() - 2);
+            }
+            if (RATING_BANDS.contains(u) || RATING_FLOORS.contains(u)) {
                 out.add(u);
             }
         }

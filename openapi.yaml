@@ -684,20 +684,35 @@ paths:
           schema: { type: number }
         - name: priceMarket
           in: query
-          schema: { type: string, enum: [below_market, at_market, above_market] }
+          style: form
+          explode: true
+          schema:
+            type: array
+            items: { type: string, enum: [below_market, at_market, above_market] }
           description: >
+            Repetible (`priceMarket=below_market&priceMarket=at_market`); combina bandas con OR.
             Filtra autos según su posición de precio respecto al promedio de mercado del mismo
             marca/modelo (mismas bandas que los badges de las cards: ≤90% below, ≤110% at,
-            >110% above; requiere al menos 2 comparables).
+            >110% above; requiere al menos 2 comparables). Seleccionar todas (o ninguna) equivale
+            a no filtrar.
         - name: rating
           in: query
           style: form
           explode: true
-          schema: { type: array, items: { type: number, minimum: 0, maximum: 5 } }
-          description: Repetible; cada valor es un piso de calificación mínima (p.ej. `rating=4&rating=5`).
+          schema:
+            type: array
+            items: { type: string, enum: ["3", "4", "5"] }
+          description: >
+            Repetible; cada valor es un piso de calificación mínima (`rating=3` ⇒ rating_avg ≥ 3).
+            Los valores se combinan con OR (p.ej. `rating=4&rating=5`).
         - name: neighborhoodId
           in: query
-          schema: { type: integer, format: int64 }
+          style: form
+          explode: true
+          schema:
+            type: array
+            items: { type: integer, format: int64 }
+          description: Repetible (`neighborhoodId=1&neighborhoodId=2`); combina barrios con OR.
         - name: from
           in: query
           schema: { type: string, format: date }

@@ -76,9 +76,9 @@ public final class CarListSupport {
             final List<String> powertrain,
             final BigDecimal priceMin,
             final BigDecimal priceMax,
-            final String priceMarket,
+            final List<String> priceMarket,
             final List<String> rating,
-            final Long neighborhoodId,
+            final List<Long> neighborhoodId,
             final String from,
             final String until,
             final boolean flexible,
@@ -195,9 +195,9 @@ public final class CarListSupport {
             final List<String> powertrain,
             final BigDecimal priceMin,
             final BigDecimal priceMax,
-            final String priceMarket,
+            final List<String> priceMarket,
             final List<String> rating,
-            final Long neighborhoodId,
+            final List<Long> neighborhoodId,
             final String from,
             final String until,
             final boolean flexible,
@@ -206,11 +206,11 @@ public final class CarListSupport {
             final List<String> status,
             final String sort,
             final UriInfo uriInfo) {
-        final PriceMarketPosition priceMarketPosition = parsePriceMarketPosition(priceMarket);
+        final List<PriceMarketPosition> priceMarketPositions = parsePriceMarketPositions(priceMarket);
 
         if (RestCarSortMapper.isBrowseShortcut(sort) && isPublicBrowseShortcut(query, category, transmission,
                 powertrain, priceMin, priceMax, rating, neighborhoodId, from, until, status, flexible)
-                && priceMarketPosition == null) {
+                && priceMarketPositions.isEmpty()) {
             final Page<CarCard> shortcutPage = "price_asc".equalsIgnoreCase(sort.trim())
                     ? carService.getCheapestCarCards(paging.getZeroBasedPage(), paging.getPageSize())
                     : carService.getMostRecentCarCards(paging.getZeroBasedPage(), paging.getPageSize());
@@ -234,11 +234,11 @@ public final class CarListSupport {
                 .page(paging.getZeroBasedPage())
                 .uiPageSize(paging.getPageSize())
                 .sort(RestCarSortMapper.toInternalSort(sort))
-                .neighborhoodIds(neighborhoodId == null ? Collections.emptyList() : List.of(neighborhoodId))
+                .neighborhoodIds(filterNonNullIds(neighborhoodId))
                 .flexible(flexible)
                 .flexMonth(flexMonth)
                 .flexDays(flexDays)
-                .priceMarketPosition(priceMarketPosition)
+                .priceMarketPositions(priceMarketPositions)
                 .build();
         final Page<CarCard> searchPage = carService.searchCarCards(carService.buildSearchCriteria(searchRequest));
         return pagedCarSummariesFromCards(searchPage, paging, true, uriInfo);
@@ -311,7 +311,7 @@ public final class CarListSupport {
             final BigDecimal priceMin,
             final BigDecimal priceMax,
             final List<String> rating,
-            final Long neighborhoodId,
+            final List<Long> neighborhoodId,
             final String from,
             final String until,
             final List<String> status,
@@ -323,7 +323,7 @@ public final class CarListSupport {
                 && priceMin == null
                 && priceMax == null
                 && (rating == null || rating.isEmpty())
-                && neighborhoodId == null
+                && (neighborhoodId == null || neighborhoodId.isEmpty())
                 && (from == null || from.isBlank())
                 && (until == null || until.isBlank())
                 && (status == null || status.isEmpty())
@@ -359,6 +359,40 @@ public final class CarListSupport {
             case "above_market" -> PriceMarketPosition.ABOVE_MARKET;
             default -> null;
         };
+    }
+
+    /**
+     * Parses the repeatable {@code priceMarket} query param into distinct market bands (OR filter).
+     * Selecting every band (or none) means "no filter", returning an empty list.
+     */
+    static List<PriceMarketPosition> parsePriceMarketPositions(final List<String> priceMarket) {
+        if (priceMarket == null || priceMarket.isEmpty()) {
+            return List.of();
+        }
+        final LinkedHashSet<PriceMarketPosition> out = new LinkedHashSet<>();
+        for (final String token : priceMarket) {
+            final PriceMarketPosition parsed = parsePriceMarketPosition(token);
+            if (parsed != null) {
+                out.add(parsed);
+            }
+        }
+        if (out.isEmpty() || out.size() == PriceMarketPosition.values().length) {
+            return List.of();
+        }
+        return List.copyOf(out);
+    }
+
+    private static List<Long> filterNonNullIds(final List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return Collections.emptyList();
+        }
+        final LinkedHashSet<Long> out = new LinkedHashSet<>();
+        for (final Long id : ids) {
+            if (id != null) {
+                out.add(id);
+            }
+        }
+        return List.copyOf(out);
     }
 
     static List<Car.Type> toCarTypes(final List<String> raw) {

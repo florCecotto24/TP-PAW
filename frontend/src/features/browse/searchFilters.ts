@@ -13,17 +13,20 @@ import {
 import { apiSortToJspSort, jspSortToApiSort } from './exploreSearch';
 import { daysInFlexMonth } from './flexibleSearch';
 
+export type PriceMarketFilter = 'below_market' | 'at_market' | 'above_market';
+
 export interface SearchFilters {
   q?: string;
-  category?: CarType;
-  transmission?: Transmission;
-  powertrain?: Powertrain;
+  category?: CarType[];
+  transmission?: Transmission[];
+  powertrain?: Powertrain[];
   priceMin?: number;
   priceMax?: number;
   /** Posición vs mercado del mismo modelo (mismas bandas que el badge de la card). */
-  priceMarket?: 'below_market' | 'at_market' | 'above_market';
-  rating?: number;
-  neighborhoodId?: number;
+  priceMarket?: PriceMarketFilter[];
+  /** UI keys {@code 3}/{@code 4}/{@code 5} (= piso 3+/4+/5+), repetibles. */
+  rating?: string[];
+  neighborhoodIds?: number[];
   from?: string; // YYYY-MM-DD
   until?: string; // YYYY-MM-DD
   flexible?: boolean;
@@ -34,9 +37,21 @@ export interface SearchFilters {
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const FLEX_MONTH = /^\d{4}-\d{2}$/;
+const PRICE_MARKET_VALUES = ['below_market', 'at_market', 'above_market'] as const;
+const RATING_UI_KEYS = ['3', '4', '5'] as const;
 
-function inEnum<T extends string>(value: string | null, allowed: readonly T[]): T | undefined {
-  return value != null && (allowed as readonly string[]).includes(value) ? (value as T) : undefined;
+function readAll(params: URLSearchParams, key: string): string[] {
+  return params.getAll(key).map((v) => v.trim()).filter(Boolean);
+}
+
+function inEnumList<T extends string>(values: string[], allowed: readonly T[]): T[] {
+  const out: T[] = [];
+  for (const value of values) {
+    if ((allowed as readonly string[]).includes(value)) {
+      out.push(value as T);
+    }
+  }
+  return out;
 }
 
 /** number finito >= 0, si no undefined. */
@@ -50,11 +65,6 @@ function toNonNegativeNumber(value: string | null): number | undefined {
 function toPositiveInt(value: string | null): number | undefined {
   const n = toNonNegativeNumber(value);
   return n !== undefined && Number.isInteger(n) && n > 0 ? n : undefined;
-}
-
-function toRating(value: string | null): number | undefined {
-  const n = toNonNegativeNumber(value);
-  return n !== undefined && n >= 0 && n <= 5 ? n : undefined;
 }
 
 function toFlexMonth(value: string | null): string | undefined {
@@ -72,19 +82,25 @@ function toIsoDate(value: string | null): string | undefined {
   return value != null && ISO_DATE.test(value) ? value : undefined;
 }
 
-const PRICE_MARKET_VALUES = ['below_market', 'at_market', 'above_market'] as const;
+function toPriceMarketList(values: string[]): PriceMarketFilter[] {
+  return inEnumList(values, PRICE_MARKET_VALUES);
+}
 
-function toPriceMarket(
-  value: string | null,
-): SearchFilters['priceMarket'] | undefined {
-  return value != null && (PRICE_MARKET_VALUES as readonly string[]).includes(value)
-    ? (value as SearchFilters['priceMarket'])
-    : undefined;
+function toNeighborhoodIds(params: URLSearchParams): number[] {
+  const out: number[] = [];
+  for (const raw of readAll(params, 'neighborhoodId')) {
+    const id = toPositiveInt(raw);
+    if (id !== undefined && !out.includes(id)) {
+      out.push(id);
+    }
+  }
+  return out;
 }
 
 /**
  * Lee filtros desde los search params de la URL. Tolerante: valores inválidos o
  * fuera de rango se descartan (no rompen la pantalla). Strings vacíos se omiten.
+ * Params repetibles (`powertrain=…&powertrain=…`) se conservan todos.
  */
 export function parseFilters(params: URLSearchParams): SearchFilters {
   const q =
@@ -104,16 +120,23 @@ export function parseFilters(params: URLSearchParams): SearchFilters {
   const flexDaysRaw = params.get('flexDays');
   const flexDays = flexMonth ? toFlexDays(flexDaysRaw, daysInFlexMonth(flexMonth)) : undefined;
 
+  const category = inEnumList(readAll(params, 'category'), CAR_TYPES);
+  const transmission = inEnumList(readAll(params, 'transmission'), TRANSMISSIONS);
+  const powertrain = inEnumList(readAll(params, 'powertrain'), POWERTRAINS);
+  const priceMarket = toPriceMarketList(readAll(params, 'priceMarket'));
+  const rating = inEnumList(readAll(params, 'rating'), RATING_UI_KEYS);
+  const neighborhoodIds = toNeighborhoodIds(params);
+
   const filters: SearchFilters = {
     q: q ? q : undefined,
-    category: inEnum(params.get('category'), CAR_TYPES),
-    transmission: inEnum(params.get('transmission'), TRANSMISSIONS),
-    powertrain: inEnum(params.get('powertrain'), POWERTRAINS),
+    category: category.length ? category : undefined,
+    transmission: transmission.length ? transmission : undefined,
+    powertrain: powertrain.length ? powertrain : undefined,
     priceMin: toNonNegativeNumber(params.get('priceMin')),
     priceMax: toNonNegativeNumber(params.get('priceMax')),
-    priceMarket: toPriceMarket(params.get('priceMarket')),
-    rating: toRating(params.get('rating')),
-    neighborhoodId: toPositiveInt(params.get('neighborhoodId')),
+    priceMarket: priceMarket.length ? priceMarket : undefined,
+    rating: rating.length ? rating : undefined,
+    neighborhoodIds: neighborhoodIds.length ? neighborhoodIds : undefined,
     flexible: flexible || undefined,
     flexMonth: flexible ? flexMonth : undefined,
     flexDays: flexible ? flexDays : undefined,
@@ -134,43 +157,49 @@ export function parseFilters(params: URLSearchParams): SearchFilters {
 }
 
 /**
- * Serializa filtros para la API REST (`q`, sort API, …).
+ * Serializa filtros para la API REST (`q`, sort API, arrays → keys repetidas).
  */
-export function filtersToApiParams(filters: SearchFilters): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const [key, value] of Object.entries(filters)) {
-    if (value === undefined || value === null) continue;
-    if (key === 'from' || key === 'until') {
-      if (filters.flexible) continue;
-    }
-    if ((key === 'flexMonth' || key === 'flexDays') && !filters.flexible) continue;
-    const s = String(value).trim();
-    if (s === '') continue;
-    if (key === 'q') {
-      out.q = s;
-    } else if (key === 'flexible') {
-      if (value === true) out.flexible = 'true';
-    } else {
-      out[key] = s;
-    }
+export function filtersToApiParams(
+  filters: SearchFilters,
+): Record<string, string | string[] | number | boolean> {
+  const out: Record<string, string | string[] | number | boolean> = {};
+  if (filters.q?.trim()) out.q = filters.q.trim();
+  if (filters.category?.length) out.category = [...filters.category];
+  if (filters.transmission?.length) out.transmission = [...filters.transmission];
+  if (filters.powertrain?.length) out.powertrain = [...filters.powertrain];
+  if (filters.priceMin !== undefined) out.priceMin = filters.priceMin;
+  if (filters.priceMax !== undefined) out.priceMax = filters.priceMax;
+  if (filters.priceMarket?.length) out.priceMarket = [...filters.priceMarket];
+  if (filters.rating?.length) out.rating = [...filters.rating];
+  if (filters.neighborhoodIds?.length) {
+    out.neighborhoodId = filters.neighborhoodIds.map(String);
   }
+  if (filters.flexible) {
+    out.flexible = true;
+    if (filters.flexMonth) out.flexMonth = filters.flexMonth;
+    if (filters.flexDays !== undefined) out.flexDays = filters.flexDays;
+  } else {
+    if (filters.from) out.from = filters.from;
+    if (filters.until) out.until = filters.until;
+  }
+  if (filters.sort) out.sort = filters.sort;
   return out;
 }
 
 /**
- * Serializa filtros a URL (paridad JSP: `query`, sort `date,desc`, …).
+ * Serializa filtros a URL (paridad JSP: `query`, sort `date,desc`, params repetidos).
  */
 export function filtersToSearchParams(filters: SearchFilters): URLSearchParams {
   const params = new URLSearchParams();
   if (filters.q) params.set('query', filters.q);
-  if (filters.category) params.set('category', filters.category);
-  if (filters.transmission) params.set('transmission', filters.transmission);
-  if (filters.powertrain) params.set('powertrain', filters.powertrain);
+  filters.category?.forEach((c) => params.append('category', c));
+  filters.transmission?.forEach((t) => params.append('transmission', t));
+  filters.powertrain?.forEach((p) => params.append('powertrain', p));
   if (filters.priceMin !== undefined) params.set('priceMin', String(filters.priceMin));
   if (filters.priceMax !== undefined) params.set('priceMax', String(filters.priceMax));
-  if (filters.priceMarket) params.set('priceMarket', filters.priceMarket);
-  if (filters.rating !== undefined) params.set('rating', String(filters.rating));
-  if (filters.neighborhoodId !== undefined) params.set('neighborhoodId', String(filters.neighborhoodId));
+  filters.priceMarket?.forEach((p) => params.append('priceMarket', p));
+  filters.rating?.forEach((r) => params.append('rating', r));
+  filters.neighborhoodIds?.forEach((id) => params.append('neighborhoodId', String(id)));
   if (filters.flexible && filters.flexMonth) {
     params.set('flexible', 'true');
     params.set('flexMonth', filters.flexMonth);
@@ -185,5 +214,7 @@ export function filtersToSearchParams(filters: SearchFilters): URLSearchParams {
 
 /** true si no hay ningún filtro activo (para mostrar estado inicial/empty). */
 export function isEmptyFilters(filters: SearchFilters): boolean {
-  return Object.values(filters).every((v) => v === undefined || v === null || v === '');
+  return Object.values(filters).every(
+    (v) => v === undefined || v === null || v === '' || (Array.isArray(v) && v.length === 0),
+  );
 }

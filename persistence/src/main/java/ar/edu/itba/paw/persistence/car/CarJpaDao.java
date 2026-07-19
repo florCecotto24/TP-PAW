@@ -10,11 +10,13 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -334,6 +336,15 @@ public class CarJpaDao implements CarDao {
         if (ratingBands.contains("OVER_4")) {
             conditions.add("c.ratingAvg >= 4");
         }
+        if (ratingBands.contains("5")) {
+            conditions.add("c.ratingAvg >= 5");
+        }
+        if (ratingBands.contains("4")) {
+            conditions.add("c.ratingAvg >= 4");
+        }
+        if (ratingBands.contains("3")) {
+            conditions.add("c.ratingAvg >= 3");
+        }
         if (!conditions.isEmpty()) {
             jpql.append("AND (").append(String.join(" OR ", conditions)).append(") ");
         }
@@ -399,6 +410,15 @@ public class CarJpaDao implements CarDao {
         }
         if (ratingBands.contains("OVER_4")) {
             conditions.add("c.rating_avg >= 4");
+        }
+        if (ratingBands.contains("5")) {
+            conditions.add("c.rating_avg >= 5");
+        }
+        if (ratingBands.contains("4")) {
+            conditions.add("c.rating_avg >= 4");
+        }
+        if (ratingBands.contains("3")) {
+            conditions.add("c.rating_avg >= 3");
         }
         if (!conditions.isEmpty()) {
             sql.append("AND (").append(String.join(" OR ", conditions)).append(") ");
@@ -977,9 +997,7 @@ public class CarJpaDao implements CarDao {
             sql.append("AND la.day_price <= :maxPrice ");
             params.put("maxPrice", criteria.getMaxPrice());
         }
-        if (criteria.getPriceMarketPosition() != null) {
-            appendPriceMarketPositionFilter(sql, params, criteria.getPriceMarketPosition());
-        }
+        appendPriceMarketPositionFilter(sql, params, criteria.getPriceMarketPositions());
         appendCarSearchRatingBandFilter(sql, criteria.getRatingBands());
         if (criteria.isFlexibleSearch()) {
             appendFlexibleSearchFilter(sql, params, criteria);
@@ -1062,7 +1080,15 @@ public class CarJpaDao implements CarDao {
     private static void appendPriceMarketPositionFilter(
             final StringBuilder sql,
             final Map<String, Object> params,
-            final PriceMarketPosition position) {
+            final Collection<PriceMarketPosition> positions) {
+        if (positions == null || positions.isEmpty()) {
+            return;
+        }
+        final Set<PriceMarketPosition> distinct = EnumSet.copyOf(positions);
+        if (distinct.size() == PriceMarketPosition.values().length) {
+            // Every market band selected -> equivalent to no filter.
+            return;
+        }
         sql.append("AND EXISTS (")
                 .append("SELECT 1 FROM (")
                 .append("  SELECT AVG(peer.min_price) AS avg_price, COUNT(*) AS sample_count ")
@@ -1086,21 +1112,33 @@ public class CarJpaDao implements CarDao {
                 .append("  WHERE la_self.car_id = c.id AND la_self.kind = '").append(KIND_OFFERED).append("'")
                 .append(") self ")
                 .append("WHERE market.sample_count >= 2 ");
-        switch (position) {
-            case BELOW_MARKET -> {
-                sql.append("AND self.self_price <= market.avg_price * :belowMarketThreshold) ");
-                params.put("belowMarketThreshold", CarPriceMarketInsight.BELOW_MARKET_THRESHOLD);
+        final List<String> conditions = new ArrayList<>();
+        boolean needsBelowThreshold = false;
+        boolean needsAboveThreshold = false;
+        for (final PriceMarketPosition position : distinct) {
+            switch (position) {
+                case BELOW_MARKET -> {
+                    conditions.add("self.self_price <= market.avg_price * :belowMarketThreshold");
+                    needsBelowThreshold = true;
+                }
+                case AT_MARKET -> {
+                    conditions.add("(self.self_price > market.avg_price * :belowMarketThreshold "
+                            + "AND self.self_price <= market.avg_price * :aboveMarketThreshold)");
+                    needsBelowThreshold = true;
+                    needsAboveThreshold = true;
+                }
+                case ABOVE_MARKET -> {
+                    conditions.add("self.self_price > market.avg_price * :aboveMarketThreshold");
+                    needsAboveThreshold = true;
+                }
             }
-            case AT_MARKET -> {
-                sql.append("AND self.self_price > market.avg_price * :belowMarketThreshold ")
-                        .append("AND self.self_price <= market.avg_price * :aboveMarketThreshold) ");
-                params.put("belowMarketThreshold", CarPriceMarketInsight.BELOW_MARKET_THRESHOLD);
-                params.put("aboveMarketThreshold", CarPriceMarketInsight.ABOVE_MARKET_THRESHOLD);
-            }
-            case ABOVE_MARKET -> {
-                sql.append("AND self.self_price > market.avg_price * :aboveMarketThreshold) ");
-                params.put("aboveMarketThreshold", CarPriceMarketInsight.ABOVE_MARKET_THRESHOLD);
-            }
+        }
+        sql.append("AND (").append(String.join(" OR ", conditions)).append(")) ");
+        if (needsBelowThreshold) {
+            params.put("belowMarketThreshold", CarPriceMarketInsight.BELOW_MARKET_THRESHOLD);
+        }
+        if (needsAboveThreshold) {
+            params.put("aboveMarketThreshold", CarPriceMarketInsight.ABOVE_MARKET_THRESHOLD);
         }
     }
 
@@ -1121,6 +1159,15 @@ public class CarJpaDao implements CarDao {
         }
         if (ratingBands.contains("OVER_4")) {
             conditions.add("c.rating_avg >= 4");
+        }
+        if (ratingBands.contains("5")) {
+            conditions.add("c.rating_avg >= 5");
+        }
+        if (ratingBands.contains("4")) {
+            conditions.add("c.rating_avg >= 4");
+        }
+        if (ratingBands.contains("3")) {
+            conditions.add("c.rating_avg >= 3");
         }
         if (!conditions.isEmpty()) {
             sql.append("AND (").append(String.join(" OR ", conditions)).append(") ");

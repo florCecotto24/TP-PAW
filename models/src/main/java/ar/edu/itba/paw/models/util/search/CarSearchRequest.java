@@ -34,8 +34,8 @@ public final class CarSearchRequest {
     private final boolean flexible;
     private final String flexMonth;
     private final Integer flexDays;
-    /** REST {@code priceMarket}: keep only listings in that market band. */
-    private final PriceMarketPosition priceMarketPosition;
+    /** REST {@code priceMarket}: keep listings in any of these market bands (OR). */
+    private final List<PriceMarketPosition> priceMarketPositions;
 
     private CarSearchRequest(final Builder b) {
         this.query = b.query;
@@ -54,7 +54,8 @@ public final class CarSearchRequest {
         this.flexible = b.flexible;
         this.flexMonth = b.flexMonth;
         this.flexDays = b.flexDays;
-        this.priceMarketPosition = b.priceMarketPosition;
+        this.priceMarketPositions = b.priceMarketPositions == null
+                ? List.of() : List.copyOf(b.priceMarketPositions);
     }
 
     public static Builder builder() {
@@ -77,7 +78,7 @@ public final class CarSearchRequest {
     public boolean isFlexible() { return flexible; }
     public String getFlexMonth() { return flexMonth; }
     public Integer getFlexDays() { return flexDays; }
-    public PriceMarketPosition getPriceMarketPosition() { return priceMarketPosition; }
+    public List<PriceMarketPosition> getPriceMarketPositions() { return priceMarketPositions; }
 
     public static final class Builder {
         private String query;
@@ -96,7 +97,7 @@ public final class CarSearchRequest {
         private boolean flexible;
         private String flexMonth;
         private Integer flexDays;
-        private PriceMarketPosition priceMarketPosition;
+        private List<PriceMarketPosition> priceMarketPositions;
 
         public Builder query(final String v) { this.query = v; return this; }
         public Builder categories(final List<Car.Type> v) { this.categories = v; return this; }
@@ -114,7 +115,7 @@ public final class CarSearchRequest {
         public Builder flexible(final boolean v) { this.flexible = v; return this; }
         public Builder flexMonth(final String v) { this.flexMonth = v; return this; }
         public Builder flexDays(final Integer v) { this.flexDays = v; return this; }
-        public Builder priceMarketPosition(final PriceMarketPosition v) { this.priceMarketPosition = v; return this; }
+        public Builder priceMarketPositions(final List<PriceMarketPosition> v) { this.priceMarketPositions = v; return this; }
 
         public CarSearchRequest build() {
             return new CarSearchRequest(this);
