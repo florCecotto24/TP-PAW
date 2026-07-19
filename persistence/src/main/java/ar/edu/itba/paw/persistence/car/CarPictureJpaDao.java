@@ -54,7 +54,15 @@ public class CarPictureJpaDao implements CarPictureDao {
 
     @Override
     public Optional<CarPicture> getCarPictureById(final long id) {
-        return Optional.ofNullable(em.find(CarPicture.class, id));
+        final List<CarPicture> rows = em.createQuery(
+                        "FROM CarPicture cp "
+                                + "LEFT JOIN FETCH cp.image "
+                                + "LEFT JOIN FETCH cp.storedFile "
+                                + "WHERE cp.id = :id",
+                        CarPicture.class)
+                .setParameter("id", id)
+                .getResultList();
+        return rows.isEmpty() ? Optional.empty() : Optional.of(rows.get(0));
     }
 
     @Override

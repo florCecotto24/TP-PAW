@@ -13,6 +13,9 @@ import ar.edu.itba.paw.services.location.LocationService;
 /**
  * {@link CarAvailabilityAddressFormatter} implementation backed by {@link LocationService} for neighborhood lookups.
  * Transaction boundaries are provided by callers; this type stays {@code final} and is not proxied for AOP.
+ *
+ * Resolves neighborhood names via {@link CarAvailability#getNeighborhoodId()} + {@link LocationService}
+ * only — never navigates the LAZY {@code neighborhood} association (avoids N+1 / LIE in mail jobs).
  */
 @Component
 public final class CarAvailabilityAddressFormatterImpl implements CarAvailabilityAddressFormatter {
@@ -28,23 +31,15 @@ public final class CarAvailabilityAddressFormatterImpl implements CarAvailabilit
     public String formatPublicPickupLocation(final CarAvailability availability) {
         return formatPublicPickupLocation(
                 availability.getStartPointStreet(),
-                availability.getNeighborhoodId().orElse(null),
-                availability.getNeighborhood());
+                availability.getNeighborhoodId().orElse(null));
     }
 
     private String formatPublicPickupLocation(final String startPointStreet, final Long neighborhoodId) {
-        return formatPublicPickupLocation(startPointStreet, neighborhoodId, null);
-    }
-
-    private String formatPublicPickupLocation(
-            final String startPointStreet,
-            final Long neighborhoodId,
-            final Neighborhood loadedNeighborhood) {
         final String street = startPointStreet == null ? "" : startPointStreet.trim();
         if (neighborhoodId == null) {
             return street;
         }
-        final String neighborhoodName = resolveNeighborhoodName(neighborhoodId, loadedNeighborhood);
+        final String neighborhoodName = resolveNeighborhoodName(neighborhoodId);
         if (neighborhoodName.isBlank()) {
             return street;
         }
@@ -54,13 +49,7 @@ public final class CarAvailabilityAddressFormatterImpl implements CarAvailabilit
         return street + ", " + neighborhoodName.trim();
     }
 
-    private String resolveNeighborhoodName(final Long neighborhoodId, final Neighborhood loadedNeighborhood) {
-        if (loadedNeighborhood != null) {
-            final String loadedName = loadedNeighborhood.getName();
-            if (loadedName != null && !loadedName.isBlank()) {
-                return loadedName.trim();
-            }
-        }
+    private String resolveNeighborhoodName(final Long neighborhoodId) {
         if (neighborhoodId == null) {
             return "";
         }
@@ -87,9 +76,7 @@ public final class CarAvailabilityAddressFormatterImpl implements CarAvailabilit
         if (availability.getNeighborhoodId().isEmpty()) {
             return streetWithNumber;
         }
-        final String neighborhoodName = resolveNeighborhoodName(
-                availability.getNeighborhoodId().get(),
-                availability.getNeighborhood());
+        final String neighborhoodName = resolveNeighborhoodName(availability.getNeighborhoodId().get());
         if (neighborhoodName.isBlank()) {
             return streetWithNumber;
         }

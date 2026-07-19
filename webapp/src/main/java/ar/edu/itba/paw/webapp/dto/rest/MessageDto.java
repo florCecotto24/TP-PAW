@@ -14,6 +14,8 @@ public final class MessageDto {
 
     private static final DateTimeFormatter ISO_OFFSET = DateTimeFormatter.ISO_OFFSET_DATE_TIME;
 
+    private String senderForename;
+    private String senderSurname;
     private String body;
     private String createdAt;
     private boolean seen;
@@ -26,6 +28,8 @@ public final class MessageDto {
 
     public static MessageDto fromDto(final ReservationMessageDto dto, final UriInfo uriInfo) {
         final MessageDto out = new MessageDto();
+        out.senderForename = dto.getSenderForename();
+        out.senderSurname = dto.getSenderSurname();
         out.body = dto.getBody();
         out.createdAt = dto.getCreatedAt() == null ? null : ISO_OFFSET.format(dto.getCreatedAt());
         out.seen = dto.isSeen();
@@ -43,6 +47,22 @@ public final class MessageDto {
                             uriInfo, dto.getReservationId(), dto.getId()).toString());
         }
         return out;
+    }
+
+    public String getSenderForename() {
+        return senderForename;
+    }
+
+    public void setSenderForename(final String senderForename) {
+        this.senderForename = senderForename;
+    }
+
+    public String getSenderSurname() {
+        return senderSurname;
+    }
+
+    public void setSenderSurname(final String senderSurname) {
+        this.senderSurname = senderSurname;
     }
 
     public String getBody() {

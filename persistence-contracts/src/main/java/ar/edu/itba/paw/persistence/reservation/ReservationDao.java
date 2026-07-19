@@ -76,14 +76,12 @@ public interface ReservationDao {
 
     int attachPaymentReceiptAndAccept(long reservationId, long riderId, long storedFileId);
 
-    Optional<Reservation> getReservationById(long id);
-
     /**
-     * Same as {@link #getReservationById}, but {@code JOIN FETCH}es car, owner and catalog brand/model
-     * so mail composers can resolve owner and vehicle label after the persistence session closes
+     * Loads a reservation by id with rider/car/owner/catalog {@code JOIN FETCH}ed so mail composers
+     * and REST mapping can navigate the graph after the persistence session closes
      * (e.g. payment-proof sweep: cancel in {@code REQUIRES_NEW}, then enqueue email outside that TX).
      */
-    Optional<Reservation> getReservationByIdForMail(long id);
+    Optional<Reservation> getReservationById(long id);
 
     Optional<Reservation> getOwnerReservationById(long ownerId, long reservationId);
 

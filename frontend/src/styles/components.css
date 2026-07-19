@@ -3007,27 +3007,7 @@ body.reservation-chat-body {
     background-color: #fff;
 }
 
-/* ─── Admin panel (panel.jsp): header band + nav cards + quick-action pill.
-       Réplica de los estilos inline de panel.jsp (antes solo en el JSP). ─── */
-
-.admin-panel-header {
-    background: var(--color-surface);
-    border-bottom: 1px solid var(--color-border);
-    padding: 2rem 0 1.75rem;
-}
-
-.admin-panel-header__icon {
-    width: 52px;
-    height: 52px;
-    border-radius: var(--radius-card);
-    background: var(--color-primary-soft);
-    color: var(--color-primary);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.5rem;
-    flex-shrink: 0;
-}
+/* ─── Admin panel: nav cards + quick-action pill. ─── */
 
 .admin-nav-card {
     transition: box-shadow var(--transition-base), transform var(--transition-base);

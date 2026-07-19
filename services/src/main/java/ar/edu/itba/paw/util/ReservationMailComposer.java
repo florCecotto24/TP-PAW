@@ -142,7 +142,7 @@ public final class ReservationMailComposer {
      */
     public void sendReservationEditedEmail(final Reservation reservation, final CarAvailability pickupAvailability) {
         try {
-            final Optional<User> riderOpt = userService.getUserById(reservation.getRiderId());
+            final Optional<User> riderOpt = resolveRider(reservation);
             final Optional<User> ownerOpt = support.resolveOwnerFromReservation(reservation);
             if (riderOpt.isEmpty() || ownerOpt.isEmpty()) {
                 return;
@@ -194,7 +194,7 @@ public final class ReservationMailComposer {
     public void sendCancellationEmail(final Reservation reservation, final boolean notifyOwnerCancellation) {
         try {
             final long riderId = reservation.getRiderId();
-            final Optional<User> riderOpt = userService.getUserById(riderId);
+            final Optional<User> riderOpt = resolveRider(reservation);
             final Optional<CarAvailability> availabilityOpt = support.resolveAvailabilityForReservation(reservation);
             final Optional<User> listingOwnerOpt = support.resolveOwnerFromReservation(reservation);
             if (riderOpt.isEmpty()) {
@@ -334,7 +334,7 @@ public final class ReservationMailComposer {
     public void sendRiderRefundProofReceived(final long reservationId, final Reservation reservation) {
         try {
             final Optional<User> ownerOpt = support.resolveOwnerFromReservation(reservation);
-            final Optional<User> riderOpt = userService.getUserById(reservation.getRiderId());
+            final Optional<User> riderOpt = resolveRider(reservation);
             if (ownerOpt.isEmpty() || riderOpt.isEmpty()) {
                 LOGGER.atWarn().addArgument(reservationId)
                         .log("Skipping rider refund-proof email: missing owner or rider (reservation id={})");
@@ -442,7 +442,7 @@ public final class ReservationMailComposer {
     // ---------------------------------------------------------------------------------------
 
     public Optional<ReservationMailPayload> buildDuePaymentProofReminder(final Reservation reservation) {
-        final Optional<User> riderOpt = userService.getUserById(reservation.getRiderId());
+        final Optional<User> riderOpt = resolveRider(reservation);
         final Optional<User> ownerOpt = support.resolveOwnerFromReservation(reservation);
         if (riderOpt.isEmpty() || ownerOpt.isEmpty()) {
             return Optional.empty();
@@ -488,7 +488,7 @@ public final class ReservationMailComposer {
     // ---------------------------------------------------------------------------------------
 
     public Optional<RiderCarReturnEmailPayload> buildRiderCarReturnPayload(final Reservation reservation) {
-        final Optional<User> riderOpt = userService.getUserById(reservation.getRiderId());
+        final Optional<User> riderOpt = resolveRider(reservation);
         final Optional<CarAvailability> availabilityOpt = support.resolveAvailabilityForReservation(reservation);
         final Optional<User> ownerOpt = support.resolveOwnerFromReservation(reservation);
         if (riderOpt.isEmpty() || ownerOpt.isEmpty()) {
@@ -524,7 +524,7 @@ public final class ReservationMailComposer {
     }
 
     public Optional<RiderReviewInviteEmailPayload> buildRiderReviewInvitePayload(final Reservation reservation) {
-        final Optional<User> riderOpt = userService.getUserById(reservation.getRiderId());
+        final Optional<User> riderOpt = resolveRider(reservation);
         if (riderOpt.isEmpty()) {
             return Optional.empty();
         }
@@ -544,5 +544,22 @@ public final class ReservationMailComposer {
 
     public void sendRiderReviewInvite(final RiderReviewInviteEmailPayload payload) {
         emailService.sendRiderReviewInviteEmail(payload);
+    }
+
+    /**
+     * Prefer the already-hydrated rider association when present; otherwise load by id.
+     * Call sites that receive an explicit {@code riderId} keep using {@code getUserById}
+     * because the reservation graph may not include the rider.
+     *
+     * {@code getRider()} on a mandatory {@code @ManyToOne} returns a proxy even when
+     * uninitialized — gate on JPA {@code PersistenceUtil.isLoaded} so mail jobs without FETCH
+     * fall back to {@code getUserById} instead of tripping {@code LazyInitializationException}.
+     */
+    private Optional<User> resolveRider(final Reservation reservation) {
+        final User rider = reservation.getRider();
+        if (rider != null && javax.persistence.Persistence.getPersistenceUtil().isLoaded(rider)) {
+            return Optional.of(rider);
+        }
+        return userService.getUserById(reservation.getRiderId());
     }
 }

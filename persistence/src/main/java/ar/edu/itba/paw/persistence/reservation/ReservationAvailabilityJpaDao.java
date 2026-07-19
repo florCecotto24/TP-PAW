@@ -98,7 +98,8 @@ public class ReservationAvailabilityJpaDao implements ReservationAvailabilityDao
     private List<ReservationAvailabilityCoverage> loadCoveragesForReservation(final long reservationId) {
         return em.createQuery(
                         "FROM ReservationAvailabilityCoverage ra "
-                                + "JOIN FETCH ra.availability "
+                                + "JOIN FETCH ra.availability a "
+                                + "LEFT JOIN FETCH a.neighborhood "
                                 + "JOIN FETCH ra.reservation "
                                 + "WHERE ra.reservation.id = :reservationId",
                         ReservationAvailabilityCoverage.class)

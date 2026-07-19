@@ -59,6 +59,9 @@ info:
     El cliente sigue cada `self` con el MIME del ítem. N+1 HTTP **previsto**.
     Endpoints: `/cars/{id}/similar`, `/users/{id}/favorites`, `GET /reviews`,
     `GET /reservations`.
+    En `GET /reviews`, tras el follow de cada `self` a `ReviewDto`, el nombre
+    visible del autor es un **segundo hop intencional** vía `links.author`
+    (H-F1): no se embebe forename/surname en la reseña.
 
     **Embedded (patrón B)** — permitido cuando (1) la colección *es* la vista
     principal de ese recurso o sub-recurso, (2) los ítems no son copias de
@@ -527,6 +530,8 @@ paths:
 
         **Patrón A (link-only):** cada reseña vive en `GET /reviews/{reviewId}`.
         La colección filtrada devuelve solo `Links`; follow con `review.v1+json`.
+        El display name del autor requiere un segundo follow intencional de
+        `links.author` (H-F1); `ReviewDto` no embebe campos del autor.
       parameters:
         - name: carId
           in: query
@@ -2616,6 +2621,8 @@ components:
     MessageDto:
       type: object
       properties:
+        senderForename: { type: string }
+        senderSurname: { type: string }
         body: { type: string }
         createdAt: { type: string, format: date-time }
         seen: { type: boolean }
@@ -2636,6 +2643,8 @@ components:
         Review es una entidad fuerte (id propio); (reservation_id, made_by_rider)
         queda como UNIQUE para la regla de "una reseña por lado", ya no como PK.
         Esto le da a cada reseña una URN única (`links.self` → `/reviews/{id}`).
+        El nombre visible del autor no se embebe aquí: follow intencional de
+        `links.author` (H-F1) tras cargar el `ReviewDto`.
       properties:
         rating: { type: integer, minimum: 1, maximum: 5, nullable: true }
         comment: { type: string, nullable: true }
@@ -2646,6 +2655,8 @@ components:
             - $ref: "#/components/schemas/Links"
           description: >
             self (`/reviews/{id}`), reservation, car, author, image (si hay).
+            `author` es el hop intencional (H-F1) para el display name; no se
+            duplican forename/surname en el body de la reseña.
 
     # ----- CATALOG -----
     BrandDto:

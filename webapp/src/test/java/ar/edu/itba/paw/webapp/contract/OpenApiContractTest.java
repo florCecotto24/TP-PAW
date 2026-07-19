@@ -681,6 +681,8 @@ class OpenApiContractTest {
 
     private static MessageDto sampleMessageDto() {
         final MessageDto dto = new MessageDto();
+        dto.setSenderForename("Alice");
+        dto.setSenderSurname("Smith");
         dto.setBody("hello");
         dto.setCreatedAt("2026-06-02T15:30:00+00:00");
         dto.setSeen(false);

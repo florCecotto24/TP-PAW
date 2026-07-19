@@ -8,6 +8,11 @@
             <pattern>${defaultPattern}</pattern>
         </encoder>
     </appender>
+    <!--
+      Same intentional ignore as runtime (WebAuthConfig + cátedra OK for /public|/assets).
+      Contained in logback-includes.xml for Jetty/prod; tests use this file alone.
+    -->
+    <logger name="org.springframework.security.config.annotation.web.builders.WebSecurity" level="ERROR"/>
     <root level="INFO">
         <appender-ref ref="STDOUT" />
     </root>

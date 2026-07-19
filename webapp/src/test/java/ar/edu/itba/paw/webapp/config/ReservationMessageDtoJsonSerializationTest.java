@@ -22,7 +22,7 @@ class ReservationMessageDtoJsonSerializationTest {
         // 1.Arrange
         final OffsetDateTime createdAt = OffsetDateTime.of(2026, 6, 2, 15, 30, 0, 0, ZoneOffset.UTC);
         final ReservationMessageDto dto =
-                new ReservationMessageDto(1L, 2L, 3L, "Alice", "hello", createdAt, null, false);
+                new ReservationMessageDto(1L, 2L, 3L, "Alice", "Smith", "hello", createdAt, null, false);
 
         // 2.Act
         final String json = objectMapper.writeValueAsString(dto);
@@ -37,7 +37,7 @@ class ReservationMessageDtoJsonSerializationTest {
         // 1.Arrange
         final OffsetDateTime createdAt = OffsetDateTime.of(2026, 6, 2, 15, 30, 0, 0, ZoneOffset.UTC);
         final ReservationMessageDto dto =
-                new ReservationMessageDto(1L, 2L, 3L, "Alice", "hello", createdAt, null, false);
+                new ReservationMessageDto(1L, 2L, 3L, "Alice", "Smith", "hello", createdAt, null, false);
 
         // 2.Act
         final JsonNode root = objectMapper.readTree(objectMapper.writeValueAsString(dto));
@@ -52,7 +52,7 @@ class ReservationMessageDtoJsonSerializationTest {
         // 1.Arrange
         final OffsetDateTime createdAt = OffsetDateTime.of(2026, 6, 2, 15, 30, 0, 0, ZoneOffset.UTC);
         final ReservationMessageDto dto =
-                new ReservationMessageDto(1L, 2L, 3L, "Alice", "hello", createdAt, null, true);
+                new ReservationMessageDto(1L, 2L, 3L, "Alice", "Smith", "hello", createdAt, null, true);
 
         // 2.Act
         final JsonNode root = objectMapper.readTree(objectMapper.writeValueAsString(dto));

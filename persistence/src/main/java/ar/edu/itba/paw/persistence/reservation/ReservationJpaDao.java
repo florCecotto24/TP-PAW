@@ -59,11 +59,13 @@ public class ReservationJpaDao implements ReservationDao {
             Reservation.Status.ACCEPTED, Reservation.Status.STARTED, Reservation.Status.FINISHED);
 
     /**
-     * Preloads car, owner and catalog labels for batch mail/scheduler jobs that call
-     * {@code resolveOwnerFromReservation} / {@code resolveVehicleLabelFromReservation} per row.
+     * Preloads rider, car, owner and catalog labels for batch mail/scheduler jobs that call
+     * {@code resolveOwnerFromReservation} / {@code resolveVehicleLabelFromReservation} / rider
+     * display per row (avoids N {@code getUserById} / brand loads).
      */
     private static final String FETCH_RESERVATION_CAR_CATALOG_FOR_MAIL =
-            "JOIN FETCH r.car c JOIN FETCH c.owner LEFT JOIN FETCH c.carModel cm LEFT JOIN FETCH cm.brand ";
+            "JOIN FETCH r.rider JOIN FETCH r.car c JOIN FETCH c.owner "
+                    + "LEFT JOIN FETCH c.carModel cm LEFT JOIN FETCH cm.brand ";
 
     /**
      * Cross-aggregate DAO intentionally injected to keep {@link #loadReservationCardsByIdNativeQuery}
@@ -284,11 +286,6 @@ public class ReservationJpaDao implements ReservationDao {
 
     @Override
     public Optional<Reservation> getReservationById(final long id) {
-        return Optional.ofNullable(em.find(Reservation.class, id));
-    }
-
-    @Override
-    public Optional<Reservation> getReservationByIdForMail(final long id) {
         return em.createQuery(
                         "FROM Reservation r "
                                 + FETCH_RESERVATION_CAR_CATALOG_FOR_MAIL
@@ -302,7 +299,8 @@ public class ReservationJpaDao implements ReservationDao {
     public Optional<Reservation> getOwnerReservationById(final long ownerId, final long reservationId) {
         return em.createQuery(
                         "FROM Reservation r "
-                                + "WHERE r.id = :reservationId AND r.car.owner.id = :ownerId",
+                                + FETCH_RESERVATION_CAR_CATALOG_FOR_MAIL
+                                + "WHERE r.id = :reservationId AND c.owner.id = :ownerId",
                         Reservation.class)
                 .setParameter("reservationId", reservationId)
                 .setParameter("ownerId", ownerId)

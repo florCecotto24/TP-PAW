@@ -123,12 +123,6 @@ public class ReservationServiceImpl implements ReservationService {
 
     @Override
     @Transactional(readOnly = true)
-    public Optional<Reservation> getReservationByIdForMail(final long id) {
-        return reservationDao.getReservationByIdForMail(id);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
     public Optional<Reservation> getRiderReservationById(final long riderId, final long reservationId) {
         // Rider-scope filter applied here (DAO has no rider-scoped variant); see queryService docs.
         return reservationDao.getReservationById(reservationId)

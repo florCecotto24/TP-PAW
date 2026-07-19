@@ -1,31 +1,28 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
+import { useCallback } from 'react';
+import { useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { formatDateTime } from '../../../i18n/dateFormat';
 import { MediaTypes } from '../../../api/mediaTypes';
 import { pageIndexFromParams, withPageIndex } from '../../../api/pageParam';
-import { fetchUserPublic } from '../api';
 import { Avatar, ChatAttachmentPreview, EmptyState, LoadingBlock } from '../../../components/ryden';
 import AdminPageHeader from '../components/AdminPageHeader';
 import { paths } from '../../../routes/paths';
 import type { AdminReservationChatLocationState } from '../../../routes/navigationState';
 import { resolveResourceUri } from '../../../api/resourceUri';
-import { profilePictureAssetUrl } from '../../../api/uri';
 import { getReservation } from '../../reservations/api';
 import AdminPagination from '../components/AdminPagination';
 import type { MessageDto } from '../types';
 import { useAdminErrorMessage } from '../useAdminErrorMessage';
 import { usePagedList } from '../usePagedList';
 
-type SenderProfile = {
-  forename: string;
-  surname: string;
-  avatarUrl: string | null;
-};
-
 function messageBody(msg: MessageDto): string {
   return (msg.body ?? '').trim();
+}
+
+function senderDisplayName(msg: MessageDto, unknownLabel: string): string {
+  const name = `${msg.senderForename ?? ''} ${msg.senderSurname ?? ''}`.trim();
+  return name || unknownLabel;
 }
 
 export default function AdminReservationChatPage() {
@@ -71,47 +68,6 @@ export default function AdminReservationChatPage() {
     messagesPath,
   ]);
 
-  const [senderProfiles, setSenderProfiles] = useState<Record<string, SenderProfile>>({});
-
-  const senderUris = useMemo(() => {
-    const uris = new Set<string>();
-    for (const msg of list.items) {
-      const sender = msg.links.sender;
-      if (sender) uris.add(sender);
-    }
-    return [...uris];
-  }, [list.items]);
-
-  useEffect(() => {
-    let active = true;
-    const missing = senderUris.filter((uri) => senderProfiles[uri] == null);
-    for (const uri of missing) {
-      fetchUserPublic(uri)
-        .then((res) => {
-          if (!active || !res.data) return;
-          setSenderProfiles((prev) => ({
-            ...prev,
-            [uri]: {
-              forename: res.data!.forename ?? '',
-              surname: res.data!.surname ?? '',
-              avatarUrl: profilePictureAssetUrl(res.data!.links),
-            },
-          }));
-        })
-        .catch(() => {
-          if (!active) return;
-          setSenderProfiles((prev) => ({
-            ...prev,
-            [uri]: { forename: t('admin.reservationChat.unknownSender'), surname: '', avatarUrl: null },
-          }));
-        });
-    }
-    return () => {
-      active = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [senderUris, t]);
-
   const displayError = list.error ? errorMessage(list.error) : null;
 
   const resolvingMessages = messagesLinkQuery.isLoading;
@@ -126,11 +82,8 @@ export default function AdminReservationChatPage() {
       <>
         <AdminPageHeader
           title={t('admin.reservationChat.title')}
-          actions={(
-            <Link to={paths.admin.reservations} className="btn btn-outline-secondary btn-sm">
-              ← {t('admin.nav.reservations')}
-            </Link>
-          )}
+          midLabel={t('admin.reservations.title')}
+          midHref={paths.admin.reservations}
         />
         <div className="alert alert-warning" role="alert">
           {t('admin.reservationChat.openFromList')}
@@ -143,13 +96,9 @@ export default function AdminReservationChatPage() {
     <>
       <AdminPageHeader
         title={t('admin.reservationChat.title')}
-        actions={(
-          <Link to={paths.admin.reservations} className="btn btn-outline-secondary btn-sm">
-            ← {t('admin.nav.reservations')}
-          </Link>
-        )}
+        midLabel={t('admin.reservations.title')}
+        midHref={paths.admin.reservations}
       />
-
       {displayError ? <div className="alert alert-danger" role="alert">{displayError}</div> : null}
       {resolvingMessages || list.loading ? <LoadingBlock variant="page" className="py-4" /> : null}
 
@@ -161,17 +110,16 @@ export default function AdminReservationChatPage() {
         <div className="card border-0 shadow-sm bg-white">
           <ul className="list-group list-group-flush">
             {list.items.map((message) => {
-              const senderUri = message.links.sender ?? '';
-              const profile = senderProfiles[senderUri];
               const bodyText = messageBody(message);
               const attachmentUri = message.hasAttachment ? message.links.attachment : undefined;
+              const forename = message.senderForename ?? '';
+              const surname = message.senderSurname ?? '';
               return (
                 <li key={message.links.self} className="list-group-item">
                   <div className="d-flex gap-3">
                     <Avatar
-                      src={profile?.avatarUrl}
-                      forename={profile?.forename}
-                      surname={profile?.surname}
+                      forename={forename}
+                      surname={surname}
                       className="reviewer-avatar flex-shrink-0"
                       imgClassName="reviewer-avatar flex-shrink-0"
                       colored
@@ -180,9 +128,7 @@ export default function AdminReservationChatPage() {
                     <div className="flex-grow-1 min-w-0">
                       <div className="d-flex flex-wrap justify-content-between gap-2 mb-1">
                         <span className="fw-semibold">
-                          {profile
-                            ? `${profile.forename} ${profile.surname}`.trim() || t('admin.reservationChat.unknownSender')
-                            : t('admin.reservationChat.unknownSender')}
+                          {senderDisplayName(message, t('admin.reservationChat.unknownSender'))}
                         </span>
                         <time className="text-secondary small" dateTime={message.createdAt}>
                           {formatDateTime(message.createdAt, i18n.language)}

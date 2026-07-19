@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { Alert, Button, Form } from 'react-bootstrap';
 import { ApiError } from '../../../api/client';
+import { BreadcrumbTrail } from '../../../components/ryden';
 import { paths } from '../../../routes/paths';
-import BreadcrumbTrail from '../../../components/ryden/layout/BreadcrumbTrail';
 import { createAdminUser } from '../api';
 import { useAdminErrorMessage } from '../useAdminErrorMessage';
 
@@ -38,7 +38,10 @@ export default function AdminCreateUserPage() {
         const byField: Record<string, string> = {};
         for (const fe of err.body.errors) byField[fe.field] = fe.message;
         setFieldErrors(byField);
-      } else if (err instanceof ApiError && err.status === 409 && !err.code) {
+      } else if (
+        err instanceof ApiError &&
+        (err.code === 'user.email.alreadyExists' || err.status === 409)
+      ) {
         setError(t('admin.createAdmin.emailTaken'));
       } else {
         setError(errorMessage(err));
@@ -49,84 +52,89 @@ export default function AdminCreateUserPage() {
   }
 
   return (
-    <div className="container py-5 mt-5" style={{ maxWidth: 520 }}>
-      <BreadcrumbTrail
-        homeLabel={t('admin.panel.title')}
-        homeHref={paths.admin.panel}
-        midLabel={t('admin.users.title')}
-        midHref={paths.admin.users}
-        currentLabel={t('admin.createAdmin.title')}
-      />
-      <h1 className="h2 fw-bold mb-4">{t('admin.createAdmin.title')}</h1>
+    <>
+      <div className="mt-4 mb-3">
+        <BreadcrumbTrail
+          homeLabel={t('admin.panel.title')}
+          homeHref={paths.admin.panel}
+          midLabel={t('admin.users.title')}
+          midHref={paths.admin.users}
+          currentLabel={t('admin.createAdmin.title')}
+        />
+      </div>
 
-      {success && (
-        <Alert variant="success" role="status">
-          {success}
-        </Alert>
-      )}
-      {error && (
-        <Alert variant="danger" role="alert">
-          {error}
-        </Alert>
-      )}
+      <div className="mx-auto" style={{ maxWidth: 520 }}>
+        <h1 className="h3 fw-bold mb-4">{t('admin.createAdmin.title')}</h1>
 
-      <div className="card border-0 shadow-sm rounded-4 bg-white">
-        <div className="card-body p-4">
-          <Form onSubmit={onSubmit} noValidate>
-            <Form.Group className="mb-3" controlId="forename">
-              <Form.Label className="fw-semibold">{t('admin.createAdmin.forename')}</Form.Label>
-              <Form.Control
-                className="rounded-3"
-                value={forename}
-                autoComplete="given-name"
-                onChange={(e) => setForename(e.target.value)}
-                isInvalid={!!fieldErrors.forename}
-                required
-              />
-              {fieldErrors.forename ? (
-                <div className="text-danger small d-block mt-1">{fieldErrors.forename}</div>
-              ) : null}
-            </Form.Group>
-            <Form.Group className="mb-3" controlId="surname">
-              <Form.Label className="fw-semibold">{t('admin.createAdmin.surname')}</Form.Label>
-              <Form.Control
-                className="rounded-3"
-                value={surname}
-                autoComplete="family-name"
-                onChange={(e) => setSurname(e.target.value)}
-                isInvalid={!!fieldErrors.surname}
-                required
-              />
-              {fieldErrors.surname ? (
-                <div className="text-danger small d-block mt-1">{fieldErrors.surname}</div>
-              ) : null}
-            </Form.Group>
-            <Form.Group className="mb-4" controlId="email">
-              <Form.Label className="fw-semibold">{t('admin.createAdmin.email')}</Form.Label>
-              <Form.Control
-                type="email"
-                className="rounded-3"
-                value={email}
-                autoComplete="email"
-                onChange={(e) => setEmail(e.target.value)}
-                isInvalid={!!fieldErrors.email}
-                required
-              />
-              {fieldErrors.email ? (
-                <div className="text-danger small d-block mt-1">{fieldErrors.email}</div>
-              ) : null}
-            </Form.Group>
-            <div className="d-flex gap-2">
-              <Button type="submit" variant="primary" className="rounded-3 flex-grow-1" disabled={submitting}>
-                {submitting ? t('admin.createAdmin.submitting') : t('admin.createAdmin.submit')}
-              </Button>
-              <Link to={paths.admin.users} className="btn btn-light border rounded-3">
-                {t('admin.createAdmin.cancel')}
-              </Link>
-            </div>
-          </Form>
+        {success && (
+          <Alert variant="success" role="status">
+            {success}
+          </Alert>
+        )}
+        {error && (
+          <Alert variant="danger" role="alert">
+            {error}
+          </Alert>
+        )}
+
+        <div className="card border-0 shadow-sm rounded-4 bg-white">
+          <div className="card-body p-4">
+            <Form onSubmit={onSubmit} noValidate>
+              <Form.Group className="mb-3" controlId="forename">
+                <Form.Label className="fw-semibold">{t('admin.createAdmin.forename')}</Form.Label>
+                <Form.Control
+                  className="rounded-3"
+                  value={forename}
+                  autoComplete="given-name"
+                  onChange={(e) => setForename(e.target.value)}
+                  isInvalid={!!fieldErrors.forename}
+                  required
+                />
+                {fieldErrors.forename ? (
+                  <div className="text-danger small d-block mt-1">{fieldErrors.forename}</div>
+                ) : null}
+              </Form.Group>
+              <Form.Group className="mb-3" controlId="surname">
+                <Form.Label className="fw-semibold">{t('admin.createAdmin.surname')}</Form.Label>
+                <Form.Control
+                  className="rounded-3"
+                  value={surname}
+                  autoComplete="family-name"
+                  onChange={(e) => setSurname(e.target.value)}
+                  isInvalid={!!fieldErrors.surname}
+                  required
+                />
+                {fieldErrors.surname ? (
+                  <div className="text-danger small d-block mt-1">{fieldErrors.surname}</div>
+                ) : null}
+              </Form.Group>
+              <Form.Group className="mb-4" controlId="email">
+                <Form.Label className="fw-semibold">{t('admin.createAdmin.email')}</Form.Label>
+                <Form.Control
+                  type="email"
+                  className="rounded-3"
+                  value={email}
+                  autoComplete="email"
+                  onChange={(e) => setEmail(e.target.value)}
+                  isInvalid={!!fieldErrors.email}
+                  required
+                />
+                {fieldErrors.email ? (
+                  <div className="text-danger small d-block mt-1">{fieldErrors.email}</div>
+                ) : null}
+              </Form.Group>
+              <div className="d-flex gap-2">
+                <Button type="submit" variant="primary" className="rounded-3 flex-grow-1" disabled={submitting}>
+                  {submitting ? t('admin.createAdmin.submitting') : t('admin.createAdmin.submit')}
+                </Button>
+                <Link to={paths.admin.users} className="btn btn-light border rounded-3">
+                  {t('admin.createAdmin.cancel')}
+                </Link>
+              </div>
+            </Form>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

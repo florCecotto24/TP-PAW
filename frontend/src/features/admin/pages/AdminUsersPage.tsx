@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { collectionQueryPath } from '../../../api/apiDiscovery';
 import { MediaTypes } from '../../../api/mediaTypes';
 import { pageIndexFromParams, withPageIndex } from '../../../api/pageParam';
 import type { UserDto } from '../../../api/types';
 import { EmptyState, LoadingBlock } from '../../../components/ryden';
+import { paths } from '../../../routes/paths';
 import { useSessionStore } from '../../../session/sessionStore';
 import { openAuthenticatedBinary, patchUser, userDocumentPath } from '../api';
 import {
@@ -159,7 +160,16 @@ export default function AdminUsersPage() {
 
   return (
     <>
-      <AdminPageHeader title={t('admin.users.title')} subtitle={t('admin.users.subtitle')} />
+      <AdminPageHeader
+        title={t('admin.users.title')}
+        subtitle={t('admin.users.subtitle')}
+        actions={(
+          <Link to={paths.admin.createAdmin} className="btn btn-primary btn-sm rounded-3">
+            <i className="bi bi-person-plus-fill me-1" aria-hidden="true" />
+            {t('admin.users.createAdmin')}
+          </Link>
+        )}
+      />
 
       <form className="row g-2 align-items-end mb-3" onSubmit={onSubmitFilters}>
         <div className="col-md-4">

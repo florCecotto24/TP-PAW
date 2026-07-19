@@ -34,7 +34,6 @@ import ar.edu.itba.paw.policy.ReservationChatPolicy;
 import ar.edu.itba.paw.policy.ReservationMessageValidationPolicy;
 import ar.edu.itba.paw.util.UploadBinaryMegabyte;
 
-import ar.edu.itba.paw.services.car.CarService;
 import ar.edu.itba.paw.services.support.RecordingEmailService;
 import ar.edu.itba.paw.services.file.StoredFileService;
 import ar.edu.itba.paw.services.user.UserLocaleService;
@@ -59,9 +58,6 @@ class ReservationMessageServiceImplTest {
 
     @Mock
     private UserLocaleService userLocaleService;
-
-    @Mock
-    private CarService carService;
 
     @Mock
     private MailPublicUrls mailPublicUrls;
@@ -92,7 +88,6 @@ class ReservationMessageServiceImplTest {
                 reservationService,
                 userService,
                 userLocaleService,
-                carService,
                 emailService,
                 mailPublicUrls,
                 storedFileService,
@@ -391,11 +386,10 @@ class ReservationMessageServiceImplTest {
         final Reservation reservation = reservation(Reservation.Status.ACCEPTED);
         final User owner = User.identities(OWNER_ID, "o@test.com", "O", "Owner");
         final User rider = User.identities(RIDER_ID, "r@test.com", "R", "Rider");
-        final Car car = Mockito.mock(Car.class);
+        final Car car = reservation.getCar();
         Mockito.when(car.getBrand()).thenReturn("Toyota");
         Mockito.when(car.getModel()).thenReturn("Corolla");
         Mockito.when(car.getOwner()).thenReturn(owner);
-        Mockito.when(carService.getCarById(CAR_ID)).thenReturn(Optional.of(car));
 
         final ReservationMessage message = Mockito.mock(ReservationMessage.class);
         Mockito.when(message.getId()).thenReturn(55L);

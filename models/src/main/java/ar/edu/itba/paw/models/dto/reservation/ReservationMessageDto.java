@@ -9,7 +9,8 @@ public final class ReservationMessageDto {
     private final long id;
     private final long reservationId;
     private final long senderUserId;
-    private final String senderDisplayName;
+    private final String senderForename;
+    private final String senderSurname;
     private final String body;
     private final OffsetDateTime createdAt;
     private final ReservationMessageAttachmentDto attachment;
@@ -19,7 +20,8 @@ public final class ReservationMessageDto {
             final long id,
             final long reservationId,
             final long senderUserId,
-            final String senderDisplayName,
+            final String senderForename,
+            final String senderSurname,
             final String body,
             final OffsetDateTime createdAt,
             final ReservationMessageAttachmentDto attachment,
@@ -27,7 +29,8 @@ public final class ReservationMessageDto {
         this.id = id;
         this.reservationId = reservationId;
         this.senderUserId = senderUserId;
-        this.senderDisplayName = Objects.requireNonNull(senderDisplayName, "senderDisplayName");
+        this.senderForename = Objects.requireNonNull(senderForename, "senderForename");
+        this.senderSurname = Objects.requireNonNull(senderSurname, "senderSurname");
         this.body = body == null ? "" : body;
         this.createdAt = Objects.requireNonNull(createdAt, "createdAt");
         this.attachment = attachment;
@@ -46,8 +49,17 @@ public final class ReservationMessageDto {
         return senderUserId;
     }
 
+    public String getSenderForename() {
+        return senderForename;
+    }
+
+    public String getSenderSurname() {
+        return senderSurname;
+    }
+
+    /** Derived full name for digests and email previews. */
     public String getSenderDisplayName() {
-        return senderDisplayName;
+        return senderForename + " " + senderSurname;
     }
 
     public String getBody() {

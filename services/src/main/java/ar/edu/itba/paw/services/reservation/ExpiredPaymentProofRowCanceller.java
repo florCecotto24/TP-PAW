@@ -45,6 +45,6 @@ public class ExpiredPaymentProofRowCanceller {
         }
         // JOIN FETCH car/owner/catalog before this REQUIRES_NEW TX ends — the caller sends mail
         // after commit, outside any persistence session.
-        return reservationService.getReservationByIdForMail(reservationId);
+        return reservationService.getReservationById(reservationId);
     }
 }

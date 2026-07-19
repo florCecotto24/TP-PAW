@@ -87,9 +87,11 @@ export interface MessageAttachmentDto {
 
 /**
  * Mensaje de chat de una reserva. `links`: self, reservation, sender,
- * attachment (si hay).
+ * attachment (si hay). Nombre del emisor inline para evitar un GET extra.
  */
 export interface MessageDto {
+  senderForename: string;
+  senderSurname: string;
   body: string;
   createdAt: string;
   seen: boolean;

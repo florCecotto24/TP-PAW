@@ -81,10 +81,13 @@ export interface ReservationDto {
 
 /**
  * Mensaje del chat de una reserva (lectura). El admin lee el historial para
- * auditoría vía GET /reservations/{id}/messages. No trae el nombre del emisor
- * inline: se deriva siguiendo el link `sender` (URN a /users/{id}).
+ * auditoría vía GET /reservations/{id}/messages. El nombre del emisor viene
+ * inline (`senderForename` / `senderSurname`); `links.sender` sigue apuntando
+ * a la URN canónica del usuario.
  */
 export interface MessageDto {
+  senderForename?: string;
+  senderSurname?: string;
   body: string;
   createdAt?: string;
   seen?: boolean;

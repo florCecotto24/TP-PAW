@@ -155,7 +155,11 @@ public class ReservationMessageJpaDao implements ReservationMessageDao {
         final List<Long> ids = idRows.stream().map(Number::longValue).collect(Collectors.toList());
         final List<ReservationMessage> hydrated = em.createQuery(
                         "SELECT DISTINCT m FROM ReservationMessage m "
-                                + "JOIN FETCH m.reservation "
+                                + "JOIN FETCH m.reservation r "
+                                + "JOIN FETCH r.car c "
+                                + "JOIN FETCH c.owner "
+                                + "LEFT JOIN FETCH c.carModel cm "
+                                + "LEFT JOIN FETCH cm.brand "
                                 + "JOIN FETCH m.sender "
                                 + "WHERE m.id IN :ids",
                         ReservationMessage.class)

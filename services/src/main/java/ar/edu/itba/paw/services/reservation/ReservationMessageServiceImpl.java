@@ -3,7 +3,6 @@ package ar.edu.itba.paw.services.reservation;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -45,11 +44,11 @@ import ar.edu.itba.paw.policy.ChatAttachmentUploadPolicy;
 import ar.edu.itba.paw.policy.ReservationChatPolicy;
 import ar.edu.itba.paw.policy.ReservationMessageValidationPolicy;
 
-import ar.edu.itba.paw.services.car.CarService;
 import ar.edu.itba.paw.services.email.EmailService;
 import ar.edu.itba.paw.services.file.StoredFileService;
 import ar.edu.itba.paw.services.user.UserLocaleService;
 import ar.edu.itba.paw.services.user.UserService;
+
 @Service
 public class ReservationMessageServiceImpl implements ReservationMessageService {
 
@@ -60,7 +59,6 @@ public class ReservationMessageServiceImpl implements ReservationMessageService 
     private final ReservationService reservationService;
     private final UserService userService;
     private final UserLocaleService userLocaleService;
-    private final CarService carService;
     private final EmailService emailService;
     private final MailPublicUrls mailPublicUrls;
     private final StoredFileService storedFileService;
@@ -75,7 +73,6 @@ public class ReservationMessageServiceImpl implements ReservationMessageService 
             final ReservationService reservationService,
             final UserService userService,
             final UserLocaleService userLocaleService,
-            final CarService carService,
             final EmailService emailService,
             final MailPublicUrls mailPublicUrls,
             final StoredFileService storedFileService,
@@ -87,7 +84,6 @@ public class ReservationMessageServiceImpl implements ReservationMessageService 
         this.reservationService = reservationService;
         this.userService = userService;
         this.userLocaleService = userLocaleService;
-        this.carService = carService;
         this.emailService = emailService;
         this.mailPublicUrls = mailPublicUrls;
         this.storedFileService = storedFileService;
@@ -297,21 +293,19 @@ public class ReservationMessageServiceImpl implements ReservationMessageService 
         if (pending.isEmpty()) {
             return;
         }
-        // Cache cars referenced during this dispatch so each car triggers at most one
-        // {@code carService.getCarById}: previously every conversation entry called it again
-        // (resolveVehicleLabel) and so did counterparty resolution for owner-bound recipients.
-        final Map<Long, Optional<Car>> carCache = new HashMap<>();
+        // findPendingEmailNotification JOIN FETCHes reservation.car.owner + catalog, so
+        // counterparty and vehicle labels are read from the already-hydrated graph.
         final Map<Long, List<ReservationMessage>> byRecipient = new LinkedHashMap<>();
         for (final ReservationMessage message : pending) {
             if (message.isSeen()) {
                 continue;
             }
             final long recipientId = resolveCounterpartyUserId(
-                    message.getSenderUserId(), message.getReservation(), carCache);
+                    message.getSenderUserId(), message.getReservation());
             byRecipient.computeIfAbsent(recipientId, ignored -> new ArrayList<>()).add(message);
         }
         for (final Map.Entry<Long, List<ReservationMessage>> entry : byRecipient.entrySet()) {
-            dispatchDigestForRecipient(entry.getKey(), entry.getValue(), carCache);
+            dispatchDigestForRecipient(entry.getKey(), entry.getValue());
         }
     }
 
@@ -360,8 +354,7 @@ public class ReservationMessageServiceImpl implements ReservationMessageService 
 
     private void dispatchDigestForRecipient(
             final long recipientId,
-            final List<ReservationMessage> messages,
-            final Map<Long, Optional<Car>> carCache) {
+            final List<ReservationMessage> messages) {
         try {
             final List<ReservationMessage> unseenMessages = messages.stream()
                     .filter(message -> !message.isSeen())
@@ -383,7 +376,7 @@ public class ReservationMessageServiceImpl implements ReservationMessageService 
             // by id, which previously cost one extra SELECT per recipient in the digest loop.
             final Locale mailLocale = userLocaleService.resolveMailLocaleFor(recipient);
             final Optional<ReservationChatDigestEmailPayload> payloadOpt =
-                    buildDigestPayload(recipient, mailLocale, unseenMessages, carCache);
+                    buildDigestPayload(recipient, mailLocale, unseenMessages);
             if (payloadOpt.isEmpty()) {
                 return;
             }
@@ -399,8 +392,7 @@ public class ReservationMessageServiceImpl implements ReservationMessageService 
     private Optional<ReservationChatDigestEmailPayload> buildDigestPayload(
             final User recipient,
             final Locale mailLocale,
-            final List<ReservationMessage> messages,
-            final Map<Long, Optional<Car>> carCache) {
+            final List<ReservationMessage> messages) {
         final Map<Long, List<ReservationMessage>> byReservation = new LinkedHashMap<>();
         for (final ReservationMessage message : messages) {
             byReservation
@@ -415,7 +407,7 @@ public class ReservationMessageServiceImpl implements ReservationMessageService 
             }
             final Reservation reservation = reservationMessages.get(0).getReservation();
             final long reservationId = reservation.getId();
-            final String vehicleLabel = resolveVehicleLabel(reservation.getCarId(), carCache);
+            final String vehicleLabel = resolveVehicleLabel(reservation);
             final boolean recipientIsOwner = recipient.getId() != reservation.getRiderId();
             final String roleParam = recipientIsOwner ? "owner" : "rider";
             final String detailPath = "/my-reservations/" + reservationId + "/chat?role=" + roleParam;
@@ -516,7 +508,8 @@ public class ReservationMessageServiceImpl implements ReservationMessageService 
                 message.getId(),
                 message.getReservationId(),
                 sender.getId(),
-                formatDisplayName(sender),
+                sender.getForename(),
+                sender.getSurname(),
                 message.getBody(),
                 message.getCreatedAt(),
                 attachmentDto,
@@ -529,7 +522,8 @@ public class ReservationMessageServiceImpl implements ReservationMessageService 
                 message.getId(),
                 message.getReservationId(),
                 message.getSenderUserId(),
-                formatDisplayName(message.getSenderForename(), message.getSenderSurname()),
+                message.getSenderForename(),
+                message.getSenderSurname(),
                 message.getBody(),
                 message.getCreatedAt(),
                 attachmentDto,
@@ -580,27 +574,19 @@ public class ReservationMessageServiceImpl implements ReservationMessageService 
         return forename + " " + surname;
     }
 
-    private long resolveCounterpartyUserId(
-            final long senderUserId,
-            final Reservation reservation,
-            final Map<Long, Optional<Car>> carCache) {
+    private long resolveCounterpartyUserId(final long senderUserId, final Reservation reservation) {
         if (senderUserId == reservation.getRiderId()) {
-            return cachedCar(reservation.getCarId(), carCache)
-                    .map(Car::getOwner)
-                    .map(User::getId)
-                    .orElseThrow(() -> new ReservationMessageException(MessageKeys.RESERVATION_CHAT_NOT_PARTICIPANT));
+            return reservation.getCar().getOwner().getId();
         }
         return reservation.getRiderId();
     }
 
-    private String resolveVehicleLabel(final long carId, final Map<Long, Optional<Car>> carCache) {
-        return cachedCar(carId, carCache)
-                .map(car -> car.getBrand() + " " + car.getModel())
-                .orElse("");
-    }
-
-    private Optional<Car> cachedCar(final long carId, final Map<Long, Optional<Car>> carCache) {
-        return carCache.computeIfAbsent(carId, carService::getCarById);
+    private String resolveVehicleLabel(final Reservation reservation) {
+        final Car car = reservation.getCar();
+        if (car == null) {
+            return "";
+        }
+        return car.getBrand() + " " + car.getModel();
     }
 
     private static String truncateForEmailPreview(final String body, final String attachmentFileName) {

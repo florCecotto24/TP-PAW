@@ -5,17 +5,40 @@ import { ApiError } from '../../api/client';
 /**
  * Traduce un error de la API a un mensaje i18n para las páginas ADMIN.
  *
- * El backend manda `message` con la CLAVE i18n del error (o, en su defecto, un
- * `code`), mapeada en el catálogo global `error.byCode.*`. Si hay match se usa
- * ese mensaje específico; si no, se cae a `error.generic`.
- *
- * Centraliza el patrón que antes duplicaban AdminUsersPage / AdminCarsPage /
- * AdminCatalogPage. Es el espejo admin de `useApiErrorMessage` (área OWNER).
+ * {@code ErrorDto.code} lleva la clave de dominio (p.ej. {@code user.email.alreadyExists});
+ * {@code ErrorDto.message} ya viene localizado por el servidor y solo se usa como fallback.
+ * Las claves se resuelven en {@code error.byCode.*}; si no hay match, se prefiere el
+ * {@code message} del body antes de caer a {@code error.generic}.
  */
 export function useAdminErrorMessage(): (err: unknown) => string {
   const { t } = useTranslation();
-  return useCallback((err) => {
-    const code = err instanceof ApiError ? (err.body?.message ?? err.code) : undefined;
-    return code ? t([`error.byCode.${code}`, 'error.generic']) : t('error.generic');
-  }, [t]);
+  return useCallback(
+    (err) => {
+      if (!(err instanceof ApiError)) {
+        return t('error.generic');
+      }
+      const code = err.code ?? err.body?.code;
+      if (code) {
+        const byCode = t(`error.byCode.${code}`, { defaultValue: '' });
+        if (byCode) {
+          return byCode;
+        }
+      }
+      const serverMessage = err.body?.message?.trim();
+      if (serverMessage) {
+        return serverMessage;
+      }
+      if (err.status === 409) {
+        return t('error.conflict');
+      }
+      if (err.status === 403) {
+        return t('error.forbidden');
+      }
+      if (err.status === 404) {
+        return t('error.notFound');
+      }
+      return t('error.generic');
+    },
+    [t],
+  );
 }

@@ -80,10 +80,6 @@ export async function patchCarStatus(
   });
 }
 
-export async function fetchUserPublic(userUri: string): Promise<ApiResponse<UserDto>> {
-  return sessionClient.get<UserDto>(userUri, { accept: MediaTypes.user });
-}
-
 export interface CreateAdminUserPayload {
   forename: string;
   surname: string;

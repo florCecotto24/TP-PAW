@@ -10,7 +10,7 @@ export const adminI18n = {
         subtitle: 'Gestioná usuarios, catálogo, autos y reservas.',
         forbidden: 'No tenés permisos para acceder a esta sección.',
         quickActions: 'Acciones rápidas',
-        createAdmin: 'Crear Admin',
+        createAdmin: 'Crear admin',
       },
       common: {
         pagination: 'Paginación',
@@ -28,6 +28,7 @@ export const adminI18n = {
       users: {
         title: 'Usuarios',
         subtitle: 'Promover, bloquear, validar documentos y filtrar usuarios.',
+        createAdmin: 'Crear admin',
         empty: 'No hay usuarios para mostrar.',
         emptyFiltered: 'Ningún usuario coincide con esos filtros.',
         filter: {
@@ -159,11 +160,11 @@ export const adminI18n = {
         openFromList: 'Abrí el chat desde el listado de reservas para cargar los mensajes.',
       },
       createAdmin: {
-        title: 'Crear Usuario Admin',
+        title: 'Crear usuario admin',
         forename: 'Nombre',
         surname: 'Apellido',
         email: 'Correo electrónico',
-        submit: 'Crear Admin',
+        submit: 'Crear admin',
         submitting: 'Creando…',
         cancel: 'Cancelar',
         emailTaken: 'Ese correo electrónico ya está registrado.',
@@ -179,7 +180,7 @@ export const adminI18n = {
         subtitle: 'Manage users, catalog, cars and reservations.',
         forbidden: 'You do not have permission to access this section.',
         quickActions: 'Quick actions',
-        createAdmin: 'Create Admin',
+        createAdmin: 'Create admin',
       },
       common: {
         pagination: 'Pagination',
@@ -197,6 +198,7 @@ export const adminI18n = {
       users: {
         title: 'Users',
         subtitle: 'Promote, block, validate documents and filter users.',
+        createAdmin: 'Create admin',
         empty: 'No users to show.',
         emptyFiltered: 'No users match those filters.',
         filter: {
@@ -328,11 +330,11 @@ export const adminI18n = {
         openFromList: 'Open the chat from the reservations list to load messages.',
       },
       createAdmin: {
-        title: 'Create Admin User',
+        title: 'Create admin user',
         forename: 'First name',
         surname: 'Last name',
         email: 'Email',
-        submit: 'Create Admin',
+        submit: 'Create admin',
         submitting: 'Creating…',
         cancel: 'Cancel',
         emailTaken: 'That email is already registered.',

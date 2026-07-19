@@ -52,8 +52,8 @@ class ReservationMessageJpaDaoTest extends DaoIntegrationTestSupport {
                 "INSERT INTO cars (owner_id, plate, transmission, powertrain) VALUES (?, ?, ?, ?)",
                 ownerId,
                 "CHAT01",
-                "manual",
-                "gasoline");
+                "MANUAL",
+                "GASOLINE");
         final long carId = jdbcTemplate.queryForObject("SELECT id FROM cars WHERE plate = ?", Long.class, "CHAT01");
 
         final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);

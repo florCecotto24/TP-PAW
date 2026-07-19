@@ -25,13 +25,12 @@ import ar.edu.itba.paw.models.util.search.ReservationSearchCriteria;
  */
 public interface ReservationService {
 
-    /** Loads a reservation by id when present (no participant check). */
-    Optional<Reservation> getReservationById(long id);
-
     /**
-     * Like {@link #getReservationById}, with car/owner/catalog preloaded for mail after the session ends.
+     * Loads a reservation by id when present (no participant check), with rider/car/owner/catalog
+     * {@code JOIN FETCH}ed so callers (REST mapping, mail after TX close) can navigate the graph
+     * without LazyInitializationException.
      */
-    Optional<Reservation> getReservationByIdForMail(long id);
+    Optional<Reservation> getReservationById(long id);
 
     /** Reservation row only if {@code riderId} is the rider on that reservation. */
     Optional<Reservation> getRiderReservationById(long riderId, long reservationId);

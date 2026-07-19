@@ -19,16 +19,14 @@ export default function AdminPanelPage() {
   const { t } = useTranslation();
   return (
     <>
-      <div className="admin-panel-header mt-5">
-        <div className="container">
-          <h1 className="h3 fw-bold mb-0">{t('admin.panel.title')}</h1>
-          <p className="text-muted mb-0 mt-1" style={{ fontSize: '0.9rem' }}>
-            {t('admin.panel.subtitle')}
-          </p>
-        </div>
-      </div>
+      <section className="card border-0 shadow-sm rounded-4 bg-white mt-4 p-4">
+        <h1 className="h3 fw-bold mb-0">{t('admin.panel.title')}</h1>
+        <p className="text-muted mb-0 mt-1" style={{ fontSize: '0.9rem' }}>
+          {t('admin.panel.subtitle')}
+        </p>
+      </section>
 
-      <div className="container py-5">
+      <div className="py-5">
         <p className="section-label">{t('admin.panel.title')}</p>
         <div className="row g-4 mb-5">
           {sections.map((section) => (
