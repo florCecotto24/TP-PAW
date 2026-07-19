@@ -523,11 +523,6 @@ public class User {
 
     @Override
     public String toString() {
-        return "User{" +
-                "id=" + id +
-                ", email='" + email + '\'' +
-                ", forename='" + forename + '\'' +
-                ", surname='" + surname + '\'' +
-                '}';
+        return "User{id=" + id + '}';
     }
 }

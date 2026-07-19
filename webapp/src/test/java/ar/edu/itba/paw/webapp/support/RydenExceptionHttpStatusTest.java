@@ -10,6 +10,7 @@ import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.car.CarNotFoundException;
 import ar.edu.itba.paw.exception.car.DuplicatePlateException;
 import ar.edu.itba.paw.exception.reservation.ReservationConflictException;
+import ar.edu.itba.paw.exception.reservation.RiderReservationException;
 import ar.edu.itba.paw.exception.user.EmailAlreadyExistsException;
 import ar.edu.itba.paw.exception.user.PasswordResetCodeInvalidException;
 import ar.edu.itba.paw.exception.user.UserNotFoundException;
@@ -67,5 +68,31 @@ class RydenExceptionHttpStatusTest {
         // 3.Assert
         assertEquals(Response.Status.UNAUTHORIZED, verificationStatus);
         assertEquals(Response.Status.UNAUTHORIZED, resetStatus);
+    }
+
+    @Test
+    void testRiderPaymentReceiptConflictMapsTo409() {
+        // 1.Arrange
+        final RiderReservationException conflict =
+                new RiderReservationException(MessageKeys.RESERVATION_PAYMENT_RECEIPT_CONFLICT);
+        final RiderReservationException deadline =
+                new RiderReservationException(MessageKeys.RESERVATION_PAYMENT_PROOF_DEADLINE_PASSED);
+        final RiderReservationException invalidFile =
+                new RiderReservationException(MessageKeys.RESERVATION_PAYMENT_RECEIPT_INVALID);
+
+        // 2.Act / 3.Assert
+        assertEquals(Response.Status.CONFLICT, RydenExceptionHttpStatus.statusFor(conflict));
+        assertEquals(Response.Status.CONFLICT, RydenExceptionHttpStatus.statusFor(deadline));
+        assertEquals(Response.Status.BAD_REQUEST, RydenExceptionHttpStatus.statusFor(invalidFile));
+    }
+
+    @Test
+    void testRiderListingNotFoundMapsTo404() {
+        // 1.Arrange
+        final RiderReservationException missing =
+                new RiderReservationException(MessageKeys.RESERVATION_RIDER_LISTING_NOT_FOUND);
+
+        // 2.Act / 3.Assert
+        assertEquals(Response.Status.NOT_FOUND, RydenExceptionHttpStatus.statusFor(missing));
     }
 }

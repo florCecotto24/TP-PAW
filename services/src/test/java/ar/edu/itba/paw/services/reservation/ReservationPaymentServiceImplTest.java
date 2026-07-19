@@ -154,7 +154,7 @@ class ReservationPaymentServiceImplTest {
                 RiderReservationException.class,
                 () -> paymentService.attachPaymentReceipt(
                         RIDER_ID, RESERVATION_ID, "proof.pdf", "application/pdf", PDF_BYTES));
-        Assertions.assertEquals(MessageKeys.RESERVATION_PAYMENT_RECEIPT_INVALID, thrown.getMessageCode());
+        Assertions.assertEquals(MessageKeys.RESERVATION_PAYMENT_RECEIPT_CONFLICT, thrown.getMessageCode());
         Assertions.assertEquals(99L, deletedId[0]);
     }
 
@@ -172,7 +172,7 @@ class ReservationPaymentServiceImplTest {
                 RiderReservationException.class,
                 () -> paymentService.attachRefundReceiptByOwner(
                         OWNER_ID, RESERVATION_ID, "refund.pdf", "application/pdf", PDF_BYTES));
-        Assertions.assertEquals(MessageKeys.RESERVATION_REFUND_RECEIPT_INVALID, thrown.getMessageCode());
+        Assertions.assertEquals(MessageKeys.RESERVATION_REFUND_RECEIPT_CONFLICT, thrown.getMessageCode());
     }
 
     @Test
@@ -189,7 +189,7 @@ class ReservationPaymentServiceImplTest {
                 RiderReservationException.class,
                 () -> paymentService.attachRefundReceiptByOwner(
                         OWNER_ID, RESERVATION_ID, "refund.pdf", "application/pdf", PDF_BYTES));
-        Assertions.assertEquals(MessageKeys.RESERVATION_REFUND_RECEIPT_INVALID, thrown.getMessageCode());
+        Assertions.assertEquals(MessageKeys.RESERVATION_REFUND_RECEIPT_CONFLICT, thrown.getMessageCode());
     }
 
     @Test
@@ -257,7 +257,7 @@ class ReservationPaymentServiceImplTest {
                 RiderReservationException.class,
                 () -> paymentService.attachRefundReceiptByOwner(
                         OWNER_ID, RESERVATION_ID, "refund.pdf", "application/pdf", PDF_BYTES));
-        Assertions.assertEquals(MessageKeys.RESERVATION_REFUND_RECEIPT_INVALID, thrown.getMessageCode());
+        Assertions.assertEquals(MessageKeys.RESERVATION_REFUND_RECEIPT_CONFLICT, thrown.getMessageCode());
         Assertions.assertEquals(77L, deletedId[0]);
     }
 

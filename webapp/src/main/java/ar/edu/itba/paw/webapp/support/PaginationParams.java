@@ -8,6 +8,9 @@ package ar.edu.itba.paw.webapp.support;
  * {@code [1, maxPageSize]} (same policy the guidelines approved as an alternative to {@code 400}).
  * OpenAPI documents {@code maximum} per collection; Bean Validation {@code @Max} on each
  * {@code @QueryParam} would duplicate the property-driven max.
+ *
+ * {@code page} is also capped so {@code (page - 1) * pageSize} cannot overflow a 32-bit DAO
+ * {@code OFFSET} (malicious {@code ?page=30000000} → empty page, not SQL error / 500).
  */
 public final class PaginationParams {
 
@@ -24,12 +27,17 @@ public final class PaginationParams {
             final Integer pageSizeParam,
             final int defaultPageSize,
             final int maxPageSize) {
-        final int safePage = Math.max(1, page);
         final int rawSize = pageSizeParam != null && pageSizeParam > 0
                 ? pageSizeParam
                 : defaultPageSize;
         final int safeMax = Math.max(1, maxPageSize);
         final int pageSize = Math.min(Math.max(1, rawSize), safeMax);
+        // Zero-based offset = (page - 1) * pageSize must fit in a signed 32-bit int.
+        final int maxZeroBasedPage = Integer.MAX_VALUE / pageSize;
+        final int maxOneBasedPage = maxZeroBasedPage == Integer.MAX_VALUE
+                ? Integer.MAX_VALUE
+                : maxZeroBasedPage + 1;
+        final int safePage = Math.min(Math.max(1, page), maxOneBasedPage);
         return new PaginationParams(safePage, pageSize);
     }
 

@@ -67,7 +67,7 @@ public final class WebApplicationExceptionMapper implements ExceptionMapper<WebA
         }
 
         String code = statusSlug(status);
-        String message = status.getReasonPhrase();
+        String message = localizedHttpStatusMessage(status);
         final String exceptionMessage = exception.getMessage();
         if (looksLikeMessageCode(exceptionMessage)) {
             final String localized = localeMessages.msg(exceptionMessage);
@@ -97,5 +97,20 @@ public final class WebApplicationExceptionMapper implements ExceptionMapper<WebA
 
     private static String statusSlug(final Response.Status status) {
         return status.name().toLowerCase(Locale.ROOT);
+    }
+
+    private String localizedHttpStatusMessage(final Response.Status status) {
+        final String key = switch (status.getStatusCode()) {
+            case 401 -> "error.unauthorized";
+            case 403 -> "error.forbidden";
+            case 404 -> "error.notFound";
+            case 400 -> "error.invalidRequestParameter";
+            default -> null;
+        };
+        if (key == null) {
+            return status.getReasonPhrase();
+        }
+        final String localized = localeMessages.msg(key);
+        return localized.equals(key) ? status.getReasonPhrase() : localized;
     }
 }

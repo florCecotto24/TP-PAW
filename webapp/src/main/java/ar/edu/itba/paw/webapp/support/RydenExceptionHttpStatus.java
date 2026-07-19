@@ -64,10 +64,23 @@ public final class RydenExceptionHttpStatus {
             if (MessageKeys.RESERVATION_CHAT_NOT_PARTICIPANT.equals(messageException.getMessageCode())) {
                 return Response.Status.FORBIDDEN;
             }
+            if (MessageKeys.RESERVATION_CHAT_ATTACHMENT_NOT_FOUND.equals(messageException.getMessageCode())) {
+                return Response.Status.NOT_FOUND;
+            }
         }
-        if (exception instanceof RiderReservationException riderException
-                && MessageKeys.REVIEW_ALREADY_SUBMITTED.equals(riderException.getMessageCode())) {
-            return Response.Status.CONFLICT;
+        if (exception instanceof RiderReservationException riderException) {
+            final String code = riderException.getMessageCode();
+            if (MessageKeys.REVIEW_ALREADY_SUBMITTED.equals(code)
+                    || MessageKeys.RESERVATION_PAYMENT_RECEIPT_CONFLICT.equals(code)
+                    || MessageKeys.RESERVATION_REFUND_RECEIPT_CONFLICT.equals(code)
+                    || MessageKeys.RESERVATION_PAYMENT_PROOF_DEADLINE_PASSED.equals(code)) {
+                return Response.Status.CONFLICT;
+            }
+            if (MessageKeys.RESERVATION_RIDER_LISTING_NOT_FOUND.equals(code)
+                    || MessageKeys.RESERVATION_RIDER_USER_NOT_FOUND.equals(code)
+                    || MessageKeys.RESERVATION_PAYMENT_RECEIPT_NOT_FOUND.equals(code)) {
+                return Response.Status.NOT_FOUND;
+            }
         }
         return Response.Status.BAD_REQUEST;
     }

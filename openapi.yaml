@@ -103,6 +103,8 @@ tags:
     description: Catálogo de barrios
   - name: files
     description: Binarios (imágenes, documentos, comprobantes, adjuntos)
+  - name: meta
+    description: Configuración pública para el SPA (límites de validación/upload)
 
 #############################################################################
 # SECURITY
@@ -909,6 +911,8 @@ paths:
       responses:
         "200":
           description: Links a autos similares (`self` → `GET /cars/{id}`).
+          headers:
+            X-Total-Count: { $ref: "#/components/headers/X-Total-Count" }
           content:
             application/vnd.paw.car.similar.v1+json:
               schema:
@@ -946,11 +950,13 @@ paths:
           description: Períodos de disponibilidad.
           headers:
             Link: { $ref: "#/components/headers/Link-Pagination" }
+            X-Total-Count: { $ref: "#/components/headers/X-Total-Count" }
           content:
             application/vnd.paw.availability.v1+json:
               schema:
                 type: array
                 items: { $ref: "#/components/schemas/AvailabilityDto" }
+        "204": { description: Colección vacía. }
     post:
       tags: [cars]
       summary: Crear un período de disponibilidad (owner)
@@ -1108,9 +1114,9 @@ paths:
           multipart/form-data:
             schema:
               type: object
+              required: [file]
               properties:
                 file: { type: string, format: binary }
-                displayOrder: { type: integer }
       responses:
         "201":
           description: Item agregado (PictureDto + Location).
@@ -1132,7 +1138,7 @@ paths:
         (misma semántica que `links.cover` en tarjetas cuando existe).
       security: []
       responses:
-        "200": { $ref: "#/components/responses/BinaryImage" }
+        "200": { $ref: "#/components/responses/BinaryFile" }
         "404": { $ref: "#/components/responses/NotFound" }
 
   /cars/{id}/pictures/{pictureId}:
@@ -1147,7 +1153,7 @@ paths:
       summary: Bytes de una imagen/video de la galería (público)
       security: []
       responses:
-        "200": { $ref: "#/components/responses/BinaryImage" }
+        "200": { $ref: "#/components/responses/BinaryFile" }
         "404": { $ref: "#/components/responses/NotFound" }
     delete:
       tags: [cars, files]
@@ -1427,8 +1433,11 @@ paths:
         "204": { description: Comprobante subido; reserva ACCEPTED. }
         "400": { $ref: "#/components/responses/ValidationError" }
         "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
         "409":
-          description: La reserva no está PENDING.
+          description: >
+            Conflicto de estado: la reserva no está PENDING, ya tiene comprobante,
+            o venció el plazo de carga.
 
   # --- Comprobante de reintegro (owner) ---
   /reservations/{id}/refund-receipt:
@@ -1444,6 +1453,9 @@ paths:
     put:
       tags: [reservations, files]
       summary: Subir comprobante de reintegro (owner)
+      description: >
+        Reemplaza el sub-recurso binario de reintegro. Si el owner no tiene más
+        reintegros vencidos pendientes, el server puede desbloquear su cuenta.
       requestBody:
         required: true
         content:
@@ -1451,7 +1463,13 @@ paths:
             schema: { type: string, format: binary }
       responses:
         "204": { description: Subido. }
+        "400": { $ref: "#/components/responses/ValidationError" }
         "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: >
+            Conflicto de estado: la reserva no está cancelada, el reintegro no
+            es requerido, o ya tiene comprobante.
 
   #############################################################################
   # RESERVATION MESSAGES (chat) — entidad débil
@@ -1491,10 +1509,16 @@ paths:
         "200":
           description: >
             Mensajes. Sin `afterId`: headers `Link` + `X-Total-Count`.
-            Con `afterId`: array acotado sin esos headers.
+            Con `afterId`: array acotado **sin** esos headers (poll incremental).
           headers:
-            Link: { $ref: "#/components/headers/Link-Pagination" }
-            X-Total-Count: { $ref: "#/components/headers/X-Total-Count" }
+            Link:
+              description: >
+                RFC 8288 pagination links. Emitido solo cuando `afterId` está ausente.
+              schema: { type: string }
+            X-Total-Count:
+              description: >
+                Total de mensajes del historial. Emitido solo cuando `afterId` está ausente.
+              schema: { type: integer, format: int64 }
           content:
             application/vnd.paw.message.v1+json:
               schema:
@@ -1599,11 +1623,13 @@ paths:
           description: Marcas.
           headers:
             Link: { $ref: "#/components/headers/Link-Pagination" }
+            X-Total-Count: { $ref: "#/components/headers/X-Total-Count" }
           content:
             application/vnd.paw.brand.v1+json:
               schema:
                 type: array
                 items: { $ref: "#/components/schemas/BrandDto" }
+        "204": { description: Colección vacía. }
     post:
       tags: [catalog]
       summary: Crear una marca
@@ -1621,6 +1647,8 @@ paths:
           content:
             application/vnd.paw.brand.v1+json:
               schema: { $ref: "#/components/schemas/BrandDto" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
         "409":
           description: Ya existe una marca con ese nombre.
           content:
@@ -1659,7 +1687,9 @@ paths:
           content:
             application/vnd.paw.brand.v1+json:
               schema: { $ref: "#/components/schemas/BrandDto" }
+        "400": { $ref: "#/components/responses/ValidationError" }
         "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
     delete:
       tags: [catalog]
       summary: Rechazar/eliminar marca (admin)
@@ -1682,11 +1712,15 @@ paths:
       responses:
         "200":
           description: Modelos.
+          headers:
+            X-Total-Count: { $ref: "#/components/headers/X-Total-Count" }
           content:
             application/vnd.paw.model.v1+json:
               schema:
                 type: array
                 items: { $ref: "#/components/schemas/ModelDto" }
+        "204": { description: Colección vacía. }
+        "404": { $ref: "#/components/responses/NotFound" }
     post:
       tags: [catalog]
       summary: Crear modelo bajo una marca
@@ -1703,6 +1737,9 @@ paths:
           content:
             application/vnd.paw.model.v1+json:
               schema: { $ref: "#/components/schemas/ModelDto" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
         "409":
           description: Ya existe un modelo con ese nombre para la marca.
           content:
@@ -1742,6 +1779,7 @@ paths:
           content:
             application/vnd.paw.model.v1+json:
               schema: { $ref: "#/components/schemas/ModelDto" }
+        "400": { $ref: "#/components/responses/ValidationError" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
     delete:
@@ -1809,7 +1847,7 @@ paths:
         "200":
           description: Modelos pendientes.
           headers:
-            Link: { $ref: "#/components/headers/Link" }
+            Link: { $ref: "#/components/headers/Link-Pagination" }
             X-Total-Count: { $ref: "#/components/headers/X-Total-Count" }
           content:
             application/vnd.paw.model.v1+json:
@@ -2006,9 +2044,13 @@ components:
         image/*:
           schema: { type: string, format: binary }
     BinaryFile:
-      description: Bytes de un archivo (pdf/imagen/video).
+      description: Bytes de un archivo (pdf/imagen/video; content-type detectado).
       content:
         application/octet-stream:
+          schema: { type: string, format: binary }
+        image/*:
+          schema: { type: string, format: binary }
+        video/*:
           schema: { type: string, format: binary }
 
   schemas:
@@ -2049,7 +2091,13 @@ components:
     ApiIndexResourceDescriptor:
       type: object
       properties:
-        href: { type: string, format: uri }
+        href:
+          type: string
+          format: uri
+          nullable: true
+          description: >
+            Absolute collection href. Null when the resource is item-only
+            (e.g. `image` has no top-level collection).
         itemTemplate:
           type: string
           format: uri-template
@@ -2057,7 +2105,7 @@ components:
         queryParams:
           type: array
           items: { type: string }
-      required: [href, queryParams]
+      required: [queryParams]
 
     ClientConfig:
       type: object
@@ -2518,7 +2566,7 @@ components:
         links:
           allOf:
             - $ref: "#/components/schemas/Links"
-          description: self (perfil público de la contraparte).
+          description: self (perfil público) y profilePicture (bytes vía GET; presencia vía hasProfilePicture del user).
 
     ReservationCreateDto:
       type: object

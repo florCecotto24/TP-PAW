@@ -144,7 +144,7 @@ public class ReservationPaymentServiceImpl implements ReservationPaymentService 
         if (updated == 0) {
             // Compensate orphan blob if attach lost a race (or TX boundaries change later) — R18.
             storedFileService.deleteById(file.getId());
-            throw new RiderReservationException(MessageKeys.RESERVATION_PAYMENT_RECEIPT_INVALID);
+            throw new RiderReservationException(MessageKeys.RESERVATION_PAYMENT_RECEIPT_CONFLICT);
         }
         final Reservation afterAttach = queryService.getRiderReservationById(riderId, reservationId).orElse(r);
         mailComposer.sendOwnerPaymentProofReceived(reservationId, riderId, afterAttach);
@@ -200,20 +200,20 @@ public class ReservationPaymentServiceImpl implements ReservationPaymentService 
         validateReceiptUpload(originalFilename, contentType, data, MessageKeys.RESERVATION_REFUND_RECEIPT_INVALID,
                 MessageKeys.RESERVATION_REFUND_RECEIPT_TOO_LARGE);
         final Reservation r = queryService.getOwnerReservationById(ownerUserId, reservationId)
-                .orElseThrow(() -> new RiderReservationException(MessageKeys.RESERVATION_REFUND_RECEIPT_INVALID));
+                .orElseThrow(() -> new RiderReservationException(MessageKeys.RESERVATION_RIDER_LISTING_NOT_FOUND));
         if (r.getStatus() != Reservation.Status.CANCELLED_BY_OWNER
                 && r.getStatus() != Reservation.Status.CANCELLED_BY_RIDER) {
-            throw new RiderReservationException(MessageKeys.RESERVATION_REFUND_RECEIPT_INVALID);
+            throw new RiderReservationException(MessageKeys.RESERVATION_REFUND_RECEIPT_CONFLICT);
         }
         if (!r.isPaymentRefundRequired() || r.getPaymentRefundReceiptFileId().isPresent()) {
-            throw new RiderReservationException(MessageKeys.RESERVATION_REFUND_RECEIPT_INVALID);
+            throw new RiderReservationException(MessageKeys.RESERVATION_REFUND_RECEIPT_CONFLICT);
         }
         final StoredFile file = storedFileService.create(ownerUserId, originalFilename, contentType, data);
         final int updated = reservationService.attachRefundReceipt(reservationId, ownerUserId, file.getId());
         if (updated == 0) {
             // Compensate orphan blob if attach lost a race (or TX boundaries change later) — R18.
             storedFileService.deleteById(file.getId());
-            throw new RiderReservationException(MessageKeys.RESERVATION_REFUND_RECEIPT_INVALID);
+            throw new RiderReservationException(MessageKeys.RESERVATION_REFUND_RECEIPT_CONFLICT);
         }
         final Reservation after = queryService.getOwnerReservationById(ownerUserId, reservationId).orElse(r);
         mailComposer.sendRiderRefundProofReceived(reservationId, after);

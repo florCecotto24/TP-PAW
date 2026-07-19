@@ -11,10 +11,6 @@ export function canonicalItemUri(collection: ApiCollectionName, id: string): str
   return expandItemTemplate(collection, id);
 }
 
-export function canonicalCarUri(carId: string): string {
-  return canonicalItemUri('cars', carId);
-}
-
 /**
  * Accepts only a relative API item path for {@code collection} (optionally matching {@code routeId}).
  * Rejects open-redirect style values and paths that do not match the collection shape.

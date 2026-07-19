@@ -6,7 +6,8 @@ import { MediaTypes } from './mediaTypes';
 import { hrefToRelativeApiPath } from './uri';
 
 export interface ApiIndexResourceDescriptor {
-  href: string;
+  /** Absolute collection href; null when the resource is item-only (e.g. image). */
+  href: string | null;
   /** RFC 6570-style canonical item URI template published by the API index. */
   itemTemplate?: string;
   queryParams?: string[];

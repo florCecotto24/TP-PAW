@@ -40,14 +40,13 @@ class ModelsToStringTest {
     }
 
     @Test
-    void testUserToStringIncludesAllFields() {
+    void testUserToStringIncludesIdOnly() {
         // Arrange
         final User user = User.identities(1L, "user@example.com", "Ada", "Lovelace");
         // Act
         final String result = user.toString();
         // Assert
-        final String expected = "User{id=1, email='user@example.com', forename='Ada', surname='Lovelace'}";
-        Assertions.assertEquals(expected, result);
+        Assertions.assertEquals("User{id=1}", result);
     }
 
     @Test

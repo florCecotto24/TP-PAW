@@ -20,6 +20,7 @@ public final class MessageKeys {
     public static final String RESERVATION_RIDER_DATES_NOT_FROM_TODAY = "reservation.rider.datesNotFromToday";
     public static final String RESERVATION_RIDER_PICKUP_MIN_24H = "reservation.rider.pickupMin24h";
     public static final String RESERVATION_PAYMENT_RECEIPT_INVALID = "reservation.paymentReceipt.invalid";
+    public static final String RESERVATION_PAYMENT_RECEIPT_CONFLICT = "reservation.paymentReceipt.conflict";
     public static final String RESERVATION_PAYMENT_PROOF_DEADLINE_PASSED = "reservation.paymentProof.deadlinePassed";
     public static final String RESERVATION_PAYMENT_RECEIPT_TOO_LARGE = "reservation.paymentReceipt.tooLarge";
     public static final String RESERVATION_PAYMENT_RECEIPT_NOT_FOUND = "reservation.paymentReceipt.notFound";
@@ -27,6 +28,7 @@ public final class MessageKeys {
     public static final String RESERVATION_EDIT_NOT_ALLOWED = "reservation.edit.notAllowed";
     public static final String RESERVATION_MARK_RETURNED_NOT_ALLOWED = "reservation.carReturned.notAllowed";
     public static final String RESERVATION_REFUND_RECEIPT_INVALID = "reservation.refundReceipt.invalid";
+    public static final String RESERVATION_REFUND_RECEIPT_CONFLICT = "reservation.refundReceipt.conflict";
     public static final String RESERVATION_REFUND_RECEIPT_TOO_LARGE = "reservation.refundReceipt.tooLarge";
     public static final String RESERVATION_CHAT_NOT_AVAILABLE = "reservation.chat.notAvailable";
     public static final String RESERVATION_CHAT_BODY_EMPTY = "reservation.chat.bodyEmpty";

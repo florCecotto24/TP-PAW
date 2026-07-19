@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 
 import { useApiDiscoveryStore } from './apiDiscovery';
 import {
-  canonicalCarUri,
   canonicalItemUri,
   resolveResourceUri,
   sanitizeResourceSelfParam,
@@ -66,9 +65,9 @@ describe('resourceUri', () => {
     expect(sanitizeResourceSelfParam('/cars/7', 'cars', '7')).toBe('/cars/7');
   });
 
-  it('testCanonicalCarUriEncodesTemplateIdentifier', () => {
+  it('testCanonicalItemUriEncodesTemplateIdentifier', () => {
     // 2.Act / 3.Assert
-    expect(canonicalCarUri('7/a')).toBe('/cars/7%2Fa');
+    expect(canonicalItemUri('cars', '7/a')).toBe('/cars/7%2Fa');
   });
 
   it('testCanonicalItemUriFailsWithoutPublishedTemplate', () => {
