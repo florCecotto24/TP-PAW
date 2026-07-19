@@ -143,8 +143,7 @@ class ReservationMessageJpaDaoTest extends DaoIntegrationTestSupport {
     void testFindProjectedByReservationIdReturnsAttachmentMetadata() {
         // 1. Arrange — metadata projection must not require hydrating StoredFile.data.
         final long fileId = insertStoredFile("receipt.pdf", "application/pdf", new byte[] {1, 2, 3, 4});
-        dao.create(reservationId, riderId, "", fileId);
-        em.flush();
+        insertMessageWithAttachment(reservationId, riderId, "", fileId);
 
         // 2. Act
         final var messages = dao.findProjectedByReservationIdOrderByCreatedAtAsc(reservationId, 0, 10);
@@ -274,5 +273,22 @@ class ReservationMessageJpaDaoTest extends DaoIntegrationTestSupport {
                         + "WHERE reservation_id = ? AND sender_user_id = ? AND body = ? "
                         + "ORDER BY id DESC LIMIT 1",
                 Long.class, reservationId, senderUserId, body);
+    }
+
+    private long insertMessageWithAttachment(
+            final long reservationId,
+            final long senderUserId,
+            final String body,
+            final long attachmentFileId) {
+        final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        jdbcTemplate.update(
+                "INSERT INTO reservation_messages "
+                        + "(reservation_id, sender_user_id, body, attachment_file_id, created_at, "
+                        + "email_notified, seen) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                reservationId, senderUserId, body, attachmentFileId, now, false, false);
+        return jdbcTemplate.queryForObject(
+                "SELECT id FROM reservation_messages WHERE reservation_id = ? AND attachment_file_id = ? "
+                        + "ORDER BY id DESC LIMIT 1",
+                Long.class, reservationId, attachmentFileId);
     }
 }

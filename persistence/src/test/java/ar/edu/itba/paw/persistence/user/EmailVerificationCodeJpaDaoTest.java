@@ -2,6 +2,7 @@ package ar.edu.itba.paw.persistence.user;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.sql.Timestamp;
 
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
@@ -42,13 +43,22 @@ class EmailVerificationCodeJpaDaoTest extends DaoIntegrationTestSupport {
         dao.insert(userId, "123456", expires, now);
         em.flush();
 
-        // 3.Assert
+        // 3.Assert — ground truth via JDBC (not another DAO read).
         final Long count = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM email_verification_codes WHERE user_id = ? AND code = ?",
                 Long.class,
                 userId,
                 "123456");
         Assertions.assertEquals(1L, count);
+    }
+
+    @Test
+    void testHasActiveCodeReturnsTrueForUnexpiredSeededRow() {
+        // 1.Arrange — seed via JDBC so Act only exercises the read under test.
+        final Instant now = Instant.now().truncatedTo(ChronoUnit.SECONDS);
+        insertCode("123456", now.plus(1, ChronoUnit.HOURS), now);
+
+        // 2.Act / 3.Assert
         Assertions.assertTrue(dao.hasActiveCode(userId, now.plus(30, ChronoUnit.MINUTES)));
     }
 
@@ -56,9 +66,7 @@ class EmailVerificationCodeJpaDaoTest extends DaoIntegrationTestSupport {
     void testDeleteIfValidRemovesMatchingUnexpiredCode() {
         // 1.Arrange
         final Instant now = Instant.now().truncatedTo(ChronoUnit.SECONDS);
-        final Instant expires = now.plus(1, ChronoUnit.HOURS);
-        dao.insert(userId, "654321", expires, now);
-        em.flush();
+        insertCode("654321", now.plus(1, ChronoUnit.HOURS), now);
 
         // 2.Act
         final boolean deleted = dao.deleteIfValid(userId, "654321", now);
@@ -66,15 +74,19 @@ class EmailVerificationCodeJpaDaoTest extends DaoIntegrationTestSupport {
 
         // 3.Assert
         Assertions.assertTrue(deleted);
-        Assertions.assertFalse(dao.hasActiveCode(userId, now));
+        final Long count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM email_verification_codes WHERE user_id = ? AND code = ?",
+                Long.class,
+                userId,
+                "654321");
+        Assertions.assertEquals(0L, count);
     }
 
     @Test
     void testDeleteForUserRemovesAllCodesForUser() {
         // 1.Arrange
         final Instant now = Instant.now().truncatedTo(ChronoUnit.SECONDS);
-        dao.insert(userId, "111111", now.plus(1, ChronoUnit.HOURS), now);
-        em.flush();
+        insertCode("111111", now.plus(1, ChronoUnit.HOURS), now);
 
         // 2.Act
         dao.deleteForUser(userId);
@@ -86,5 +98,14 @@ class EmailVerificationCodeJpaDaoTest extends DaoIntegrationTestSupport {
                 Long.class,
                 userId);
         Assertions.assertEquals(0L, count);
+    }
+
+    private void insertCode(final String code, final Instant expiresAt, final Instant createdAt) {
+        jdbcTemplate.update(
+                "INSERT INTO email_verification_codes (user_id, code, expires_at, created_at) VALUES (?, ?, ?, ?)",
+                userId,
+                code,
+                Timestamp.from(expiresAt),
+                Timestamp.from(createdAt));
     }
 }

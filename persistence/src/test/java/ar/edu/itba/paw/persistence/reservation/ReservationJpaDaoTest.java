@@ -14,8 +14,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import ar.edu.itba.paw.models.domain.car.Car;
-import ar.edu.itba.paw.models.domain.file.StoredFile;
 import ar.edu.itba.paw.models.domain.reservation.Reservation;
 import ar.edu.itba.paw.persistence.support.DaoIntegrationTestSupport;
 
@@ -265,16 +263,12 @@ class ReservationJpaDaoTest extends DaoIntegrationTestSupport {
     void testUpdateParticipantCancellationWithRefundMetaNoOpWhenPendingHasReceipt() {
         // 1. Arrange
         final long receiptId = insertStoredFile("race.pdf");
-        final long reservationId = dao.createReservationForCar(
-                riderId,
-                carId,
+        final long reservationId = insertDatedReservation(
+                "pending",
                 OffsetDateTime.parse("2026-06-15T10:00:00Z"),
                 OffsetDateTime.parse("2026-06-20T18:00:00Z"),
-                Reservation.Status.PENDING,
-                new BigDecimal("100.00"),
-                OffsetDateTime.parse("2026-06-14T10:00:00Z")).getId();
-        final Reservation managed = em.find(Reservation.class, reservationId);
-        managed.setPaymentReceiptFile(em.getReference(StoredFile.class, receiptId));
+                OffsetDateTime.parse("2026-06-14T10:00:00Z"),
+                receiptId);
         em.flush();
         em.clear();
 
@@ -295,14 +289,12 @@ class ReservationJpaDaoTest extends DaoIntegrationTestSupport {
     void testFindReservationsWithDuePendingPaymentProofExcludesCancelledRows() {
         // 1. Arrange
         final OffsetDateTime now = OffsetDateTime.parse("2026-06-10T12:00:00Z");
-        final long pendingId = dao.createReservationForCar(
-                riderId,
-                carId,
+        final long pendingId = insertDatedReservation(
+                "pending",
                 OffsetDateTime.parse("2026-06-15T10:00:00Z"),
                 OffsetDateTime.parse("2026-06-20T18:00:00Z"),
-                Reservation.Status.PENDING,
-                new BigDecimal("100.00"),
-                now.plusHours(1)).getId();
+                now.plusHours(1),
+                null);
         insertReservation("cancelled_by_rider", false, null, null);
         em.flush();
         em.clear();
@@ -320,14 +312,12 @@ class ReservationJpaDaoTest extends DaoIntegrationTestSupport {
     void testCancelPendingMissingPaymentProofIfEligibleCancelsUnpaidPendingPastDeadline() {
         // 1. Arrange
         final OffsetDateTime now = OffsetDateTime.parse("2026-06-10T12:00:00Z");
-        final long reservationId = dao.createReservationForCar(
-                riderId,
-                carId,
+        final long reservationId = insertDatedReservation(
+                "pending",
                 OffsetDateTime.parse("2026-06-15T10:00:00Z"),
                 OffsetDateTime.parse("2026-06-20T18:00:00Z"),
-                Reservation.Status.PENDING,
-                new BigDecimal("100.00"),
-                now.minusHours(1)).getId();
+                now.minusHours(1),
+                null);
         em.flush();
         em.clear();
 
@@ -370,9 +360,8 @@ class ReservationJpaDaoTest extends DaoIntegrationTestSupport {
         // 1. Arrange
         final OffsetDateTime start = OffsetDateTime.parse("2026-06-15T10:00:00Z");
         final OffsetDateTime end = OffsetDateTime.parse("2026-06-20T18:00:00Z");
-        dao.createReservationForCar(
-                riderId, carId, start, end, Reservation.Status.PENDING, new BigDecimal("100.00"),
-                OffsetDateTime.parse("2026-06-14T10:00:00Z"));
+        insertDatedReservation(
+                "pending", start, end, OffsetDateTime.parse("2026-06-14T10:00:00Z"), null);
         em.flush();
         em.clear();
 
@@ -388,14 +377,12 @@ class ReservationJpaDaoTest extends DaoIntegrationTestSupport {
         // 1. Arrange
         final long receiptId = insertStoredFile("payment.pdf");
         final OffsetDateTime deadline = OffsetDateTime.now(ZoneOffset.UTC).plusHours(24);
-        final long reservationId = dao.createReservationForCar(
-                riderId,
-                carId,
+        final long reservationId = insertDatedReservation(
+                "pending",
                 OffsetDateTime.parse("2099-06-15T10:00:00Z"),
                 OffsetDateTime.parse("2099-06-20T18:00:00Z"),
-                Reservation.Status.PENDING,
-                new BigDecimal("100.00"),
-                deadline).getId();
+                deadline,
+                null);
         em.flush();
         em.clear();
 
@@ -423,16 +410,12 @@ class ReservationJpaDaoTest extends DaoIntegrationTestSupport {
         final long existingReceiptId = insertStoredFile("existing.pdf");
         final long newReceiptId = insertStoredFile("duplicate.pdf");
         final OffsetDateTime deadline = OffsetDateTime.now(ZoneOffset.UTC).plusHours(24);
-        final long reservationId = dao.createReservationForCar(
-                riderId,
-                carId,
+        final long reservationId = insertDatedReservation(
+                "pending",
                 OffsetDateTime.parse("2099-06-15T10:00:00Z"),
                 OffsetDateTime.parse("2099-06-20T18:00:00Z"),
-                Reservation.Status.PENDING,
-                new BigDecimal("100.00"),
-                deadline).getId();
-        final Reservation managed = em.find(Reservation.class, reservationId);
-        managed.setPaymentReceiptFile(em.getReference(StoredFile.class, existingReceiptId));
+                deadline,
+                existingReceiptId);
         em.flush();
         em.clear();
 
@@ -455,16 +438,12 @@ class ReservationJpaDaoTest extends DaoIntegrationTestSupport {
         // 1. Arrange
         final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         final long receiptId = insertStoredFile("paid-race.pdf");
-        final long reservationId = dao.createReservationForCar(
-                riderId,
-                carId,
+        final long reservationId = insertDatedReservation(
+                "pending",
                 OffsetDateTime.parse("2099-06-15T10:00:00Z"),
                 OffsetDateTime.parse("2099-06-20T18:00:00Z"),
-                Reservation.Status.PENDING,
-                new BigDecimal("100.00"),
-                now.minusHours(1)).getId();
-        final Reservation managed = em.find(Reservation.class, reservationId);
-        managed.setPaymentReceiptFile(em.getReference(StoredFile.class, receiptId));
+                now.minusHours(1),
+                receiptId);
         em.flush();
         em.clear();
 
@@ -520,8 +499,39 @@ class ReservationJpaDaoTest extends DaoIntegrationTestSupport {
             final OffsetDateTime startDate,
             final OffsetDateTime endDate,
             final Reservation.Status status) {
-        return dao.createReservationForCar(
-                riderId, carId, startDate, endDate, status, new BigDecimal("100.00"), null).getId();
+        return insertDatedReservation(status.dbValue(), startDate, endDate, null, null);
+    }
+
+    /**
+     * Seeds a reservation row via JDBC so arrange never exercises {@link ReservationDao#createReservationForCar}.
+     */
+    private long insertDatedReservation(
+            final String statusLower,
+            final OffsetDateTime startDate,
+            final OffsetDateTime endDate,
+            final OffsetDateTime paymentProofDeadlineAt,
+            final Long paymentReceiptFileId) {
+        final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        jdbcTemplate.update(
+                "INSERT INTO reservations (rider_id, car_id, start_date, end_date, status, "
+                        + "total_price, created_at, updated_at, payment_proof_deadline_at, "
+                        + "payment_receipt_file_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                riderId,
+                carId,
+                toTimestamp(startDate),
+                toTimestamp(endDate),
+                statusLower,
+                new BigDecimal("100.00"),
+                toTimestamp(now),
+                toTimestamp(now),
+                paymentProofDeadlineAt == null ? null : toTimestamp(paymentProofDeadlineAt),
+                paymentReceiptFileId);
+        return jdbcTemplate.queryForObject(
+                "SELECT MAX(id) FROM reservations WHERE car_id = ?", Long.class, carId);
+    }
+
+    private static java.sql.Timestamp toTimestamp(final OffsetDateTime value) {
+        return java.sql.Timestamp.from(value.toInstant());
     }
 
     // --- Review scheduler queries (regression for the `rv.madeByRider` JPQL path) -----------------
@@ -631,11 +641,5 @@ class ReservationJpaDaoTest extends DaoIntegrationTestSupport {
                 ownerId, name, "application/pdf", new byte[] { 1, 2, 3 }, 3L, OffsetDateTime.now(ZoneOffset.UTC));
         return jdbcTemplate.queryForObject(
                 "SELECT id FROM stored_files WHERE file_name = ?", Long.class, name);
-    }
-
-    /** Quick reference to the {@link Car} so the foreign key references resolve. */
-    @SuppressWarnings("unused")
-    private Car loadCar() {
-        return em.find(Car.class, carId);
     }
 }

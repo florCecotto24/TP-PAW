@@ -182,7 +182,18 @@ class ReviewJpaDaoTest extends DaoIntegrationTestSupport {
                 "SELECT comment FROM reviews WHERE reservation_id = ?", String.class, reservationId));
         Assertions.assertEquals(carId, jdbcTemplate.queryForObject(
                 "SELECT car_id FROM reviews WHERE reservation_id = ?", Long.class, reservationId));
+    }
+
+    @Test
+    void testExistsReviewReturnsTrueForSeededRiderReview() {
+        // 1.Arrange — JDBC seed; Act only exercises the read under test.
+        final long carId = insertCar("REV121");
+        final long reservationId = insertFinishedReservation(carId, riderId);
+        insertRiderReview(reservationId, carId, 5, "Seeded", OffsetDateTime.now(ZoneOffset.UTC));
+
+        // 2.Act / 3.Assert
         Assertions.assertTrue(dao.existsReview(reservationId, true));
+        Assertions.assertFalse(dao.existsReview(reservationId, false));
     }
 
     @Test

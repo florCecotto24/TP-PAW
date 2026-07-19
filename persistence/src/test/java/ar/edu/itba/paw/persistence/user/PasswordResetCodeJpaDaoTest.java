@@ -42,23 +42,40 @@ class PasswordResetCodeJpaDaoTest extends DaoIntegrationTestSupport {
         dao.insert(userId, "123456", expires, now);
         em.flush();
 
-        // 3.Assert
+        // 3.Assert — ground truth via JDBC (not another DAO read).
         final Long count = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM password_reset_codes WHERE user_id = ? AND code = ?",
                 Long.class,
                 userId,
                 "123456");
         Assertions.assertEquals(1L, count);
+    }
+
+    @Test
+    void testHasActiveCodeReturnsTrueForUnexpiredSeededRow() {
+        // 1.Arrange
+        final Instant now = Instant.now().truncatedTo(ChronoUnit.SECONDS);
+        insertCode("123456", now.plus(1, ChronoUnit.HOURS), now);
+
+        // 2.Act / 3.Assert
         Assertions.assertTrue(dao.hasActiveCode(userId, now.plus(30, ChronoUnit.MINUTES)));
+    }
+
+    @Test
+    void testMatchesValidCodeReturnsTrueForUnexpiredSeededRow() {
+        // 1.Arrange
+        final Instant now = Instant.now().truncatedTo(ChronoUnit.SECONDS);
+        insertCode("654321", now.plus(1, ChronoUnit.HOURS), now);
+
+        // 2.Act / 3.Assert
+        Assertions.assertTrue(dao.matchesValidCode(userId, "654321", now));
     }
 
     @Test
     void testDeleteIfValidRemovesMatchingUnexpiredCode() {
         // 1.Arrange
         final Instant now = Instant.now().truncatedTo(ChronoUnit.SECONDS);
-        final Instant expires = now.plus(1, ChronoUnit.HOURS);
-        dao.insert(userId, "654321", expires, now);
-        em.flush();
+        insertCode("654321", now.plus(1, ChronoUnit.HOURS), now);
 
         // 2.Act
         final boolean deleted = dao.deleteIfValid(userId, "654321", now);
@@ -66,15 +83,19 @@ class PasswordResetCodeJpaDaoTest extends DaoIntegrationTestSupport {
 
         // 3.Assert
         Assertions.assertTrue(deleted);
-        Assertions.assertFalse(dao.matchesValidCode(userId, "654321", now));
+        final Long count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM password_reset_codes WHERE user_id = ? AND code = ?",
+                Long.class,
+                userId,
+                "654321");
+        Assertions.assertEquals(0L, count);
     }
 
     @Test
     void testDeleteForUserRemovesAllCodesForUser() {
         // 1.Arrange
         final Instant now = Instant.now().truncatedTo(ChronoUnit.SECONDS);
-        dao.insert(userId, "111111", now.plus(1, ChronoUnit.HOURS), now);
-        em.flush();
+        insertCode("111111", now.plus(1, ChronoUnit.HOURS), now);
 
         // 2.Act
         dao.deleteForUser(userId);
@@ -86,5 +107,14 @@ class PasswordResetCodeJpaDaoTest extends DaoIntegrationTestSupport {
                 Long.class,
                 userId);
         Assertions.assertEquals(0L, count);
+    }
+
+    private void insertCode(final String code, final Instant expiresAt, final Instant createdAt) {
+        jdbcTemplate.update(
+                "INSERT INTO password_reset_codes (user_id, code, expires_at, created_at) VALUES (?, ?, ?, ?)",
+                userId,
+                code,
+                java.sql.Timestamp.from(expiresAt),
+                java.sql.Timestamp.from(createdAt));
     }
 }
