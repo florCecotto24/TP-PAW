@@ -439,10 +439,11 @@ class ReservationWorkflowServiceImplTest {
     }
 
     @Test
-    void testMarkCarReturnedByOwnerDoesNotThrowWhenAcceptedReservationIsCheckedOut() {
+    void testMarkCarReturnedByOwnerCompletesWhenRowUpdated() {
         // 1. Arrange — endDate is in the past and the reservation is ACCEPTED, so the owner is
-        //              allowed to mark the car returned. The post-mark reload reports
-        //              carReturned=true so the sync step advances the status to FINISHED.
+        //              allowed to mark the car returned; the DAO update reports 1 row written.
+        //              The SUT is void and delegates every write, so the only externally
+        //              observable contract on this path is that no guard exception surfaces.
         final long reservationId = 102L;
         final long ownerId = 10L;
         final long riderId = 20L;
@@ -480,6 +481,42 @@ class ReservationWorkflowServiceImplTest {
 
         // 2. Act and 3. Assert — orchestration completes without surfacing an exception.
         Assertions.assertDoesNotThrow(() -> workflowService.markCarReturnedByOwner(ownerId, reservationId));
+    }
+
+    @Test
+    void testMarkCarReturnedByOwnerThrowsWhenNoRowUpdated() {
+        // 1. Arrange — the guards pass (ACCEPTED, endDate in the past, not yet returned) but the
+        //              conditional DAO update reports 0 rows written (e.g. concurrent change), so
+        //              the SUT must surface the not-allowed error instead of silently succeeding.
+        final long reservationId = 103L;
+        final long ownerId = 10L;
+        final long riderId = 20L;
+        final User owner = User.identities(ownerId, "owner@test.com", "Owner", "Test");
+        final User rider = User.identities(riderId, "rider@test.com", "Rider", "Test");
+        final Car car = Car.builder()
+                .id(1L).owner(owner).plate("ABC123")
+                .powertrain(Car.Powertrain.GASOLINE).transmission(Car.Transmission.MANUAL)
+                .build();
+        final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        final Reservation accepted = Reservation.builder()
+                .id(reservationId).rider(rider).car(car)
+                .status(Reservation.Status.ACCEPTED)
+                .totalPrice(new BigDecimal("200.00"))
+                .startDate(OffsetDateTime.parse("2000-01-01T10:00:00Z"))
+                .endDate(OffsetDateTime.parse("2000-01-02T18:00:00Z"))
+                .createdAt(now).updatedAt(now)
+                .build();
+        Mockito.when(queryService.getOwnerReservationById(ownerId, reservationId))
+                .thenReturn(Optional.of(accepted));
+        Mockito.when(reservationService.markCarReturned(reservationId, ownerId)).thenReturn(0);
+
+        // 2. Act
+        final RiderReservationException thrown = Assertions.assertThrows(
+                RiderReservationException.class,
+                () -> workflowService.markCarReturnedByOwner(ownerId, reservationId));
+
+        // 3. Assert
+        Assertions.assertEquals(MessageKeys.RESERVATION_MARK_RETURNED_NOT_ALLOWED, thrown.getMessageCode());
     }
 
     @Test

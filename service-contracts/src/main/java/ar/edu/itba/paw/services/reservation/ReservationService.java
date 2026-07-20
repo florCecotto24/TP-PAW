@@ -170,7 +170,7 @@ public interface ReservationService {
      * Batch job: transitions {@link Reservation.Status#ACCEPTED} reservations to
      * {@link Reservation.Status#STARTED} once their pickup {@code start_date} is reached (UTC).
      */
-    void transitionAcceptedReservationsToStarted();
+    int transitionAcceptedReservationsToStarted();
 
     /**
      * Rider uploads a payment receipt file; validates rider, state, and size policy, persists file metadata, and may
@@ -243,14 +243,17 @@ public interface ReservationService {
     /** Max inclusive billable days for one reservation ({@code app.reservation.max-billable-days}). */
     int getConfiguredMaxReservationBillableDays();
 
+    /** Scheduled job: reminder email to the rider the day before pickup. */
+    int dispatchReservationReminderEmails();
+
     /** Scheduled job: reminder email to return the car (within configured hours before checkout). */
-    void dispatchReturnReminderEmails();
+    int dispatchReturnReminderEmails();
 
     /** Scheduled job: email at checkout if the car was not marked returned. */
-    void dispatchReturnCheckoutEmails();
+    int dispatchReturnCheckoutEmails();
 
     /** Scheduled job: invite the rider to leave an optional review after the rental period. */
-    void dispatchRiderReviewInviteEmails();
+    int dispatchRiderReviewInviteEmails();
 
     /**
      * Scheduled job: closes stale reviews by inserting a null/commentless "skipped" review row. Rider
@@ -259,26 +262,26 @@ public interface ReservationService {
      * less than 1 disables the job). Idempotent — a reservation with an existing review on that side
      * is skipped, and any per-row failure is logged and the loop continues.
      */
-    void dispatchReviewAutoSkips();
+    int dispatchReviewAutoSkips();
 
     /**
      * Scheduled job: sends payment-proof deadline reminders to riders whose deadline falls within the configured lead
      * window ({@code app.reservation.payment-proof-reminder-lead-hours}).
      */
-    void dispatchDuePaymentProofReminderEmails();
+    int dispatchDuePaymentProofReminderEmails();
 
     /**
      * Scheduled job: reminds the host to upload refund transfer proof before the deadline (same lead window as payment
      * proof reminders).
      */
-    void dispatchDueRefundProofReminderEmails();
+    int dispatchDueRefundProofReminderEmails();
 
     /**
      * Scheduled job: blocks owners whose refund-proof deadlines have already lapsed without an uploaded receipt.
      * Idempotent — owners already blocked are skipped. A single email is enqueued per newly-blocked owner with
      * the full list of overdue reservations.
      */
-    void sweepRefundOverdueAndBlockOwners();
+    int sweepRefundOverdueAndBlockOwners();
 
     /**
      * Reservations in {@code pending}, {@code accepted}, or {@code started} for one car (availability overlap checks).

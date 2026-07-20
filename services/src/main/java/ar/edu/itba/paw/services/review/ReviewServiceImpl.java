@@ -86,7 +86,8 @@ public class ReviewServiceImpl implements ReviewService {
     @Override
     @Transactional(readOnly = true)
     public BigDecimal getAverageRatingForCounterparty(final long counterpartyUserId, final boolean counterpartyIsOwner) {
-        return reviewDao.findAverageRatingForCounterparty(counterpartyUserId, counterpartyIsOwner);
+        return reviewDao.findAverageRatingForCounterparty(counterpartyUserId, counterpartyIsOwner)
+                .orElse(null);
     }
 
     @Override
@@ -157,6 +158,9 @@ public class ReviewServiceImpl implements ReviewService {
             }
             final Reservation r = reservationService.getOwnerReservationById(ownerUserId, reservationId)
                     .orElseThrow(() -> new RiderReservationException(MessageKeys.REVIEW_NOT_ALLOWED));
+            if (Reservation.isCancelledStatus(r.getStatus())) {
+                throw new RiderReservationException(MessageKeys.REVIEW_NOT_ALLOWED);
+            }
             if (!r.isCarReturned()) {
                 throw new RiderReservationException(MessageKeys.REVIEW_NOT_ALLOWED);
             }
@@ -178,6 +182,9 @@ public class ReviewServiceImpl implements ReviewService {
         final String storedComment = trimmed.isEmpty() ? null : trimmed;
         final Reservation r = reservationService.getOwnerReservationById(ownerUserId, reservationId)
                 .orElseThrow(() -> new RiderReservationException(MessageKeys.REVIEW_NOT_ALLOWED));
+        if (Reservation.isCancelledStatus(r.getStatus())) {
+            throw new RiderReservationException(MessageKeys.REVIEW_NOT_ALLOWED);
+        }
         if (!r.isCarReturned()) {
             throw new RiderReservationException(MessageKeys.REVIEW_NOT_ALLOWED);
         }
@@ -209,6 +216,9 @@ public class ReviewServiceImpl implements ReviewService {
             }
             final Reservation r = reservationService.getRiderReservationById(riderUserId, reservationId)
                     .orElseThrow(() -> new RiderReservationException(MessageKeys.REVIEW_NOT_ALLOWED));
+            if (Reservation.isCancelledStatus(r.getStatus())) {
+                throw new RiderReservationException(MessageKeys.REVIEW_NOT_ALLOWED);
+            }
             if (!OffsetDateTime.now(ZoneOffset.UTC).isAfter(r.getEndDate())) {
                 throw new RiderReservationException(MessageKeys.REVIEW_NOT_ALLOWED);
             }
@@ -230,6 +240,9 @@ public class ReviewServiceImpl implements ReviewService {
         final String storedComment = trimmed.isEmpty() ? null : trimmed;
         final Reservation r = reservationService.getRiderReservationById(riderUserId, reservationId)
                 .orElseThrow(() -> new RiderReservationException(MessageKeys.REVIEW_NOT_ALLOWED));
+        if (Reservation.isCancelledStatus(r.getStatus())) {
+            throw new RiderReservationException(MessageKeys.REVIEW_NOT_ALLOWED);
+        }
         if (!OffsetDateTime.now(ZoneOffset.UTC).isAfter(r.getEndDate())) {
             throw new RiderReservationException(MessageKeys.REVIEW_NOT_ALLOWED);
         }
@@ -297,7 +310,8 @@ public class ReviewServiceImpl implements ReviewService {
      * outside that context.
      */
     private void refreshAggregatesAfterOwnerReview(final Reservation r) {
-        final BigDecimal riderAvg = reviewDao.findAverageRatingForCounterparty(r.getRiderId(), false);
+        final BigDecimal riderAvg = reviewDao.findAverageRatingForCounterparty(r.getRiderId(), false)
+                .orElse(null);
         userService.updateRatingAsRider(r.getRiderId(), riderAvg);
     }
 
@@ -314,10 +328,11 @@ public class ReviewServiceImpl implements ReviewService {
         carService.getCarById(carId)
                 .map(Car::getOwner)
                 .ifPresent(owner -> {
-                    final BigDecimal ownerAvg = reviewDao.findAverageRatingForCounterparty(owner.getId(), true);
+                    final BigDecimal ownerAvg = reviewDao.findAverageRatingForCounterparty(owner.getId(), true)
+                            .orElse(null);
                     userService.updateRatingAsOwner(owner.getId(), ownerAvg);
                 });
-        final BigDecimal carAvg = reviewDao.findAverageRatingForCar(carId);
+        final BigDecimal carAvg = reviewDao.findAverageRatingForCar(carId).orElse(null);
         carService.updateRatingAvg(carId, carAvg);
     }
 

@@ -364,8 +364,8 @@ public class ReservationServiceImpl implements ReservationService {
     // Deliberately NOT @Transactional: same pattern as payment sweeps — each row commits in
     // ReservationLifecycleRowProcessor (REQUIRES_NEW); an outer TX would nest connections.
     @Override
-    public void transitionAcceptedReservationsToStarted() {
-        schedulerService.transitionAcceptedReservationsToStarted();
+    public int transitionAcceptedReservationsToStarted() {
+        return schedulerService.transitionAcceptedReservationsToStarted();
     }
 
     @Override
@@ -425,50 +425,56 @@ public class ReservationServiceImpl implements ReservationService {
     // Deliberately NOT @Transactional: each reminder is claimed in ReservationSweepRowProcessor
     // (REQUIRES_NEW); an outer TX would nest connections.
     @Override
-    public void dispatchDuePaymentProofReminderEmails() {
-        paymentService.dispatchDuePaymentProofReminderEmails();
+    public int dispatchDuePaymentProofReminderEmails() {
+        return paymentService.dispatchDuePaymentProofReminderEmails();
     }
 
     // Deliberately NOT @Transactional: each reminder is claimed in ReservationSweepRowProcessor
     // (REQUIRES_NEW); an outer TX would nest connections.
     @Override
-    public void dispatchDueRefundProofReminderEmails() {
-        paymentService.dispatchDueRefundProofReminderEmails();
+    public int dispatchDueRefundProofReminderEmails() {
+        return paymentService.dispatchDueRefundProofReminderEmails();
     }
 
     // Deliberately NOT @Transactional: each owner block commits in REQUIRES_NEW.
     @Override
-    public void sweepRefundOverdueAndBlockOwners() {
-        paymentService.sweepRefundOverdueAndBlockOwners();
+    public int sweepRefundOverdueAndBlockOwners() {
+        return paymentService.sweepRefundOverdueAndBlockOwners();
     }
 
     // ---------------------------------------------------------------------------------------
     // Scheduled lifecycle jobs + per-car analytics → scheduler service
     // ---------------------------------------------------------------------------------------
 
+    // Deliberately NOT @Transactional: claim-then-mail-after-commit per row (REQUIRES_NEW).
+    @Override
+    public int dispatchReservationReminderEmails() {
+        return schedulerService.dispatchReservationReminderEmails();
+    }
+
     // Deliberately NOT @Transactional: claim-then-mail-after-commit per row in the lifecycle
     // processor (REQUIRES_NEW), matching payment-proof reminder sweeps.
     @Override
-    public void dispatchReturnReminderEmails() {
-        schedulerService.dispatchReturnReminderEmails();
+    public int dispatchReturnReminderEmails() {
+        return schedulerService.dispatchReturnReminderEmails();
     }
 
     // Deliberately NOT @Transactional: claim-then-mail-after-commit per row (REQUIRES_NEW).
     @Override
-    public void dispatchReturnCheckoutEmails() {
-        schedulerService.dispatchReturnCheckoutEmails();
+    public int dispatchReturnCheckoutEmails() {
+        return schedulerService.dispatchReturnCheckoutEmails();
     }
 
     // Deliberately NOT @Transactional: claim-then-mail-after-commit per row (REQUIRES_NEW).
     @Override
-    public void dispatchRiderReviewInviteEmails() {
-        schedulerService.dispatchRiderReviewInviteEmails();
+    public int dispatchRiderReviewInviteEmails() {
+        return schedulerService.dispatchRiderReviewInviteEmails();
     }
 
     // Deliberately NOT @Transactional: each auto-skip commits in REQUIRES_NEW.
     @Override
-    public void dispatchReviewAutoSkips() {
-        schedulerService.dispatchReviewAutoSkips();
+    public int dispatchReviewAutoSkips() {
+        return schedulerService.dispatchReviewAutoSkips();
     }
 
     @Override

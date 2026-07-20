@@ -127,9 +127,13 @@ class CarJpaDaoTest extends DaoIntegrationTestSupport {
         Assertions.assertEquals("lack_doc", status);
     }
 
-    @Test
-    void testFindActiveDayPriceMarketInsightAggregatesPerCarMinPriceAndExcludesCar() {
-        // 1. Arrange — catalog + three active cars (two Corolla peers, one Ford Ka outlier).
+    /**
+     * Seeds the market-insight fixture: catalog + three active cars (two Corolla peers, one
+     * Ford Ka outlier). Corolla A has segment prices 80/50 (per-car MIN = 50), Corolla B has
+     * 120, and the Ka has 200 (must never leak into Corolla stats). Returns Corolla A's id so
+     * the exclusion variant can leave it out.
+     */
+    private long seedCorollaMarketInsightFixture() {
         jdbcTemplate.update("INSERT INTO car_brands (name, validated) VALUES (?, ?)", "Toyota", true);
         final long toyotaBrandId = jdbcTemplate.queryForObject(
                 "SELECT id FROM car_brands WHERE name = ?", Long.class, "Toyota");
@@ -163,21 +167,37 @@ class CarJpaDaoTest extends DaoIntegrationTestSupport {
         insertOfferedAvailability(corollaAId, new BigDecimal("50.00"), t.plusDays(1));
         insertOfferedAvailability(corollaBId, new BigDecimal("120.00"), t);
         insertOfferedAvailability(kaId, new BigDecimal("200.00"), t);
+        return corollaAId;
+    }
 
-        // 2. Act — market stats for Toyota Corolla (two cars, min prices 50 and 120).
+    @Test
+    void testFindActiveDayPriceMarketInsightByBrandAndModelAggregatesPerCarMinPrice() {
+        // 1. Arrange
+        seedCorollaMarketInsightFixture();
+
+        // 2. Act — market stats for Toyota Corolla (two cars, per-car min prices 50 and 120).
         final Optional<CarPriceMarketInsight> market = dao.findActiveDayPriceMarketInsightByBrandAndModel(
                 "Toyota", "Corolla", null);
-        final Optional<CarPriceMarketInsight> excludingCorollaA = dao.findActiveDayPriceMarketInsightByBrandAndModel(
-                "Toyota", "Corolla", corollaAId);
 
-        // 3. Assert — per-car MIN aggregation (not raw segment count).
+        // 3. Assert — per-car MIN aggregation (not raw segment count), Ka excluded by model.
         Assertions.assertTrue(market.isPresent());
         final CarPriceMarketInsight insight = market.get();
         Assertions.assertEquals(0, new BigDecimal("50.00").compareTo(insight.getMinPrice()));
         Assertions.assertEquals(0, new BigDecimal("120.00").compareTo(insight.getMaxPrice()));
         Assertions.assertEquals(0, new BigDecimal("85.00").compareTo(insight.getAveragePrice()));
         Assertions.assertEquals(2L, insight.getSampleCount());
+    }
 
+    @Test
+    void testFindActiveDayPriceMarketInsightByBrandAndModelExcludesGivenCar() {
+        // 1. Arrange
+        final long corollaAId = seedCorollaMarketInsightFixture();
+
+        // 2. Act — same pair but excluding Corolla A: only Corolla B (min price 120) remains.
+        final Optional<CarPriceMarketInsight> excludingCorollaA = dao.findActiveDayPriceMarketInsightByBrandAndModel(
+                "Toyota", "Corolla", corollaAId);
+
+        // 3. Assert
         Assertions.assertTrue(excludingCorollaA.isPresent());
         final CarPriceMarketInsight excluded = excludingCorollaA.get();
         Assertions.assertEquals(0, new BigDecimal("120.00").compareTo(excluded.getMinPrice()));

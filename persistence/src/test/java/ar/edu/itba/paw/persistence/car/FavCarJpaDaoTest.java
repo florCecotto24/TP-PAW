@@ -99,17 +99,28 @@ class FavCarJpaDaoTest extends DaoIntegrationTestSupport {
     }
 
     @Test
-    void testIsFavoritedReturnsTrueWhenRowExistsAndFalseOtherwise() {
-        // 1. Arrange — insert one favorite directly via JdbcTemplate.
+    void testIsFavoritedReturnsTrueWhenRowExists() {
+        // 1. Arrange — insert the (car, viewer) favorite directly via JdbcTemplate.
         final long carId = insertCar("FAV010", "active");
         insertFavorite(carId, viewerId, OffsetDateTime.now(ZoneOffset.UTC));
 
         // 2. Act
         final boolean viewerHasIt = dao.isFavorited(carId, viewerId);
-        final boolean ownerHasIt = dao.isFavorited(carId, ownerId);
 
         // 3. Assert
         Assertions.assertTrue(viewerHasIt);
+    }
+
+    @Test
+    void testIsFavoritedReturnsFalseWhenUserHasNotFavoritedCar() {
+        // 1. Arrange — the favorite belongs to the viewer, so the (car, owner) pair is absent.
+        final long carId = insertCar("FAV011", "active");
+        insertFavorite(carId, viewerId, OffsetDateTime.now(ZoneOffset.UTC));
+
+        // 2. Act
+        final boolean ownerHasIt = dao.isFavorited(carId, ownerId);
+
+        // 3. Assert
         Assertions.assertFalse(ownerHasIt);
     }
 

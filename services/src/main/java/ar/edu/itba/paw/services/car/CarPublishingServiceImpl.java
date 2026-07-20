@@ -1,6 +1,5 @@
 package ar.edu.itba.paw.services.car;
 
-import java.util.Locale;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -54,8 +53,7 @@ public class CarPublishingServiceImpl implements CarPublishingService {
 
     @Override
     @Transactional
-    public PublishCarOutcome publishCar(
-            final long ownerId, final PublishCarRequest request, final Locale locale) {
+    public PublishCarOutcome publishCar(final long ownerId, final PublishCarRequest request) {
         final User owner = userService.getUserById(ownerId)
                 .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
         if (!userReadinessService.meetsPublishingPrerequisites(owner)) {
@@ -74,7 +72,7 @@ public class CarPublishingServiceImpl implements CarPublishingService {
 
         // Admins skip the pending-validation flow: they're trusted to add catalog entries directly.
         if (newCatalogEntry && owner.isAdmin()) {
-            adminService.validateCatalogEntry(resolvedModel.getId(), locale);
+            adminService.validateCatalogEntry(resolvedModel.getId());
         }
 
         final Car car = carService.publishCar(

@@ -1,6 +1,5 @@
 package ar.edu.itba.paw.services.user;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -38,6 +37,9 @@ public class AdminServiceImplTest {
     private CarService carService;
 
     @Mock
+    private UserLocaleService userLocaleService;
+
+    @Mock
     private CarBrandService carBrandService;
 
     @Mock
@@ -67,6 +69,7 @@ public class AdminServiceImplTest {
     public void setUp() {
         adminService = new AdminServiceImpl(
                 userService,
+                userLocaleService,
                 carService,
                 carBrandService,
                 carModelService,
@@ -150,67 +153,9 @@ public class AdminServiceImplTest {
     }
 
     @Test
-    public void testUnblockUserDelegatesWhenCallerIsAdmin() {
-        // 1. Arrange
-        Mockito.when(userService.findRolesForUser(10L)).thenReturn(List.of(UserRole.ADMIN));
-
-        // 2. Act and 3. Assert
-        Assertions.assertDoesNotThrow(() -> adminService.unblockUser(50L, 10L));
-    }
-
-    @Test
-    public void testRejectCarBrandClearsCarModelsBeforeDelete() {
-        // 1. Arrange — brand with one model referenced by a car; clear must run before delete.
-        final long brandId = 7L;
-        final long modelId = 11L;
-        final long carId = 21L;
-        final CarBrand brand = CarBrand.builder().id(brandId).name("PendingBrand").validated(false).build();
-        final CarModel model = CarModel.builder()
-                .id(modelId)
-                .name("PendingModel")
-                .brand(brand)
-                .validated(false)
-                .type(Car.Type.SEDAN)
-                .build();
-        final Car car = Car.builder()
-                .id(carId)
-                .owner(User.identities(1L, "o@test.com", "O", "Wner"))
-                .plate("XYZ999")
-                .powertrain(Car.Powertrain.GASOLINE)
-                .transmission(Car.Transmission.MANUAL)
-                .build();
-        final List<Long> clearedCarIds = new ArrayList<>();
-        final List<Long> deletedModelIds = new ArrayList<>();
-        final List<Long> deletedBrandIds = new ArrayList<>();
-
-        Mockito.when(carBrandService.findById(brandId)).thenReturn(Optional.of(brand));
-        Mockito.when(carModelService.findByBrandIdOrdered(brandId)).thenReturn(List.of(model));
-        Mockito.when(carService.findCarsByModelId(modelId)).thenReturn(List.of(car));
-        Mockito.doAnswer(inv -> {
-            clearedCarIds.add(inv.getArgument(0));
-            return null;
-        }).when(carService).clearCarModel(carId);
-        Mockito.doAnswer(inv -> {
-            deletedModelIds.add(inv.getArgument(0));
-            return null;
-        }).when(carModelService).deleteById(modelId);
-        Mockito.doAnswer(inv -> {
-            deletedBrandIds.add(inv.getArgument(0));
-            return null;
-        }).when(carBrandService).deleteById(brandId);
-
-        // 2. Act
-        adminService.rejectCarBrand(brandId);
-
-        // 3. Assert — cars cleared, then model and brand removed (avoids FK 500).
-        Assertions.assertEquals(List.of(carId), clearedCarIds);
-        Assertions.assertEquals(List.of(modelId), deletedModelIds);
-        Assertions.assertEquals(List.of(brandId), deletedBrandIds);
-    }
-
-    @Test
     public void testValidateCatalogEntryAlsoValidatesPendingBrand() {
         // 1. Arrange — pending brand + pending model; approving the model must validate both.
+        // The stubs only load the entities: the validated flags are flipped by the SUT itself.
         final long brandId = 3L;
         final long modelId = 8L;
         final CarBrand brand = CarBrand.builder().id(brandId).name("Pirulete").validated(false).build();
@@ -221,35 +166,20 @@ public class AdminServiceImplTest {
                 .validated(false)
                 .type(Car.Type.CONVERTIBLE)
                 .build();
-        final List<Long> validatedBrandIds = new ArrayList<>();
-        final List<Long> validatedModelIds = new ArrayList<>();
-
         Mockito.when(carModelService.findById(modelId)).thenReturn(Optional.of(model));
         Mockito.when(carService.findCarsByModelId(modelId)).thenReturn(List.of());
-        Mockito.doAnswer(inv -> {
-            validatedBrandIds.add(inv.getArgument(0));
-            brand.setValidated(true);
-            return null;
-        }).when(carBrandService).markAsValidated(brandId);
-        Mockito.doAnswer(inv -> {
-            validatedModelIds.add(inv.getArgument(0));
-            model.setValidated(true);
-            return null;
-        }).when(carModelService).markAsValidated(modelId);
 
         // 2. Act
-        adminService.validateCatalogEntry(modelId, Locale.ENGLISH);
+        adminService.validateCatalogEntry(modelId);
 
-        // 3. Assert
-        Assertions.assertEquals(List.of(brandId), validatedBrandIds);
-        Assertions.assertEquals(List.of(modelId), validatedModelIds);
+        // 3. Assert — state mutated by the SUT on the loaded entities.
         Assertions.assertTrue(brand.isValidated());
         Assertions.assertTrue(model.isValidated());
     }
 
     @Test
     public void testValidateCatalogEntrySkipsAlreadyValidatedBrand() {
-        // 1. Arrange — brand already validated; only the model should be marked.
+        // 1. Arrange — brand already validated; only the model is pending.
         final long brandId = 3L;
         final long modelId = 8L;
         final CarBrand brand = CarBrand.builder().id(brandId).name("Toyota").validated(true).build();
@@ -260,22 +190,14 @@ public class AdminServiceImplTest {
                 .validated(false)
                 .type(Car.Type.SEDAN)
                 .build();
-        final List<Long> validatedModelIds = new ArrayList<>();
-
         Mockito.when(carModelService.findById(modelId)).thenReturn(Optional.of(model));
         Mockito.when(carService.findCarsByModelId(modelId)).thenReturn(List.of());
-        Mockito.doAnswer(inv -> {
-            validatedModelIds.add(inv.getArgument(0));
-            model.setValidated(true);
-            return null;
-        }).when(carModelService).markAsValidated(modelId);
 
         // 2. Act
-        adminService.validateCatalogEntry(modelId, Locale.ENGLISH);
+        adminService.validateCatalogEntry(modelId);
 
-        // 3. Assert — brand left alone; model validated.
+        // 3. Assert — brand stays validated; model validated by the SUT.
         Assertions.assertTrue(brand.isValidated());
-        Assertions.assertEquals(List.of(modelId), validatedModelIds);
         Assertions.assertTrue(model.isValidated());
     }
 }

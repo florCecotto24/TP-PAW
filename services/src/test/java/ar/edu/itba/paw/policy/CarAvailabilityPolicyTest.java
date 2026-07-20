@@ -73,6 +73,15 @@ class CarAvailabilityPolicyTest {
 
         // 2.Act / 3.Assert (no exception)
         Assertions.assertDoesNotThrow(() -> policy.validateAvailabilityWithinPublishHorizon(today, List.of()));
+    }
+
+    @Test
+    void testValidateAvailabilityWithinPublishHorizonAllowsNullPeriods() {
+        // 1.Arrange
+        final CarAvailabilityPolicy policy = new CarAvailabilityPolicyImpl(environment);
+        final LocalDate today = LocalDate.of(2026, 5, 3);
+
+        // 2.Act / 3.Assert (no exception)
         Assertions.assertDoesNotThrow(() -> policy.validateAvailabilityWithinPublishHorizon(today, null));
     }
 

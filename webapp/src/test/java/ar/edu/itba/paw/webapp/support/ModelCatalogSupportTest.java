@@ -85,7 +85,7 @@ class ModelCatalogSupportTest {
         stubModelUnderBrand(brandId, modelId);
 
         // 2.Act
-        final Response response = support.rejectModelForBrand(brandId, modelId, Locale.ENGLISH);
+        final Response response = support.rejectModelForBrand(brandId, modelId);
 
         // 3.Assert
         Assertions.assertEquals(Response.Status.NO_CONTENT.getStatusCode(), response.getStatus());

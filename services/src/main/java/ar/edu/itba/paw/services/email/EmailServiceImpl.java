@@ -16,6 +16,7 @@ import org.thymeleaf.context.Context;
 
 import ar.edu.itba.paw.exception.email.EmailMessagingException;
 import ar.edu.itba.paw.models.domain.reservation.Reservation;
+import ar.edu.itba.paw.models.util.rules.SupportedLocales;
 import ar.edu.itba.paw.models.email.admin.AdminInvitationEmailPayload;
 import ar.edu.itba.paw.models.email.admin.AdminPromotedEmailPayload;
 import ar.edu.itba.paw.models.email.listing.CarPausedByAdminOwnerEmailPayload;
@@ -128,7 +129,7 @@ public class EmailServiceImpl implements EmailService {
         ctx.setVariable("hasDeliveryLocation", hasDelivery);
         ctx.setVariable("deliveryLocation", hasDelivery ? delivery : "");
         ctx.setVariable("ownerFullName", payload.getOwnerFullName());
-        final Locale loc = mailLocale != null ? mailLocale : Locale.ENGLISH;
+        final Locale loc = mailLocale != null ? mailLocale : SupportedLocales.DEFAULT;
         ctx.setVariable("ownerEmail", mailDispatch.nonBlankEmailForDisplay(payload.getOwnerEmail(), loc));
         ctx.setVariable("ownerCbu", payload.getOwnerCbu() != null ? payload.getOwnerCbu() : "");
         return ctx;

@@ -122,8 +122,8 @@ public final class ReservationMailComposer {
                     .ownerFullName(carOwner.getForename() + " " + carOwner.getSurname())
                     .ownerEmail(carOwner.getEmail())
                     .reservationTotal(moneyFormat.format(reservation.getTotalPrice()))
-                    .riderMailLocale(userLocaleService.resolveMailLocale(rider.getId()))
-                    .ownerMailLocale(userLocaleService.resolveMailLocale(carOwner.getId()))
+                    .riderMailLocale(userLocaleService.resolveMailLocaleFor(rider))
+                    .ownerMailLocale(userLocaleService.resolveMailLocaleFor(carOwner))
                     .ownerCbu(ownerCbu)
                     .build();
             LOGGER.atInfo().addArgument(rider.getEmail()).addArgument(reservation.getId())
@@ -176,8 +176,8 @@ public final class ReservationMailComposer {
                     .ownerFullName(owner.getForename() + " " + owner.getSurname())
                     .ownerEmail(owner.getEmail())
                     .reservationTotal(moneyFormat.format(reservation.getTotalPrice()))
-                    .riderMailLocale(userLocaleService.resolveMailLocale(rider.getId()))
-                    .ownerMailLocale(userLocaleService.resolveMailLocale(owner.getId()))
+                    .riderMailLocale(userLocaleService.resolveMailLocaleFor(rider))
+                    .ownerMailLocale(userLocaleService.resolveMailLocaleFor(owner))
                     .ownerCbu(ownerCbu)
                     .build();
             emailService.sendReservationConfirmationEmail(payload);
@@ -230,8 +230,8 @@ public final class ReservationMailComposer {
                     .ownerFullName(listingOwner.getForename() + " " + listingOwner.getSurname())
                     .ownerEmail(listingOwner.getEmail())
                     .reservationTotal(moneyFormat.format(reservation.getTotalPrice()))
-                    .riderMailLocale(userLocaleService.resolveMailLocale(rider.getId()))
-                    .ownerMailLocale(userLocaleService.resolveMailLocale(listingOwner.getId()))
+                    .riderMailLocale(userLocaleService.resolveMailLocaleFor(rider))
+                    .ownerMailLocale(userLocaleService.resolveMailLocaleFor(listingOwner))
                     .build();
             final ReservationCancellationEmailPayload cancelPayload = ReservationCancellationEmailPayload.builder()
                     .mail(mail)
@@ -283,8 +283,8 @@ public final class ReservationMailComposer {
                     .ownerFullName(listingOwner.getForename() + " " + listingOwner.getSurname())
                     .ownerEmail(listingOwner.getEmail())
                     .reservationTotal(moneyFormat.format(reservation.getTotalPrice()))
-                    .riderMailLocale(userLocaleService.resolveMailLocale(rider.getId()))
-                    .ownerMailLocale(userLocaleService.resolveMailLocale(listingOwner.getId()))
+                    .riderMailLocale(userLocaleService.resolveMailLocaleFor(rider))
+                    .ownerMailLocale(userLocaleService.resolveMailLocaleFor(listingOwner))
                     .build();
             LOGGER.atInfo().addArgument(rider.getEmail()).addArgument(reservation.getId())
                     .log("Queueing rider reservation confirmed-after-proof email to {} for reservation id={}");
@@ -307,7 +307,7 @@ public final class ReservationMailComposer {
             final User owner = ownerOpt.get();
             final User rider = riderOpt.get();
             final OwnerPaymentProofReceivedEmailPayload mailPayload = OwnerPaymentProofReceivedEmailPayload.builder()
-                    .messageLocale(userLocaleService.resolveMailLocale(owner.getId()))
+                    .messageLocale(userLocaleService.resolveMailLocaleFor(owner))
                     .recipientEmail(owner.getEmail())
                     .ownerFullName(owner.getForename() + " " + owner.getSurname())
                     .riderFullName(rider.getForename() + " " + rider.getSurname())
@@ -343,7 +343,7 @@ public final class ReservationMailComposer {
             final User owner = ownerOpt.get();
             final User rider = riderOpt.get();
             final RiderRefundProofReceivedEmailPayload mailPayload = RiderRefundProofReceivedEmailPayload.builder()
-                    .messageLocale(userLocaleService.resolveMailLocale(rider.getId()))
+                    .messageLocale(userLocaleService.resolveMailLocaleFor(rider))
                     .recipientEmail(rider.getEmail())
                     .riderFullName(rider.getForename() + " " + rider.getSurname())
                     .ownerFullName(owner.getForename() + " " + owner.getSurname())
@@ -387,7 +387,7 @@ public final class ReservationMailComposer {
             }
             final User owner = ownerOpt.get();
             final OwnerRefundProofObligationEmailPayload mailPayload = OwnerRefundProofObligationEmailPayload.builder()
-                    .messageLocale(userLocaleService.resolveMailLocale(owner.getId()))
+                    .messageLocale(userLocaleService.resolveMailLocaleFor(owner))
                     .recipientEmail(owner.getEmail())
                     .ownerFullName(owner.getForename() + " " + owner.getSurname())
                     .vehicleLabel(support.resolveVehicleLabelFromReservation(reservation))
@@ -425,7 +425,7 @@ public final class ReservationMailComposer {
                 return;
             }
             final OwnerBlockedEmailPayload payload = OwnerBlockedEmailPayload.builder()
-                    .messageLocale(userLocaleService.resolveMailLocale(owner.getId()))
+                    .messageLocale(userLocaleService.resolveMailLocaleFor(owner))
                     .recipientEmail(owner.getEmail())
                     .ownerFullName(owner.getForename() + " " + owner.getSurname())
                     .overdueReservations(rows)
@@ -461,7 +461,7 @@ public final class ReservationMailComposer {
                     .log("Skipping due payment proof reminder: owner CBU unavailable (reservation id={}, owner id={})");
             return Optional.empty();
         }
-        final Locale riderLocale = userLocaleService.resolveMailLocale(rider.getId());
+        final Locale riderLocale = userLocaleService.resolveMailLocaleFor(rider);
         return Optional.of(ReservationMailPayload.builder()
                 .recipientEmail(rider.getEmail())
                 .riderFullName(rider.getForename() + " " + rider.getSurname())
@@ -475,7 +475,7 @@ public final class ReservationMailComposer {
                 .reservationTotal(moneyFormat.format(reservation.getTotalPrice()))
                 .ownerCbu(ownerCbu)
                 .riderMailLocale(riderLocale)
-                .ownerMailLocale(userLocaleService.resolveMailLocale(owner.getId()))
+                .ownerMailLocale(userLocaleService.resolveMailLocaleFor(owner))
                 .build());
     }
 
@@ -487,6 +487,47 @@ public final class ReservationMailComposer {
     // Return reminder + return checkout + review invite (scheduler-driven)
     // ---------------------------------------------------------------------------------------
 
+    /**
+     * Day-before-pickup reminder. Rider, car and owner must come pre-fetched on the reservation
+     * (see {@code getReminderReservations}); the pickup snapshot is batch-resolved by the caller,
+     * so building the payload issues no per-row queries.
+     */
+    public Optional<ReservationMailPayload> buildReservationReminderPayload(
+            final Reservation reservation, final CarAvailability pickupSnapshot) {
+        final User rider = reservation.getRider();
+        final Car car = reservation.getCar();
+        if (rider == null || car == null || car.getOwner() == null) {
+            return Optional.empty();
+        }
+        final User listingOwner = car.getOwner();
+        final String riderLocation = pickupSnapshot == null
+                ? null
+                : addressFormatter.formatRiderReservationHandoverSummary(pickupSnapshot, reservation);
+        final String ownerLocation = pickupSnapshot == null
+                ? null
+                : addressFormatter.formatOwnerReservationHandoverSummary(pickupSnapshot);
+        return Optional.of(ReservationMailPayload.builder()
+                .recipientEmail(rider.getEmail())
+                .riderFullName(trimName(rider.getForename(), rider.getSurname()))
+                .reservationId(reservation.getId())
+                .carId(car.getId())
+                .vehicleLabel(support.resolveVehicleLabelFromReservation(reservation))
+                .startDate(reservation.getStartDate())
+                .endDate(reservation.getEndDate())
+                .riderHandoverLocation(riderLocation)
+                .ownerHandoverLocation(ownerLocation)
+                .ownerFullName(trimName(listingOwner.getForename(), listingOwner.getSurname()))
+                .ownerEmail(listingOwner.getEmail())
+                .reservationTotal(moneyFormat.format(reservation.getTotalPrice()))
+                .riderMailLocale(userLocaleService.resolveMailLocaleFor(rider))
+                .ownerMailLocale(userLocaleService.resolveMailLocaleFor(listingOwner))
+                .build());
+    }
+
+    public void sendReservationReminder(final ReservationMailPayload payload) {
+        emailService.sendReservationReminderEmail(payload);
+    }
+
     public Optional<RiderCarReturnEmailPayload> buildRiderCarReturnPayload(final Reservation reservation) {
         final Optional<User> riderOpt = resolveRider(reservation);
         final Optional<CarAvailability> availabilityOpt = support.resolveAvailabilityForReservation(reservation);
@@ -496,7 +537,7 @@ public final class ReservationMailComposer {
         }
         final User rider = riderOpt.get();
         final User owner = ownerOpt.get();
-        final Locale locale = userLocaleService.resolveMailLocale(rider.getId());
+        final Locale locale = userLocaleService.resolveMailLocaleFor(rider);
         final String checkout = WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(reservation.getEndDate(), locale);
         final String returnLine = availabilityOpt
                 .map(a -> addressFormatter.formatPickupForReservationView(a, reservation, false))
@@ -530,7 +571,7 @@ public final class ReservationMailComposer {
         }
         final User rider = riderOpt.get();
         final String vehicleLabel = support.resolveVehicleLabelFromReservation(reservation);
-        final Locale locale = userLocaleService.resolveMailLocale(rider.getId());
+        final Locale locale = userLocaleService.resolveMailLocaleFor(rider);
         /* Deep link must stay consistent with GET /my-reservations/{id} (default role=rider) + #rider-review-owner. */
         final String path = "/my-reservations/" + reservation.getId() + "?role=rider#rider-review-owner";
         return Optional.of(RiderReviewInviteEmailPayload.builder()

@@ -22,25 +22,28 @@ import java.util.Optional;
  */
 public interface ReservationLifecycleSchedulerService {
 
-    /** Scheduled job: reminder email to return the car. */
-    void dispatchReturnReminderEmails();
+    /** Scheduled job: reminder email to the rider the day before pickup. */
+    int dispatchReservationReminderEmails();
 
-    /** Scheduled job: email at checkout if the car was not marked returned. */
-    void dispatchReturnCheckoutEmails();
+    /** Scheduled job: reminder email to return the car. Returns the number of emails queued. */
+    int dispatchReturnReminderEmails();
 
-    /** Scheduled job: invite the rider to leave an optional review after the rental period. */
-    void dispatchRiderReviewInviteEmails();
+    /** Scheduled job: email at checkout if the car was not marked returned. Returns the number of emails queued. */
+    int dispatchReturnCheckoutEmails();
+
+    /** Scheduled job: invite the rider to leave an optional review after the rental period. Returns the number of emails queued. */
+    int dispatchRiderReviewInviteEmails();
 
     /**
      * Scheduled job: closes stale reviews by inserting a null/commentless "skipped" review row.
      * Window length is {@code app.reservation.review-auto-skip-days} (less than 1 disables the job).
      */
-    void dispatchReviewAutoSkips();
+    int dispatchReviewAutoSkips();
 
     /**
      * Scheduled job: marks confirmed ({@code accepted}) reservations as {@code started} once pickup time is reached.
      */
-    void transitionAcceptedReservationsToStarted();
+    int transitionAcceptedReservationsToStarted();
 
     /** Counts reservations per status bucket for the owner's car dashboard charts. */
     Map<String, Long> countCarReservationsByStatus(long ownerId, long carId);

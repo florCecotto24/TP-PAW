@@ -2,7 +2,6 @@ package ar.edu.itba.paw.services.car;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
@@ -212,7 +211,7 @@ public interface CarService {
      * {@link Car.Status#PAUSED}, {@link Car.Status#ADMIN_PAUSED} and {@link Car.Status#DEACTIVATED}
      * are left unchanged so the owner's prior intent is preserved when docs are restored.
      */
-    void pauseCarsForMissingCbu(long ownerId);
+    List<Long> pauseCarsForMissingCbu(long ownerId);
 
     /**
      * Re-activates cars that were demoted only for missing CBU ({@link Car.Status#LACK_DOC} →
@@ -227,7 +226,7 @@ public interface CarService {
      * {@link Car.Status#PAUSED}, {@link Car.Status#ADMIN_PAUSED} and {@link Car.Status#DEACTIVATED}
      * are left unchanged.
      */
-    void pauseCarsForMissingIdentity(long ownerId);
+    List<Long> pauseCarsForMissingIdentity(long ownerId);
 
     /**
      * Re-activates cars demoted for missing identity ({@link Car.Status#LACK_DOC} →
@@ -273,7 +272,7 @@ public interface CarService {
      * @throws ar.edu.itba.paw.exception.admin.AdminPromoterNotAdminException when admin-only targets
      *         are requested by a non-admin caller
      */
-    void applyStatusTransition(long carId, Car.Status target, long actingUserId, Locale locale);
+    void applyStatusTransition(long carId, Car.Status target, long actingUserId);
 
     // -----------------------------------------------------------------------------------------------------------
     // Admin-orchestrated operations on car rows.

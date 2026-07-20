@@ -1,6 +1,5 @@
 package ar.edu.itba.paw.services.car;
 
-import java.util.Locale;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Assertions;
@@ -121,7 +120,7 @@ class CarPublishingServiceImplTest {
 
         // 2.Act
         final PublishCarOutcome outcome =
-                carPublishingService.publishCar(OWNER_ID, request(), Locale.ENGLISH);
+                carPublishingService.publishCar(OWNER_ID, request());
 
         // 3.Assert
         Assertions.assertEquals(PublishCarOutcome.Kind.PUBLISHED, outcome.getKind());
@@ -153,7 +152,7 @@ class CarPublishingServiceImplTest {
 
         // 2.Act
         final PublishCarOutcome outcome =
-                carPublishingService.publishCar(OWNER_ID, request(), Locale.ENGLISH);
+                carPublishingService.publishCar(OWNER_ID, request());
 
         // 3.Assert
         Assertions.assertEquals(PublishCarOutcome.Kind.PENDING_VALIDATION, outcome.getKind());
@@ -170,6 +169,6 @@ class CarPublishingServiceImplTest {
         // 2.Act / 3.Assert
         Assertions.assertThrows(
                 CarPublishPrerequisitesMissingException.class,
-                () -> carPublishingService.publishCar(OWNER_ID, request(), Locale.ENGLISH));
+                () -> carPublishingService.publishCar(OWNER_ID, request()));
     }
 }

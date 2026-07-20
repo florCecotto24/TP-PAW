@@ -2,6 +2,7 @@ package ar.edu.itba.paw.services.reservation;
 
 import java.math.BigDecimal;
 import java.util.Collection;
+import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,5 +46,12 @@ public class ReservationAvailabilityServiceImpl implements ReservationAvailabili
     @Transactional(readOnly = true)
     public Optional<CarAvailability> findEffectivePickupAvailabilityForReservation(final long reservationId) {
         return reservationAvailabilityDao.findEffectivePickupAvailabilityForReservation(reservationId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<Long, CarAvailability> findEffectivePickupAvailabilitiesForReservations(
+            final Collection<Long> reservationIds) {
+        return reservationAvailabilityDao.findEffectivePickupAvailabilitiesForReservations(reservationIds);
     }
 }

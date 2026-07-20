@@ -2,10 +2,14 @@ package ar.edu.itba.paw.persistence.reservation;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -19,7 +23,6 @@ import ar.edu.itba.paw.models.domain.car.CarAvailability;
 import ar.edu.itba.paw.models.domain.reservation.Reservation;
 import ar.edu.itba.paw.models.domain.reservation.ReservationAvailabilityCoverage;
 import ar.edu.itba.paw.models.util.time.AppTimezone;
-import ar.edu.itba.paw.persistence.reservation.ReservationAvailabilityDao;
 
 @Transactional(readOnly = true)
 @Repository
@@ -88,6 +91,43 @@ public class ReservationAvailabilityJpaDao implements ReservationAvailabilityDao
         final LocalDate firstDay = reservation.getStartDate()
                 .atZoneSameInstant(AppTimezone.WALL_ZONE).toLocalDate();
         return pickEffectiveOfferedForDay(candidates, firstDay);
+    }
+
+    @Override
+    public Map<Long, CarAvailability> findEffectivePickupAvailabilitiesForReservations(
+            final Collection<Long> reservationIds) {
+        if (reservationIds == null || reservationIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        // One query for the whole batch (WHERE ... IN); the per-reservation winner is resolved in
+        // memory with the same precedence rule as the single-reservation variant.
+        final List<ReservationAvailabilityCoverage> coverages = em.createQuery(
+                        "FROM ReservationAvailabilityCoverage ra "
+                                + "JOIN FETCH ra.availability a "
+                                + "LEFT JOIN FETCH a.neighborhood "
+                                + "JOIN FETCH ra.reservation "
+                                + "WHERE ra.reservation.id IN :reservationIds",
+                        ReservationAvailabilityCoverage.class)
+                .setParameter("reservationIds", reservationIds)
+                .getResultList();
+        final Map<Long, List<CarAvailability>> candidatesByReservation = new LinkedHashMap<>();
+        final Map<Long, LocalDate> firstDayByReservation = new LinkedHashMap<>();
+        for (final ReservationAvailabilityCoverage coverage : coverages) {
+            final Reservation reservation = coverage.getReservation();
+            candidatesByReservation
+                    .computeIfAbsent(reservation.getId(), ignored -> new ArrayList<>())
+                    .add(coverage.getAvailability());
+            firstDayByReservation.computeIfAbsent(
+                    reservation.getId(),
+                    ignored -> reservation.getStartDate()
+                            .atZoneSameInstant(AppTimezone.WALL_ZONE).toLocalDate());
+        }
+        final Map<Long, CarAvailability> effectiveByReservation = new LinkedHashMap<>();
+        for (final Map.Entry<Long, List<CarAvailability>> entry : candidatesByReservation.entrySet()) {
+            pickEffectiveOfferedForDay(entry.getValue(), firstDayByReservation.get(entry.getKey()))
+                    .ifPresent(winner -> effectiveByReservation.put(entry.getKey(), winner));
+        }
+        return effectiveByReservation;
     }
 
     /**

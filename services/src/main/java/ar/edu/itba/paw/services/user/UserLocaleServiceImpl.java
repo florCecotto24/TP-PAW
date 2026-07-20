@@ -30,13 +30,13 @@ public class UserLocaleServiceImpl implements UserLocaleService {
     @Override
     @Transactional(readOnly = true)
     public Locale resolveMailLocale(final long userId) {
-        return resolveMailLocaleOrElse(userId, Locale.ENGLISH);
+        return resolveMailLocaleOrElse(userId, SupportedLocales.DEFAULT);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Locale resolveMailLocaleOrElse(final long userId, final Locale fallback) {
-        final Locale fb = fallback != null ? fallback : Locale.ENGLISH;
+        final Locale fb = fallback != null ? fallback : SupportedLocales.DEFAULT;
         return preferredLocaleFor(userId).orElse(fb);
     }
 
@@ -44,11 +44,11 @@ public class UserLocaleServiceImpl implements UserLocaleService {
     @Transactional(readOnly = true)
     public Locale resolveMailLocaleFor(final User user) {
         if (user == null) {
-            return Locale.ENGLISH;
+            return SupportedLocales.DEFAULT;
         }
         return user.getLatestLocale()
                 .flatMap(loc -> SupportedLocales.parse(loc.toLanguageTag()))
-                .orElse(Locale.ENGLISH);
+                .orElse(SupportedLocales.DEFAULT);
     }
 
     private Optional<Locale> preferredLocaleFor(final long userId) {

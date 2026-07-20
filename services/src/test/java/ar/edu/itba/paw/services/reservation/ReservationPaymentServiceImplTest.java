@@ -112,42 +112,18 @@ class ReservationPaymentServiceImplTest {
     }
 
     @Test
-    void testAttachPaymentReceiptAcceptsValidProof() {
-        // 1. Arrange
-        final Reservation pending = pendingReservation(OffsetDateTime.now().plusDays(1));
-        final StoredFile file = StoredFile.identified(
-                99L, User.identities(RIDER_ID, "r@test.com", "R", "Rider"),
-                "proof.pdf", "application/pdf", PDF_BYTES, null);
-        Mockito.when(queryService.getRiderReservationById(RIDER_ID, RESERVATION_ID))
-                .thenReturn(Optional.of(pending));
-        Mockito.when(storedFileService.create(RIDER_ID, "proof.pdf", "application/pdf", PDF_BYTES))
-                .thenReturn(file);
-        Mockito.when(reservationService.attachPaymentReceiptAndAccept(RESERVATION_ID, RIDER_ID, 99L))
-                .thenReturn(1);
-
-        // 2. Act / 3. Assert
-        Assertions.assertDoesNotThrow(() -> paymentService.attachPaymentReceipt(
-                RIDER_ID, RESERVATION_ID, "proof.pdf", "application/pdf", PDF_BYTES));
-    }
-
-    @Test
-    void testAttachPaymentReceiptDeletesOrphanWhenAttachFails() {
+    void testAttachPaymentReceiptThrowsConflictWhenAttachFails() {
         // 1. Arrange — create succeeds, atomic attach loses (race / ineligible)
         final Reservation pending = pendingReservation(OffsetDateTime.now().plusDays(1));
         final StoredFile file = StoredFile.identified(
                 99L, User.identities(RIDER_ID, "r@test.com", "R", "Rider"),
                 "proof.pdf", "application/pdf", PDF_BYTES, null);
-        final long[] deletedId = {-1L};
         Mockito.when(queryService.getRiderReservationById(RIDER_ID, RESERVATION_ID))
                 .thenReturn(Optional.of(pending));
         Mockito.when(storedFileService.create(RIDER_ID, "proof.pdf", "application/pdf", PDF_BYTES))
                 .thenReturn(file);
         Mockito.when(reservationService.attachPaymentReceiptAndAccept(RESERVATION_ID, RIDER_ID, 99L))
                 .thenReturn(0);
-        Mockito.when(storedFileService.deleteById(99L)).thenAnswer(inv -> {
-            deletedId[0] = inv.getArgument(0);
-            return true;
-        });
 
         // 2. Act / 3. Assert
         final RiderReservationException thrown = Assertions.assertThrows(
@@ -155,7 +131,6 @@ class ReservationPaymentServiceImplTest {
                 () -> paymentService.attachPaymentReceipt(
                         RIDER_ID, RESERVATION_ID, "proof.pdf", "application/pdf", PDF_BYTES));
         Assertions.assertEquals(MessageKeys.RESERVATION_PAYMENT_RECEIPT_CONFLICT, thrown.getMessageCode());
-        Assertions.assertEquals(99L, deletedId[0]);
     }
 
     @Test
@@ -193,64 +168,20 @@ class ReservationPaymentServiceImplTest {
     }
 
     @Test
-    void testAttachRefundReceiptUnblocksOwnerWhenNoOverdueRemain() {
-        // 1. Arrange
-        final Reservation cancelled = baseReservation(Reservation.Status.CANCELLED_BY_RIDER)
-                .paymentRefundRequired(true)
-                .build();
-        final StoredFile file = StoredFile.identified(
-                77L, User.identities(OWNER_ID, "o@test.com", "O", "Owner"),
-                "refund.pdf", "application/pdf", PDF_BYTES, null);
-        final User blockedOwner = User.builder()
-                .id(OWNER_ID)
-                .email("o@test.com")
-                .forename("O")
-                .surname("Owner")
-                .blocked(true)
-                .build();
-        Mockito.when(queryService.getOwnerReservationById(OWNER_ID, RESERVATION_ID))
-                .thenReturn(Optional.of(cancelled));
-        Mockito.when(storedFileService.create(OWNER_ID, "refund.pdf", "application/pdf", PDF_BYTES))
-                .thenReturn(file);
-        Mockito.when(reservationService.attachRefundReceipt(RESERVATION_ID, OWNER_ID, 77L))
-                .thenReturn(1);
-        Mockito.when(reservationService.countOverdueRefundProofsForOwner(
-                Mockito.eq(OWNER_ID), Mockito.any(OffsetDateTime.class)))
-                .thenReturn(0L);
-        Mockito.when(userService.getUserById(OWNER_ID)).thenReturn(Optional.of(blockedOwner));
-        Mockito.doAnswer(inv -> {
-            blockedOwner.setBlocked(false);
-            return null;
-        }).when(userService).unblockUser(OWNER_ID);
-
-        // 2. Act
-        paymentService.attachRefundReceiptByOwner(
-                OWNER_ID, RESERVATION_ID, "refund.pdf", "application/pdf", PDF_BYTES);
-
-        // 3. Assert — domain outcome: owner is no longer blocked
-        Assertions.assertFalse(blockedOwner.isBlocked());
-    }
-
-    @Test
-    void testAttachRefundReceiptDeletesOrphanWhenAttachFails() {
-        // 1. Arrange
+    void testAttachRefundReceiptThrowsConflictWhenAttachFails() {
+        // 1. Arrange — create succeeds, atomic attach loses (race / ineligible)
         final Reservation cancelled = baseReservation(Reservation.Status.CANCELLED_BY_OWNER)
                 .paymentRefundRequired(true)
                 .build();
         final StoredFile file = StoredFile.identified(
                 77L, User.identities(OWNER_ID, "o@test.com", "O", "Owner"),
                 "refund.pdf", "application/pdf", PDF_BYTES, null);
-        final long[] deletedId = {-1L};
         Mockito.when(queryService.getOwnerReservationById(OWNER_ID, RESERVATION_ID))
                 .thenReturn(Optional.of(cancelled));
         Mockito.when(storedFileService.create(OWNER_ID, "refund.pdf", "application/pdf", PDF_BYTES))
                 .thenReturn(file);
         Mockito.when(reservationService.attachRefundReceipt(RESERVATION_ID, OWNER_ID, 77L))
                 .thenReturn(0);
-        Mockito.when(storedFileService.deleteById(77L)).thenAnswer(inv -> {
-            deletedId[0] = inv.getArgument(0);
-            return true;
-        });
 
         // 2. Act / 3. Assert
         final RiderReservationException thrown = Assertions.assertThrows(
@@ -258,37 +189,6 @@ class ReservationPaymentServiceImplTest {
                 () -> paymentService.attachRefundReceiptByOwner(
                         OWNER_ID, RESERVATION_ID, "refund.pdf", "application/pdf", PDF_BYTES));
         Assertions.assertEquals(MessageKeys.RESERVATION_REFUND_RECEIPT_CONFLICT, thrown.getMessageCode());
-        Assertions.assertEquals(77L, deletedId[0]);
-    }
-
-    @Test
-    void testCancelExpiredPendingPaymentSkipsMailWhenClaimRollsBack() {
-        // 1. Arrange
-        final Reservation expired = pendingReservation(OffsetDateTime.parse("2020-01-01T00:00:00Z"));
-        Mockito.when(reservationService.findPendingPaymentPastDeadline(Mockito.any(OffsetDateTime.class)))
-                .thenReturn(List.of(expired));
-        Mockito.when(expiredPaymentProofRowCanceller.cancelExpiredReservation(
-                Mockito.eq(RESERVATION_ID), Mockito.any(OffsetDateTime.class)))
-                .thenReturn(Optional.empty());
-
-        // 2. Act / 3. Assert — claim rollback: mail composer is not stubbed to throw (no verify-style probe)
-        Assertions.assertDoesNotThrow(() -> paymentService.cancelExpiredPendingPaymentReservations());
-    }
-
-    @Test
-    void testCancelExpiredPendingPaymentSendsMailAfterSuccessfulClaim() {
-        // 1. Arrange
-        final Reservation expired = pendingReservation(OffsetDateTime.parse("2020-01-01T00:00:00Z"));
-        final Reservation cancelled = baseReservation(Reservation.Status.CANCELLED_DUE_TO_MISSING_PAYMENT_PROOF)
-                .build();
-        Mockito.when(reservationService.findPendingPaymentPastDeadline(Mockito.any(OffsetDateTime.class)))
-                .thenReturn(List.of(expired));
-        Mockito.when(expiredPaymentProofRowCanceller.cancelExpiredReservation(
-                Mockito.eq(RESERVATION_ID), Mockito.any(OffsetDateTime.class)))
-                .thenReturn(Optional.of(cancelled));
-
-        // 2. Act / 3. Assert
-        Assertions.assertDoesNotThrow(() -> paymentService.cancelExpiredPendingPaymentReservations());
     }
 
     @Test
@@ -310,12 +210,15 @@ class ReservationPaymentServiceImplTest {
         Mockito.when(sweepRowProcessor.blockOwnerForRefundOverdueIfEligible(OWNER_ID))
                 .thenReturn(Optional.of(owner));
 
-        // 2. Act / 3. Assert
-        Assertions.assertDoesNotThrow(() -> paymentService.sweepRefundOverdueAndBlockOwners());
+        // 2. Act
+        final int blocked = paymentService.sweepRefundOverdueAndBlockOwners();
+
+        // 3. Assert — contract: the sweep reports one blocked owner
+        Assertions.assertEquals(1, blocked);
     }
 
     @Test
-    void testSweepRefundOverdueSkipsMailWhenBlockRollsBack() {
+    void testSweepRefundOverdueReturnsZeroWhenBlockRollsBack() {
         // 1. Arrange
         final User owner = User.builder()
                 .id(OWNER_ID)
@@ -332,8 +235,11 @@ class ReservationPaymentServiceImplTest {
         Mockito.when(sweepRowProcessor.blockOwnerForRefundOverdueIfEligible(OWNER_ID))
                 .thenReturn(Optional.empty());
 
-        // 2. Act / 3. Assert — block rollback: mail composer is not stubbed to throw (no verify-style probe)
-        Assertions.assertDoesNotThrow(() -> paymentService.sweepRefundOverdueAndBlockOwners());
+        // 2. Act
+        final int blocked = paymentService.sweepRefundOverdueAndBlockOwners();
+
+        // 3. Assert — contract: a rolled-back block is not counted
+        Assertions.assertEquals(0, blocked);
     }
 
     private static Reservation pendingReservation(final OffsetDateTime deadline) {

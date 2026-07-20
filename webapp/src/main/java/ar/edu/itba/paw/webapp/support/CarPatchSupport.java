@@ -1,7 +1,5 @@
 package ar.edu.itba.paw.webapp.support;
 
-import java.util.Locale;
-
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 
@@ -35,7 +33,6 @@ public final class CarPatchSupport {
             final long carId,
             final CarPatchForm patch,
             final RydenUserDetails viewer,
-            final Locale locale,
             final UriInfo uriInfo) {
         final Car car = carService.getCarById(carId)
                 .orElseThrow(() -> new CarNotFoundException(carId));
@@ -47,7 +44,7 @@ public final class CarPatchSupport {
         }
         if (patch.getStatus() != null) {
             final Car.Status target = CarRestEnums.parseStatus(patch.getStatus());
-            carService.applyStatusTransition(car.getId(), target, viewer.getUserId(), locale);
+            carService.applyStatusTransition(car.getId(), target, viewer.getUserId());
         }
         if (patch.getDescription() != null) {
             carService.updateDescription(car.getOwnerId(), carId, patch.getDescription());

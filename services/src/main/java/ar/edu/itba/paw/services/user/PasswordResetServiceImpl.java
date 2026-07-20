@@ -17,6 +17,7 @@ import ar.edu.itba.paw.exception.user.PasswordResetCodeInvalidException;
 import ar.edu.itba.paw.exception.user.RegistrationPasswordException;
 import ar.edu.itba.paw.exception.user.UserNotFoundException;
 import ar.edu.itba.paw.models.util.format.EmailNormalizer;
+import ar.edu.itba.paw.models.util.rules.SupportedLocales;
 import ar.edu.itba.paw.models.util.security.OtpCodeDigest;
 import ar.edu.itba.paw.models.email.user.PasswordResetCodeEmailPayload;
 import ar.edu.itba.paw.models.domain.user.User;
@@ -86,7 +87,7 @@ public class PasswordResetServiceImpl implements PasswordResetService {
                 OtpCodeDigest.sha256Hex(code),
                 now.plus(verificationCodePolicy.getCodeTtl()),
                 now);
-        final Locale fallback = locale != null ? locale : Locale.ENGLISH;
+        final Locale fallback = locale != null ? locale : SupportedLocales.DEFAULT;
         final Locale mailLocale = userLocaleService.resolveMailLocaleOrElse(user.getId(), fallback);
         emailService.sendPasswordResetCode(PasswordResetCodeEmailPayload.builder()
                 .messageLocale(mailLocale)

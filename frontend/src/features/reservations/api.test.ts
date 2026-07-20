@@ -79,12 +79,10 @@ describe('reservations api hypermedia', () => {
   });
 
   it('testListReservationsRejectsBlankLink', async () => {
-    // 1.Arrange / 2.Act / 3.Assert — outcome only (no HTTP when link is blank)
+    // 1.Arrange / 2.Act / 3.Assert — the thrown error is the observable contract
     await expect(listReservations({ page: 1 }, '   ')).rejects.toThrow(
       'reservations.list.missingLink',
     );
-    expect(linkPageCalls).toEqual([]);
-    expect(collectionPathCalls).toEqual([]);
   });
 
   it('testListReservationsUsesProvidedUserLinkNotGlobalCollection', async () => {

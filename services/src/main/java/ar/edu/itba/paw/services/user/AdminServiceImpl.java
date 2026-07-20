@@ -53,6 +53,7 @@ import ar.edu.itba.paw.services.reservation.ReservationWorkflowService;
  * ({@link UserService}, {@link CarService}, {@link CarBrandService}, {@link CarModelService},
  * {@link ReservationService}, {@link ReservationMessageService}).</p>
  */
+// Not final: webapp's @EnableMethodSecurity(proxyTargetClass = true) proxies via CGLIB subclassing.
 @Service
 public class AdminServiceImpl implements AdminService {
 
@@ -64,6 +65,7 @@ public class AdminServiceImpl implements AdminService {
             "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789".toCharArray();
 
     private final UserService userService;
+    private final UserLocaleService userLocaleService;
     private final CarService carService;
     private final CarBrandService carBrandService;
     private final CarModelService carModelService;
@@ -77,6 +79,7 @@ public class AdminServiceImpl implements AdminService {
     @Autowired
     public AdminServiceImpl(
             final UserService userService,
+            final UserLocaleService userLocaleService,
             final CarService carService,
             final CarBrandService carBrandService,
             final CarModelService carModelService,
@@ -87,6 +90,7 @@ public class AdminServiceImpl implements AdminService {
             final PasswordEncoder passwordEncoder,
             final PasswordResetService passwordResetService) {
         this.userService = userService;
+        this.userLocaleService = userLocaleService;
         this.carService = carService;
         this.carBrandService = carBrandService;
         this.carModelService = carModelService;
@@ -185,7 +189,7 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     @Transactional
-    public void adminPauseCar(final long carId, final long actingAdminId, final Locale locale) {
+    public void adminPauseCar(final long carId, final long actingAdminId) {
         assertAdminCaller(actingAdminId);
         final Car car = carService.getCarById(carId)
                 .orElseThrow(() -> new CarNotFoundException(carId));
@@ -201,7 +205,7 @@ public class AdminServiceImpl implements AdminService {
                 + (car.getModel() != null ? car.getModel() : "");
         emailService.sendCarPausedByAdmin(
                 CarPausedByAdminOwnerEmailPayload.builder()
-                        .messageLocale(locale)
+                        .messageLocale(userLocaleService.resolveMailLocaleFor(owner))
                         .ownerEmail(owner.getEmail())
                         .ownerFullName(owner.getForename() + " " + owner.getSurname())
                         .vehicleLabel(vehicleLabel)
@@ -249,7 +253,7 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     @Transactional
-    public void validateCatalogEntry(final long modelId, final Locale locale) {
+    public void validateCatalogEntry(final long modelId) {
         final CarModel model = carModelService.findById(modelId)
                 .orElseThrow(() -> new CarModelNotFoundException(modelId));
         final CarBrand brand = model.getBrand();
@@ -270,7 +274,7 @@ public class AdminServiceImpl implements AdminService {
             final String vehicleLabel = brandName + " " + modelName;
             emailService.sendCarValidatedByAdmin(
                     CarValidatedByAdminOwnerEmailPayload.builder()
-                            .messageLocale(locale != null ? locale : Locale.ENGLISH)
+                            .messageLocale(userLocaleService.resolveMailLocaleFor(owner))
                             .ownerEmail(owner.getEmail())
                             .ownerFullName(owner.getForename() + " " + owner.getSurname())
                             .vehicleLabel(vehicleLabel)
@@ -284,7 +288,7 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     @Transactional
-    public void rejectCatalogEntry(final long modelId, final Locale locale) {
+    public void rejectCatalogEntry(final long modelId) {
         final CarModel model = carModelService.findById(modelId)
                 .orElseThrow(() -> new CarModelNotFoundException(modelId));
         final CarBrand brand = model.getBrand();
@@ -300,7 +304,7 @@ public class AdminServiceImpl implements AdminService {
             final String vehicleLabel = brandName + " " + modelName;
             notifications.add(
                     CarRejectedByAdminOwnerEmailPayload.builder()
-                            .messageLocale(locale != null ? locale : Locale.ENGLISH)
+                            .messageLocale(userLocaleService.resolveMailLocaleFor(owner))
                             .ownerEmail(owner.getEmail())
                             .ownerFullName(owner.getForename() + " " + owner.getSurname())
                             .vehicleLabel(vehicleLabel)

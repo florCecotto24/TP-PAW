@@ -1,6 +1,5 @@
 package ar.edu.itba.paw.services.car;
 
-import java.util.Locale;
 
 import ar.edu.itba.paw.dto.PublishCarOutcome;
 import ar.edu.itba.paw.dto.PublishCarRequest;
@@ -26,11 +25,10 @@ public interface CarPublishingService {
      *
      * @param ownerId owner persisting the car
      * @param request payload coming from the publish form (already validated by the controller)
-     * @param locale  locale used for admin notification messages
      * @throws ar.edu.itba.paw.exception.car.CarPublishPrerequisitesMissingException when the owner
      *         lacks a valid CBU or hasn't uploaded an identity document
      * @throws ar.edu.itba.paw.exception.car.DuplicatePlateException when the plate is taken
      * @throws ar.edu.itba.paw.exception.RydenException for typed publish-time failures
      */
-    PublishCarOutcome publishCar(long ownerId, PublishCarRequest request, Locale locale);
+    PublishCarOutcome publishCar(long ownerId, PublishCarRequest request);
 }

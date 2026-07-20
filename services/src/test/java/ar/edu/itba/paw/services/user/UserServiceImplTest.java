@@ -1,7 +1,6 @@
 package ar.edu.itba.paw.services.user;
 
 import java.time.LocalDate;
-import java.util.Locale;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Assertions;
@@ -153,16 +152,10 @@ public class UserServiceImplTest {
         Assertions.assertEquals(MessageKeys.USER_EMAIL_ALREADY_EXISTS, thrown.getMessageCode());
     }
 
-    @Test
-    public void testUpdateDisplayNameWhenUserExistsDoesNotThrow() {
-        // 1. Arrange
-        final User user = User.identities(1L, "u@mail.com", "A", "B");
-        Mockito.when(userDao.getUserById(1L)).thenReturn(Optional.of(user));
-
-        // 2. Execute and 3. Assert
-        Assertions.assertDoesNotThrow(() -> userService.updateDisplayName(1L, "  Ada ", " Lovelace "));
-
-    }
+    // NOTE: no happy-path test for updateDisplayName/updatePhoneNumber/updateBirthDate/updateAbout/
+    // promoteToAdmin: those methods are void and delegate the write to UserDao without mutating the
+    // loaded entity or returning anything, so the success path has no observable under the course
+    // rules (TEST-4 / no verify allowed). Only the guard (exception) paths are testable here.
 
     @Test
     public void testUpdateDisplayNameUserMissingThrows() {
@@ -171,38 +164,6 @@ public class UserServiceImplTest {
 
         Assertions.assertThrows(UserNotFoundException.class,
                 () -> userService.updateDisplayName(99L, "X", "Y"));
-    }
-
-    @Test
-    public void testUpdatePhoneNumberWhenValidDoesNotThrow() {
-        // 1. Arrange
-        final User user = User.identities(1L, "u@mail.com", "A", "B");
-        Mockito.when(userDao.getUserById(1L)).thenReturn(Optional.of(user));
-
-        // 2. Execute and 3. Assert
-        Assertions.assertDoesNotThrow(() -> userService.updatePhoneNumber(1L, "  +5411  "));
-    }
-
-    @Test
-    public void testUpdateBirthDateDoesNotThrow() {
-        // 1. Arrange
-        final User user = User.identities(1L, "u@mail.com", "A", "B");
-        Mockito.when(userDao.getUserById(1L)).thenReturn(Optional.of(user));
-        final LocalDate birth = LocalDate.of(2000, 1, 2);
-
-        // 2. Execute and 3. Assert
-        Assertions.assertDoesNotThrow(() -> userService.updateBirthDate(1L, birth));
-    }
-
-    @Test
-    public void testUpdateBirthDateTodayDoesNotThrow() {
-        // 1. Arrange
-        final User user = User.identities(1L, "u@mail.com", "A", "B");
-        Mockito.when(userDao.getUserById(1L)).thenReturn(Optional.of(user));
-        final LocalDate today = LocalDate.now(AppTimezone.WALL_ZONE);
-
-        // 2. Execute and 3. Assert
-        Assertions.assertDoesNotThrow(() -> userService.updateBirthDate(1L, today));
     }
 
     @Test
@@ -220,16 +181,6 @@ public class UserServiceImplTest {
     }
 
     @Test
-    public void testUpdatePhoneNumberWhenBlankDoesNotThrow() {
-        // 1. Arrange
-        final User user = User.identities(1L, "u@mail.com", "A", "B");
-        Mockito.when(userDao.getUserById(1L)).thenReturn(Optional.of(user));
-
-        // 2. Execute and 3. Assert
-        Assertions.assertDoesNotThrow(() -> userService.updatePhoneNumber(1L, "   \t"));
-    }
-
-    @Test
     public void testUpdatePhoneNumberInvalidPhoneThrows() {
         // 1. Arrange
         final User user = User.identities(1L, "u@mail.com", "A", "B");
@@ -239,13 +190,6 @@ public class UserServiceImplTest {
         final InvalidProfilePhoneException thrown = Assertions.assertThrows(InvalidProfilePhoneException.class,
                 () -> userService.updatePhoneNumber(1L, "12a34"));
         Assertions.assertEquals(MessageKeys.USER_PROFILE_PHONE_INVALID, thrown.getMessageCode());
-    }
-
-    @Test
-    public void testUpdateAboutWhenValidDoesNotThrow() {
-        final User user = User.identities(1L, "u@mail.com", "A", "B");
-        Mockito.when(userDao.getUserById(1L)).thenReturn(Optional.of(user));
-        Assertions.assertDoesNotThrow(() -> userService.updateAbout(1L, "  About me text  "));
     }
 
     @Test
@@ -307,32 +251,6 @@ public class UserServiceImplTest {
         Mockito.when(userReadinessService.hasUploadedLicenseAndIdentity(user)).thenReturn(false);
 
         Assertions.assertFalse(userService.hasUploadedLicenseAndIdentity(user));
-    }
-
-    @Test
-    public void testPromoteToAdminDoesNotThrowWhenValid() {
-        // 1. Arrange
-        final User granting = User.builder()
-                .id(10L)
-                .email("admin@test.com")
-                .forename("Grant")
-                .surname("Admin")
-                .userRole(UserRole.ADMIN)
-                .build();
-        final User target = User.builder()
-                .id(20L)
-                .email("user@test.com")
-                .forename("Tar")
-                .surname("Get")
-                .userRole(UserRole.USER)
-                .build();
-        Mockito.when(userDao.getUserById(10L)).thenReturn(Optional.of(granting));
-        Mockito.when(userDao.getUserById(20L)).thenReturn(Optional.of(target));
-        Mockito.when(userLocaleService.resolveMailLocaleOrElse(20L, Locale.ENGLISH))
-                .thenReturn(Locale.ENGLISH);
-
-        // 2. Execute and 3. Assert
-        Assertions.assertDoesNotThrow(() -> userService.promoteToAdmin(20L, 10L));
     }
 
     @Test

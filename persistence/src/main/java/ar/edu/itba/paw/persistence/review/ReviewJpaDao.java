@@ -147,7 +147,7 @@ public class ReviewJpaDao implements ReviewDao {
     }
 
     @Override
-    public BigDecimal findAverageRatingForCar(final long carId) {
+    public Optional<BigDecimal> findAverageRatingForCar(final long carId) {
         final Double avg = em.createQuery(
                         "SELECT AVG(r.rating) FROM Review r "
                                 + "WHERE r.reservation.car.id = :carId AND r.madeByRider = true "
@@ -155,11 +155,11 @@ public class ReviewJpaDao implements ReviewDao {
                         Double.class)
                 .setParameter("carId", carId)
                 .getSingleResult();
-        return round2(avg);
+        return Optional.ofNullable(round2(avg));
     }
 
     @Override
-    public BigDecimal findAverageRatingForCounterparty(final long counterpartyUserId, final boolean counterpartyIsOwner) {
+    public Optional<BigDecimal> findAverageRatingForCounterparty(final long counterpartyUserId, final boolean counterpartyIsOwner) {
         final String jpql = counterpartyIsOwner
                 ? "SELECT AVG(r.rating) FROM Review r "
                         + "WHERE r.madeByRider = true AND r.reservation.car.owner.id = :userId "
@@ -170,7 +170,7 @@ public class ReviewJpaDao implements ReviewDao {
         final Double avg = em.createQuery(jpql, Double.class)
                 .setParameter("userId", counterpartyUserId)
                 .getSingleResult();
-        return round2(avg);
+        return Optional.ofNullable(round2(avg));
     }
 
     @Override

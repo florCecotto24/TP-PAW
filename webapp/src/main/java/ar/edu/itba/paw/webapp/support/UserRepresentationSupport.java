@@ -12,9 +12,12 @@ import javax.ws.rs.core.Response;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Component;
 
+import ar.edu.itba.paw.exception.MessageKeys;
+import ar.edu.itba.paw.exception.user.UserNotFoundException;
 import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.services.reservation.ReservationService;
 import ar.edu.itba.paw.services.review.ReviewService;
+import ar.edu.itba.paw.services.user.UserService;
 import ar.edu.itba.paw.webapp.api.common.VndMediaType;
 import ar.edu.itba.paw.webapp.dto.rest.UserDto;
 import ar.edu.itba.paw.webapp.dto.rest.UserPrivateDto;
@@ -27,17 +30,35 @@ import ar.edu.itba.paw.webapp.util.RestUriUtils;
 @Component
 public final class UserRepresentationSupport {
 
+    private final UserService userService;
     private final ReviewService reviewService;
     private final ReservationService reservationService;
     private final UserResourceAccess userResourceAccess;
 
     public UserRepresentationSupport(
+            final UserService userService,
             final ReviewService reviewService,
             final ReservationService reservationService,
             final UserResourceAccess userResourceAccess) {
+        this.userService = userService;
         this.reviewService = reviewService;
         this.reservationService = reservationService;
         this.userResourceAccess = userResourceAccess;
+    }
+
+    /**
+     * Resolves the user by id (404 when absent) and negotiates the public/private representation,
+     * so {@code GET /users/{id}} stays a single delegation in the controller (same lookup-in-support
+     * pattern as {@code ReviewRepresentationSupport.getReview} / {@code CarItemSupport.get}).
+     */
+    public Response getUserResponse(
+            final long userId,
+            final javax.ws.rs.core.UriInfo uriInfo,
+            final RydenUserDetails viewer,
+            final HttpHeaders headers) {
+        final User user = userService.getUserById(userId)
+                .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
+        return buildUserResponse(user, uriInfo, viewer, headers);
     }
 
     /**

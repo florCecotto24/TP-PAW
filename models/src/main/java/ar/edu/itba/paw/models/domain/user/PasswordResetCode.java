@@ -7,6 +7,7 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 
 import ar.edu.itba.paw.models.domain.internal.EntityEquality;
@@ -18,7 +19,8 @@ import ar.edu.itba.paw.models.domain.internal.EntityEquality;
 public class PasswordResetCode {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "password_reset_codes_id_seq")
+    @SequenceGenerator(name = "password_reset_codes_id_seq", sequenceName = "password_reset_codes_id_seq", allocationSize = 1)
     private long id;
 
     @Column(name = "user_id", nullable = false)

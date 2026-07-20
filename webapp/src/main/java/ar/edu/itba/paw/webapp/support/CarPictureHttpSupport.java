@@ -28,6 +28,7 @@ import ar.edu.itba.paw.services.file.ImageService;
 import ar.edu.itba.paw.services.file.StoredFileService;
 import ar.edu.itba.paw.webapp.api.common.PaginationLinks;
 import ar.edu.itba.paw.webapp.dto.rest.PictureDto;
+import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
 
 /**
  * HTTP binding for car gallery metadata, multipart upload, and binary bytes.
@@ -41,6 +42,7 @@ public final class CarPictureHttpSupport {
     private final StoredFileService storedFileService;
     private final CarGalleryUploadSupport carGalleryUploadSupport;
     private final BinaryPayloadSupport binaryPayloadSupport;
+    private final CarResourceAccess carResourceAccess;
 
     public CarPictureHttpSupport(
             final CarService carService,
@@ -48,7 +50,9 @@ public final class CarPictureHttpSupport {
             final ImageService imageService,
             final StoredFileService storedFileService,
             final CarGalleryUploadSupport carGalleryUploadSupport,
-            final BinaryPayloadSupport binaryPayloadSupport) {
+            final BinaryPayloadSupport binaryPayloadSupport,
+            final CarResourceAccess carResourceAccess) {
+        this.carResourceAccess = carResourceAccess;
         this.carService = carService;
         this.carPictureService = carPictureService;
         this.imageService = imageService;
@@ -57,7 +61,14 @@ public final class CarPictureHttpSupport {
         this.binaryPayloadSupport = binaryPayloadSupport;
     }
 
-    public Response list(final long carId, final PaginationParams paging, final UriInfo uriInfo) {
+    public Response list(
+            final long carId,
+            final PaginationParams paging,
+            final RydenUserDetails viewer,
+            final UriInfo uriInfo) {
+        // Access check inside the support (same pattern as CarAvailabilityHttpSupport /
+        // ImageHttpSupport) so the controller stays a single delegation.
+        carResourceAccess.requireViewableCar(carId, viewer);
         final Page<CarPictureSummary> picturePage = carPictureService.findSummariesByCarPaginated(
                 carId, paging.getZeroBasedPage(), paging.getPageSize());
         final List<PictureDto> dtos = picturePage.getContent().stream()
@@ -102,13 +113,19 @@ public final class CarPictureHttpSupport {
                 .build();
     }
 
-    public Response primaryBytes(final long carId, final Request request) {
+    public Response primaryBytes(final long carId, final RydenUserDetails viewer, final Request request) {
+        carResourceAccess.requireViewableCar(carId, viewer);
         final CarPicture picture = carPictureService.findPrimaryPictureByCarId(carId)
                 .orElseThrow(() -> new CarNotFoundException(carId));
         return pictureBytesResponse(picture, request);
     }
 
-    public Response pictureBytes(final long carId, final long pictureId, final Request request) {
+    public Response pictureBytes(
+            final long carId,
+            final long pictureId,
+            final RydenUserDetails viewer,
+            final Request request) {
+        carResourceAccess.requireViewableCar(carId, viewer);
         final CarPicture picture = carPictureService.getCarPictureById(pictureId)
                 .filter(p -> p.getCarId() == carId)
                 .orElseThrow(() -> new CarNotFoundException(carId));

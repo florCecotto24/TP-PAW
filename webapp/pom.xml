@@ -51,9 +51,13 @@
       <groupId>ar.edu.itba.paw</groupId>
       <artifactId>service-contracts</artifactId>
     </dependency>
+    <!-- test scope on purpose: webapp main must not compile against persistence contracts
+         (layering; they reach the WAR transitively via the runtime persistence module).
+         Only CarFlexibleSearchPostgresIT compiles against CarDao. -->
     <dependency>
       <groupId>ar.edu.itba.paw</groupId>
       <artifactId>persistence-contracts</artifactId>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>ar.edu.itba.paw</groupId>

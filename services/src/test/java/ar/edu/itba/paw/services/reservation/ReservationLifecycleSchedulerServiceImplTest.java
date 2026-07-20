@@ -4,6 +4,9 @@ package ar.edu.itba.paw.services.reservation;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,6 +21,7 @@ import ar.edu.itba.paw.exception.reservation.RiderReservationException;
 import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.models.domain.reservation.Reservation;
 import ar.edu.itba.paw.models.domain.user.User;
+import ar.edu.itba.paw.models.email.reservation.ReservationMailPayload;
 import ar.edu.itba.paw.policy.ReservationTimingPolicy;
 import ar.edu.itba.paw.util.ReservationMailComposer;
 
@@ -36,6 +40,9 @@ class ReservationLifecycleSchedulerServiceImplTest {
     // Architectural rule: this service no longer touches ReservationDao; tests mock
     // ReservationService (the sole DAO owner) instead.
     private ReservationService reservationService;
+
+    @Mock
+    private ReservationAvailabilityService reservationAvailabilityService;
 
     @Mock
     private ReservationTimingPolicy reservationTimingPolicy;
@@ -81,22 +88,83 @@ class ReservationLifecycleSchedulerServiceImplTest {
  
 
     @Test
-    void testDispatchReviewAutoSkipsSwallowsRiderReservationException() {
-        final Reservation r = finishedReservation(RESERVATION_ID);
+    void testDispatchReviewAutoSkipsProcessesRemainingRowsWhenOneRowFails() {
+        // 1. Arrange — two rider candidates: the row processor fails on the first one and
+        // succeeds on the second; there are no owner candidates. A per-row failure must not
+        // abort the batch, so exactly one auto-skip is counted.
+        final long failingReservationId = RESERVATION_ID;
+        final long succeedingReservationId = RESERVATION_ID + 1;
+        final Reservation failing = finishedReservation(failingReservationId);
+        final Reservation succeeding = finishedReservation(succeedingReservationId);
         Mockito.when(reservationService.findReservationsForRiderReviewAutoSkip(
                 Mockito.any(OffsetDateTime.class), Mockito.any(OffsetDateTime.class)))
-                .thenReturn(List.of(r));
+                .thenReturn(List.of(failing, succeeding));
         Mockito.when(reservationService.findReservationsForOwnerReviewAutoSkip(
                 Mockito.any(OffsetDateTime.class), Mockito.any(OffsetDateTime.class)))
                 .thenReturn(List.of());
         Mockito.doThrow(new RiderReservationException("err"))
-                .when(lifecycleRowProcessor).autoSkipRiderReview(RIDER_ID, RESERVATION_ID);
+                .when(lifecycleRowProcessor).autoSkipRiderReview(RIDER_ID, failingReservationId);
 
-        Assertions.assertDoesNotThrow(() -> schedulerService.dispatchReviewAutoSkips());
+        // 2. Act
+        final int processed = schedulerService.dispatchReviewAutoSkips();
+
+        // 3. Assert — the failed first row is skipped, the second row still gets processed.
+        Assertions.assertEquals(1, processed);
     }
 
+    @Test
+    void testDispatchReservationReminderEmailsReturnsQueuedCountWhenPayloadPresentAndClaimed() {
+        // 1. Arrange — one candidate whose payload builds fine and whose claim succeeds.
+        final Reservation reservation = finishedReservation(RESERVATION_ID);
+        final ReservationMailPayload payload = ReservationMailPayload.builder()
+                .recipientEmail("r@test.com")
+                .riderFullName("R Rider")
+                .reservationId(RESERVATION_ID)
+                .carId(1L)
+                .vehicleLabel("Toyota Corolla")
+                .startDate(START)
+                .endDate(END)
+                .riderMailLocale(Locale.ENGLISH)
+                .ownerMailLocale(Locale.ENGLISH)
+                .build();
+        Mockito.when(reservationService.findReminderReservations(
+                Mockito.any(OffsetDateTime.class), Mockito.any(OffsetDateTime.class)))
+                .thenReturn(List.of(reservation));
+        Mockito.when(reservationAvailabilityService.findEffectivePickupAvailabilitiesForReservations(
+                List.of(RESERVATION_ID)))
+                .thenReturn(Map.of());
+        Mockito.when(mailComposer.buildReservationReminderPayload(
+                Mockito.eq(reservation), Mockito.isNull()))
+                .thenReturn(Optional.of(payload));
+        Mockito.when(lifecycleRowProcessor.claimPickupReminder(RESERVATION_ID)).thenReturn(true);
 
+        // 2. Act
+        final int queued = schedulerService.dispatchReservationReminderEmails();
 
+        // 3. Assert
+        Assertions.assertEquals(1, queued);
+    }
 
+    @Test
+    void testDispatchReservationReminderEmailsReturnsZeroWhenPayloadCannotBeBuilt() {
+        // 1. Arrange — the candidate is missing rider/car/owner data, so no payload can be
+        // built and nothing is claimed or queued.
+        final Reservation reservation = finishedReservation(RESERVATION_ID);
+        Mockito.when(reservationService.findReminderReservations(
+                Mockito.any(OffsetDateTime.class), Mockito.any(OffsetDateTime.class)))
+                .thenReturn(List.of(reservation));
+        Mockito.when(reservationAvailabilityService.findEffectivePickupAvailabilitiesForReservations(
+                List.of(RESERVATION_ID)))
+                .thenReturn(Map.of());
+        Mockito.when(mailComposer.buildReservationReminderPayload(
+                Mockito.eq(reservation), Mockito.isNull()))
+                .thenReturn(Optional.empty());
+
+        // 2. Act
+        final int queued = schedulerService.dispatchReservationReminderEmails();
+
+        // 3. Assert
+        Assertions.assertEquals(0, queued);
+    }
 
 }

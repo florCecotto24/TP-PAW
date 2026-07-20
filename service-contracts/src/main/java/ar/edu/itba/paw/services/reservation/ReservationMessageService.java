@@ -63,7 +63,7 @@ public interface ReservationMessageService {
 
     boolean canParticipantAccessReservationChat(long viewerUserId, long reservationId);
 
-    void dispatchChatDigestEmails();
+    int dispatchChatDigestEmails();
 
     /**
      * Atomically marks unseen messages as email-notified. Returns how many rows were updated.

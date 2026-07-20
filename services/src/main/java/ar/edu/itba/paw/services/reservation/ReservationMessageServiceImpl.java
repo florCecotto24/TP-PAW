@@ -192,7 +192,7 @@ public class ReservationMessageServiceImpl implements ReservationMessageService 
             throw new ReservationMessageException(MessageKeys.RESERVATION_CHAT_BODY_EMPTY);
         }
         validateBodyLength(trimmed);
-        final Reservation reservation = requireChatOpenForParticipant(senderUserId, reservationId);
+        requireChatOpenForParticipant(senderUserId, reservationId);
         final ReservationMessage saved = reservationMessageDao.create(reservationId, senderUserId, trimmed);
         return toDto(saved);
     }
@@ -217,7 +217,7 @@ public class ReservationMessageServiceImpl implements ReservationMessageService 
             validateBodyLength(trimmedBody);
         }
         validateAttachment(fileName, contentType, data);
-        final Reservation reservation = requireChatOpenForParticipant(senderUserId, reservationId);
+        requireChatOpenForParticipant(senderUserId, reservationId);
         final String safeFileName = sanitizeFileName(fileName);
         final StoredFile storedFile =
                 storedFileService.create(senderUserId, safeFileName, normalizeContentType(contentType), data);
@@ -286,12 +286,12 @@ public class ReservationMessageServiceImpl implements ReservationMessageService 
      * before mail is queued, so a failed send cannot roll back the claim (or leave TX rollback-only).
      */
     @Override
-    public void dispatchChatDigestEmails() {
+    public int dispatchChatDigestEmails() {
         final int digestBatchSize = 200;
         final List<ReservationMessage> pending =
                 reservationMessageDao.findPendingEmailNotification(digestBatchSize);
         if (pending.isEmpty()) {
-            return;
+            return 0;
         }
         // findPendingEmailNotification JOIN FETCHes reservation.car.owner + catalog, so
         // counterparty and vehicle labels are read from the already-hydrated graph.
@@ -304,9 +304,16 @@ public class ReservationMessageServiceImpl implements ReservationMessageService 
                     message.getSenderUserId(), message.getReservation());
             byRecipient.computeIfAbsent(recipientId, ignored -> new ArrayList<>()).add(message);
         }
+        // One WHERE id IN query for every distinct recipient — no per-recipient getUserById.
+        final Map<Long, User> recipientsById = userService.getUsersByIds(byRecipient.keySet()).stream()
+                .collect(Collectors.toMap(User::getId, recipient -> recipient));
+        int queued = 0;
         for (final Map.Entry<Long, List<ReservationMessage>> entry : byRecipient.entrySet()) {
-            dispatchDigestForRecipient(entry.getKey(), entry.getValue());
+            if (dispatchDigestForRecipient(entry.getKey(), recipientsById.get(entry.getKey()), entry.getValue())) {
+                queued++;
+            }
         }
+        return queued;
     }
 
     @Override
@@ -352,40 +359,43 @@ public class ReservationMessageServiceImpl implements ReservationMessageService 
                 .map(sf -> new BinaryContent(sf.getData(), sf.getContentType(), sf.getFileName()));
     }
 
-    private void dispatchDigestForRecipient(
+    /** {@code recipient} comes from the batch lookup; {@code null} when the account no longer exists. */
+    /** Returns {@code true} when a digest email was queued for the recipient. */
+    private boolean dispatchDigestForRecipient(
             final long recipientId,
+            final User recipient,
             final List<ReservationMessage> messages) {
         try {
             final List<ReservationMessage> unseenMessages = messages.stream()
                     .filter(message -> !message.isSeen())
                     .collect(Collectors.toList());
             if (unseenMessages.isEmpty()) {
-                return;
+                return false;
             }
             final List<Long> messageIds =
                     unseenMessages.stream().map(ReservationMessage::getId).collect(Collectors.toList());
             if (!lifecycleRowProcessor.markChatDigestNotified(messageIds)) {
-                return;
+                return false;
             }
-            final Optional<User> recipientOpt = userService.getUserById(recipientId);
-            if (recipientOpt.isEmpty()) {
-                return;
+            if (recipient == null) {
+                return false;
             }
-            final User recipient = recipientOpt.get();
             // resolveMailLocaleFor reuses the already-loaded user instead of re-querying users
             // by id, which previously cost one extra SELECT per recipient in the digest loop.
             final Locale mailLocale = userLocaleService.resolveMailLocaleFor(recipient);
             final Optional<ReservationChatDigestEmailPayload> payloadOpt =
                     buildDigestPayload(recipient, mailLocale, unseenMessages);
             if (payloadOpt.isEmpty()) {
-                return;
+                return false;
             }
             emailService.sendReservationChatDigestEmail(payloadOpt.get());
+            return true;
         } catch (final RuntimeException e) {
             LOGGER.atWarn()
                     .setCause(e)
                     .addArgument(recipientId)
                     .log("Failed to dispatch reservation chat digest email (recipient id={})");
+            return false;
         }
     }
 

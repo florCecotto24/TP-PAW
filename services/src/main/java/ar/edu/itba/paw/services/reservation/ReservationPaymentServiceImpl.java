@@ -324,7 +324,7 @@ public class ReservationPaymentServiceImpl implements ReservationPaymentService 
     // the @Async email is sent only AFTER that claim commits, so a rolled-back batch cannot leave a
     // reminder marked-sent-but-not-delivered nor re-send a duplicate on the next run.
     @Override
-    public void dispatchDuePaymentProofReminderEmails() {
+    public int dispatchDuePaymentProofReminderEmails() {
         final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         final List<Reservation> candidates = reservationService.findReservationsWithDuePendingPaymentProof(now);
         LOGGER.atInfo().addArgument(candidates.size()).log("Due payment proof reminder run: {} candidate reservation(s)");
@@ -356,12 +356,13 @@ public class ReservationPaymentServiceImpl implements ReservationPaymentService 
             }
         }
         LOGGER.atInfo().addArgument(queued).log("Due payment proof reminder run: queued {} email(s)");
+        return queued;
     }
 
     // Deliberately NOT @Transactional: same per-row claim-then-mail-after-commit pattern as the
     // due-payment-proof reminder above.
     @Override
-    public void dispatchDueRefundProofReminderEmails() {
+    public int dispatchDueRefundProofReminderEmails() {
         final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         final List<Reservation> candidates = reservationService.findReservationsWithDuePendingRefundProof(now);
         LOGGER.atInfo().addArgument(candidates.size()).log("Due refund proof reminder run: {} candidate reservation(s)");
@@ -387,6 +388,7 @@ public class ReservationPaymentServiceImpl implements ReservationPaymentService 
             }
         }
         LOGGER.atInfo().addArgument(queued).log("Due refund proof reminder run: queued {} email(s)");
+        return queued;
     }
 
     /**
@@ -406,12 +408,12 @@ public class ReservationPaymentServiceImpl implements ReservationPaymentService 
     // block email is sent only AFTER that commit, so a rolled-back batch never emails an owner who was not
     // actually blocked (which would re-block + re-email next run).
     @Override
-    public void sweepRefundOverdueAndBlockOwners() {
+    public int sweepRefundOverdueAndBlockOwners() {
         final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         final List<Reservation> overdue = reservationService.findReservationsWithOverdueRefundProof(now);
         LOGGER.atInfo().addArgument(overdue.size()).log("Refund-overdue sweep: {} reservation(s) with lapsed deadline");
         if (overdue.isEmpty()) {
-            return;
+            return 0;
         }
         // Group reservations by owner so we issue a single block + single email per owner.
         final Map<Long, List<Reservation>> byOwner = new LinkedHashMap<>();
@@ -442,5 +444,6 @@ public class ReservationPaymentServiceImpl implements ReservationPaymentService 
             }
         }
         LOGGER.atInfo().addArgument(blockedCount).log("Refund-overdue sweep: blocked {} owner(s)");
+        return blockedCount;
     }
 }

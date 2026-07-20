@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.persistence.user;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -32,6 +33,9 @@ public interface UserDao {
     }
 
     Optional<User> getUserById(final long id);
+
+    /** Batch lookup for mail/scheduler jobs: one {@code WHERE id IN} query for every requested id. */
+    List<User> getUsersByIds(Collection<Long> ids);
 
     Optional<User> findByEmail(final String email);
 

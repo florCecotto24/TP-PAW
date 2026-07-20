@@ -2,6 +2,7 @@ package ar.edu.itba.paw.persistence.reservation;
 
 import java.math.BigDecimal;
 import java.util.Collection;
+import java.util.Map;
 import java.util.Optional;
 
 import ar.edu.itba.paw.models.domain.car.CarAvailability;
@@ -51,4 +52,12 @@ public interface ReservationAvailabilityDao {
      *         when none of the bridged candidates is an OFFERED row covering the first day.
      */
     Optional<CarAvailability> findEffectivePickupAvailabilityForReservation(long reservationId);
+
+    /**
+     * Batch variant of {@link #findEffectivePickupAvailabilityForReservation} for scheduler jobs:
+     * loads every bridge row for {@code reservationIds} in one query and resolves the winning
+     * pickup snapshot per reservation in memory. Reservations without a winning snapshot are
+     * absent from the returned map.
+     */
+    Map<Long, CarAvailability> findEffectivePickupAvailabilitiesForReservations(Collection<Long> reservationIds);
 }

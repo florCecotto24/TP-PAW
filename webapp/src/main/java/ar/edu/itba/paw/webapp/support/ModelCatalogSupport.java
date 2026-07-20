@@ -1,7 +1,6 @@
 package ar.edu.itba.paw.webapp.support;
 
 import java.util.List;
-import java.util.Locale;
 import java.util.stream.Collectors;
 
 import javax.ws.rs.BadRequestException;
@@ -105,30 +104,29 @@ public final class ModelCatalogSupport {
             final long brandId,
             final long modelId,
             final boolean validated,
-            final Locale locale,
             final UriInfo uriInfo) {
         requireModelForBrand(brandId, modelId);
         if (validated) {
-            approveModel(modelId, locale);
+            approveModel(modelId);
         }
         final CarModel updated = requireModelForBrand(brandId, modelId);
         return Response.ok(toDto(updated, uriInfo)).build();
     }
 
-    public void approveModel(final long modelId, final Locale locale) {
+    public void approveModel(final long modelId) {
         carModelService.findById(modelId)
                 .orElseThrow(() -> new CarModelNotFoundException(modelId));
-        adminService.validateCatalogEntry(modelId, locale);
+        adminService.validateCatalogEntry(modelId);
     }
 
-    public void rejectModel(final long modelId, final Locale locale) {
-        adminService.rejectCatalogEntry(modelId, locale);
+    public void rejectModel(final long modelId) {
+        adminService.rejectCatalogEntry(modelId);
     }
 
     /** Admin DELETE: ownership check under the brand, then catalog rejection → {@code 204}. */
-    public Response rejectModelForBrand(final long brandId, final long modelId, final Locale locale) {
+    public Response rejectModelForBrand(final long brandId, final long modelId) {
         requireModelForBrand(brandId, modelId);
-        rejectModel(modelId, locale);
+        rejectModel(modelId);
         return Response.noContent().build();
     }
 

@@ -3,6 +3,7 @@ package ar.edu.itba.paw.services.user;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -40,6 +41,9 @@ public interface UserService {
 
     /** Loads a user row by primary key when present. */
     Optional<User> getUserById(final long id);
+
+    /** Batch lookup for mail/scheduler jobs: one {@code WHERE id IN} query for every requested id. */
+    List<User> getUsersByIds(Collection<Long> ids);
 
     /** Loads {@link User#getPasswordHash()} for Spring Security; empty if unknown email or no password set. */
     Optional<User> findByEmailForAuthentication(final String email);

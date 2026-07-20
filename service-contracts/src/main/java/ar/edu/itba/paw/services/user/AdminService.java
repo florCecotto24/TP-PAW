@@ -36,7 +36,7 @@ public interface AdminService {
      */
     void deleteUser(long targetUserId, long actingAdminId);
 
-    void adminPauseCar(long carId, long actingAdminId, Locale locale);
+    void adminPauseCar(long carId, long actingAdminId);
 
     void adminResumeCar(long carId, long actingAdminId);
 
@@ -46,17 +46,17 @@ public interface AdminService {
 
     /**
      * Validates a pending catalog entry: validates the model and, if its brand is also pending, validates the brand.
-     * Notifies by email each affected car owner indicating whether only the model or both brand and model were validated.
-     * {@code locale} is the fallback request locale.
+     * Notifies by email each affected car owner (in each owner's mail locale) indicating whether only the model or
+     * both brand and model were validated.
      */
-    void validateCatalogEntry(long modelId, Locale locale);
+    void validateCatalogEntry(long modelId);
 
     /**
      * Rejects a pending catalog entry: removes the model and, if its brand is pending and has no remaining models,
-     * removes the brand too. Notifies by email each affected car owner indicating whether the rejection targeted
-     * only the model or both brand and model. {@code locale} is the fallback request locale.
+     * removes the brand too. Notifies by email each affected car owner (in each owner's mail locale) indicating
+     * whether the rejection targeted only the model or both brand and model.
      */
-    void rejectCatalogEntry(long modelId, Locale locale);
+    void rejectCatalogEntry(long modelId);
 
     Page<User> listUsers(int page, int pageSize, Boolean blocked, String role, String query);
 

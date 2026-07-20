@@ -17,7 +17,6 @@ import ar.edu.itba.paw.models.domain.car.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.car.CarAvailability;
 import ar.edu.itba.paw.models.dto.car.BookableSegmentProjection;
 
-import ar.edu.itba.paw.services.car.CarAvailabilityServiceImpl;
 /**
  * Stateless calendar math used by {@code CarAvailabilityServiceImpl}: range subtraction,
  * adjacent-day merging, identical-projection collapsing, and the wall-day pickup-lead clip.

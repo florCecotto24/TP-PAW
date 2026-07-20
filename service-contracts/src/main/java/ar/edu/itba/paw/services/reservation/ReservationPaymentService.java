@@ -71,20 +71,20 @@ public interface ReservationPaymentService {
      * Scheduled job: sends payment-proof deadline reminders to riders whose deadline falls
      * within the configured lead window.
      */
-    void dispatchDuePaymentProofReminderEmails();
+    int dispatchDuePaymentProofReminderEmails();
 
     /**
      * Scheduled job: reminds the host to upload refund transfer proof before the deadline
      * (same lead window as payment proof reminders).
      */
-    void dispatchDueRefundProofReminderEmails();
+    int dispatchDueRefundProofReminderEmails();
 
     /**
      * Scheduled job: blocks owners whose refund-proof deadlines have already lapsed without an
      * uploaded receipt. Idempotent — owners already blocked are skipped. A single email is
      * enqueued per newly-blocked owner with the full list of overdue reservations.
      */
-    void sweepRefundOverdueAndBlockOwners();
+    int sweepRefundOverdueAndBlockOwners();
 
     /**
      * Queues the "you must upload a refund receipt within X" email for the owner of

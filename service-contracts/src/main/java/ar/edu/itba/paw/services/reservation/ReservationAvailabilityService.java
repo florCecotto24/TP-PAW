@@ -2,6 +2,7 @@ package ar.edu.itba.paw.services.reservation;
 
 import java.math.BigDecimal;
 import java.util.Collection;
+import java.util.Map;
 import java.util.Optional;
 
 import ar.edu.itba.paw.models.domain.car.CarAvailability;
@@ -42,4 +43,11 @@ public interface ReservationAvailabilityService {
      * do not mutate the address / times shown for already-bridged reservations.
      */
     Optional<CarAvailability> findEffectivePickupAvailabilityForReservation(long reservationId);
+
+    /**
+     * Batch variant of {@link #findEffectivePickupAvailabilityForReservation} for scheduler jobs:
+     * one query for every {@code reservationIds} bridge row, winner resolved per reservation in
+     * memory. Reservations without a winning snapshot are absent from the returned map.
+     */
+    Map<Long, CarAvailability> findEffectivePickupAvailabilitiesForReservations(Collection<Long> reservationIds);
 }

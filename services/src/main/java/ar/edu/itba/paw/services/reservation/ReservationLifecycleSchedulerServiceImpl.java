@@ -2,6 +2,7 @@ package ar.edu.itba.paw.services.reservation;
 
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.time.ZoneOffset;
@@ -18,8 +19,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import ar.edu.itba.paw.models.domain.car.Car;
+import ar.edu.itba.paw.models.domain.car.CarAvailability;
 import ar.edu.itba.paw.models.domain.reservation.Reservation;
 import ar.edu.itba.paw.models.domain.user.User;
+import ar.edu.itba.paw.models.email.reservation.ReservationMailPayload;
 import ar.edu.itba.paw.models.email.reservation.RiderCarReturnEmailPayload;
 import ar.edu.itba.paw.models.email.reservation.RiderReviewInviteEmailPayload;
 import ar.edu.itba.paw.models.util.time.AppTimezone;
@@ -41,6 +44,7 @@ public class ReservationLifecycleSchedulerServiceImpl implements ReservationLife
     private static final Logger LOGGER = LoggerFactory.getLogger(ReservationLifecycleSchedulerServiceImpl.class);
 
     private final ReservationService reservationService;
+    private final ReservationAvailabilityService reservationAvailabilityService;
     private final ReservationTimingPolicy reservationTimingPolicy;
     private final ReservationMailComposer mailComposer;
     private final ReservationLifecycleRowProcessor lifecycleRowProcessor;
@@ -48,10 +52,12 @@ public class ReservationLifecycleSchedulerServiceImpl implements ReservationLife
     @Autowired
     public ReservationLifecycleSchedulerServiceImpl(
             @Lazy final ReservationService reservationService,
+            final ReservationAvailabilityService reservationAvailabilityService,
             final ReservationTimingPolicy reservationTimingPolicy,
             final ReservationMailComposer mailComposer,
             final ReservationLifecycleRowProcessor lifecycleRowProcessor) {
         this.reservationService = reservationService;
+        this.reservationAvailabilityService = reservationAvailabilityService;
         this.reservationTimingPolicy = reservationTimingPolicy;
         this.mailComposer = mailComposer;
         this.lifecycleRowProcessor = lifecycleRowProcessor;
@@ -63,10 +69,53 @@ public class ReservationLifecycleSchedulerServiceImpl implements ReservationLife
 
     /**
      * Deliberately NOT {@code @Transactional}: each claim commits in {@code REQUIRES_NEW} before
+     * {@code @Async} mail is queued. Rider/car/owner come pre-fetched from
+     * {@code findReminderReservations} and the pickup snapshots are batch-loaded in one query,
+     * so the loop issues no per-row SELECTs.
+     */
+    @Override
+    public int dispatchReservationReminderEmails() {
+        final LocalDate tomorrow = LocalDate.now(AppTimezone.WALL_ZONE).plusDays(1);
+        final OffsetDateTime from =
+                tomorrow.atStartOfDay(AppTimezone.WALL_ZONE).toInstant().atOffset(ZoneOffset.UTC);
+        final OffsetDateTime to =
+                tomorrow.plusDays(1).atStartOfDay(AppTimezone.WALL_ZONE).toInstant().atOffset(ZoneOffset.UTC);
+        final List<Reservation> candidates = reservationService.findReminderReservations(from, to);
+        LOGGER.atInfo().addArgument(candidates.size()).addArgument(tomorrow)
+                .log("Reservation reminder run: {} candidate reservation(s) picking up on {}");
+        final Map<Long, CarAvailability> pickupSnapshots =
+                reservationAvailabilityService.findEffectivePickupAvailabilitiesForReservations(
+                        candidates.stream().map(Reservation::getId).toList());
+        int queued = 0;
+        for (final Reservation reservation : candidates) {
+            final Optional<ReservationMailPayload> payload = mailComposer.buildReservationReminderPayload(
+                    reservation, pickupSnapshots.get(reservation.getId()));
+            if (payload.isEmpty()) {
+                LOGGER.atWarn().addArgument(reservation.getId())
+                        .log("Skipping reservation reminder: rider/car/owner missing (reservation id={})");
+                continue;
+            }
+            if (!lifecycleRowProcessor.claimPickupReminder(reservation.getId())) {
+                continue;
+            }
+            try {
+                mailComposer.sendReservationReminder(payload.get());
+                queued++;
+            } catch (final RuntimeException e) {
+                LOGGER.atError().setCause(e).addArgument(reservation.getId())
+                        .log("Failed to queue reservation reminder email (reservation id={})");
+            }
+        }
+        LOGGER.atInfo().addArgument(queued).log("Reservation reminder run: queued {} email(s)");
+        return queued;
+    }
+
+    /**
+     * Deliberately NOT {@code @Transactional}: each claim commits in {@code REQUIRES_NEW} before
      * {@code @Async} mail is queued, so a rolled-back batch cannot leave emails for unclaimed rows.
      */
     @Override
-    public void dispatchReturnReminderEmails() {
+    public int dispatchReturnReminderEmails() {
         final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         final int hours = reservationTimingPolicy.getReturnReminderHoursBeforeCheckout();
         final List<Reservation> candidates = reservationService.findReservationsForReturnReminderEmail(now, hours);
@@ -92,6 +141,7 @@ public class ReservationLifecycleSchedulerServiceImpl implements ReservationLife
             }
         }
         LOGGER.atInfo().addArgument(queued).log("Return reminder run: queued {} email(s)");
+        return queued;
     }
 
     /**
@@ -99,7 +149,7 @@ public class ReservationLifecycleSchedulerServiceImpl implements ReservationLife
      * {@code @Async} mail is queued, so a rolled-back batch cannot leave emails for unclaimed rows.
      */
     @Override
-    public void dispatchReturnCheckoutEmails() {
+    public int dispatchReturnCheckoutEmails() {
         final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         final List<Reservation> candidates = reservationService.findReservationsForReturnCheckoutEmail(now);
         LOGGER.atInfo().addArgument(candidates.size()).log("Return checkout email run: {} candidate reservation(s)");
@@ -123,6 +173,7 @@ public class ReservationLifecycleSchedulerServiceImpl implements ReservationLife
             }
         }
         LOGGER.atInfo().addArgument(queued).log("Return checkout email run: queued {} email(s)");
+        return queued;
     }
 
     /**
@@ -130,7 +181,7 @@ public class ReservationLifecycleSchedulerServiceImpl implements ReservationLife
      * {@code @Async} mail is queued.
      */
     @Override
-    public void dispatchRiderReviewInviteEmails() {
+    public int dispatchRiderReviewInviteEmails() {
         final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         final List<Reservation> candidates = reservationService.findReservationsForRiderReviewInviteEmail(now);
         LOGGER.atInfo().addArgument(candidates.size()).log("Rider review invite run: {} candidate reservation(s)");
@@ -154,6 +205,7 @@ public class ReservationLifecycleSchedulerServiceImpl implements ReservationLife
             }
         }
         LOGGER.atInfo().addArgument(queued).log("Rider review invite run: queued {} email(s)");
+        return queued;
     }
 
     /**
@@ -161,11 +213,11 @@ public class ReservationLifecycleSchedulerServiceImpl implements ReservationLife
      * Candidates are already filtered with {@code NOT EXISTS} in the DAO (no per-row review probe).
      */
     @Override
-    public void dispatchReviewAutoSkips() {
+    public int dispatchReviewAutoSkips() {
         final int days = reservationTimingPolicy.getReviewAutoSkipDays();
         if (days < 1) {
             LOGGER.atInfo().addArgument(days).log("Review auto-skip run skipped: feature disabled (days={})");
-            return;
+            return 0;
         }
         final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         final OffsetDateTime endDateCutoff = now.minusDays(days);
@@ -211,6 +263,7 @@ public class ReservationLifecycleSchedulerServiceImpl implements ReservationLife
             }
         }
         LOGGER.atInfo().addArgument(oDone).log("Review auto-skip (owner) run: closed {} review(s)");
+        return rDone + oDone;
     }
 
     /**
@@ -219,7 +272,7 @@ public class ReservationLifecycleSchedulerServiceImpl implements ReservationLife
      * hold locks across the whole batch.
      */
     @Override
-    public void transitionAcceptedReservationsToStarted() {
+    public int transitionAcceptedReservationsToStarted() {
         final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         final List<Long> candidateIds = reservationService.findAcceptedReservationIdsWithStartOnOrBefore(now);
         LOGGER.atInfo().addArgument(candidateIds.size())
@@ -234,6 +287,7 @@ public class ReservationLifecycleSchedulerServiceImpl implements ReservationLife
             }
         }
         LOGGER.atInfo().addArgument(started).log("Reservation start transition run: marked {} reservation(s) as started");
+        return started;
     }
 
     // ---------------------------------------------------------------------------------------

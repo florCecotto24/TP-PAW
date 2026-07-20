@@ -4,6 +4,7 @@ package ar.edu.itba.paw.services.user;
 import java.security.SecureRandom;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -32,6 +33,7 @@ import ar.edu.itba.paw.exception.user.RegistrationPasswordException;
 import ar.edu.itba.paw.exception.user.UserForbiddenException;
 import ar.edu.itba.paw.exception.user.UserNotFoundException;
 import ar.edu.itba.paw.models.security.UserRole;
+import ar.edu.itba.paw.models.util.rules.SupportedLocales;
 import ar.edu.itba.paw.models.domain.file.StoredFile;
 import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.models.domain.user.UserDocumentType;
@@ -51,7 +53,6 @@ import ar.edu.itba.paw.policy.UserValidationPolicy;
 
 import ar.edu.itba.paw.services.car.CarService;
 import ar.edu.itba.paw.services.email.EmailService;
-import ar.edu.itba.paw.services.user.AdminService;
 /**
  * User rows via {@link UserDao}; blobs, mail, verification, and listing side effects use peer services.
  * {@code @Lazy} breaks cycles with {@link EmailVerificationService} and {@link CarService}.
@@ -149,6 +150,12 @@ public class UserServiceImpl implements UserService {
     @Transactional(readOnly = true)
     public Optional<User> getUserById(final long id) {
         return userDao.getUserById(id);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<User> getUsersByIds(final Collection<Long> ids) {
+        return userDao.getUsersByIds(ids);
     }
 
     @Override
@@ -383,7 +390,7 @@ public class UserServiceImpl implements UserService {
         userDao.updatePasswordHash(userId, passwordEncoder.encode(plain));
         userDao.updateEmailValidated(userId, true);
         final Locale mailLocale = userLocaleService.resolveMailLocaleOrElse(
-                userId, locale != null ? locale : Locale.ENGLISH);
+                userId, locale != null ? locale : SupportedLocales.DEFAULT);
         emailService.sendMigratedUserPassword(MigratedUserPasswordEmailPayload.builder()
                 .messageLocale(mailLocale)
                 .recipientEmail(withHash.getEmail())
@@ -619,7 +626,7 @@ public class UserServiceImpl implements UserService {
             throw new UserAlreadyAdminException();
         }
         userDao.updateUserRoleAndGrantor(targetUserId, UserRole.ADMIN, assignedByUserId);
-        final Locale mailLocale = userLocaleService.resolveMailLocaleOrElse(targetUserId, Locale.ENGLISH);
+        final Locale mailLocale = userLocaleService.resolveMailLocaleOrElse(targetUserId, SupportedLocales.DEFAULT);
         emailService.sendAdminPromoted(AdminPromotedEmailPayload.builder()
                 .messageLocale(mailLocale)
                 .recipientEmail(target.getEmail())

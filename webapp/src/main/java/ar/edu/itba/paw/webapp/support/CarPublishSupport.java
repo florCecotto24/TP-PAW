@@ -5,7 +5,6 @@ import java.io.InputStream;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -56,9 +55,9 @@ public final class CarPublishSupport {
         this.objectMapper = objectMapper;
     }
 
-    public Response publishJson(final long ownerId, final CarCreateForm form, final Locale locale, final UriInfo uriInfo)
+    public Response publishJson(final long ownerId, final CarCreateForm form, final UriInfo uriInfo)
             throws IOException {
-        return publish(ownerId, form, List.of(), null, null, null, locale, uriInfo);
+        return publish(ownerId, form, List.of(), null, null, null, uriInfo);
     }
 
     public Response publishMultipart(
@@ -66,7 +65,6 @@ public final class CarPublishSupport {
             final InputStream carPart,
             final List<FormDataBodyPart> pictureParts,
             final FormDataBodyPart insurancePart,
-            final Locale locale,
             final UriInfo uriInfo) throws IOException {
         final OptionalInsurance insurance = readOptionalInsurance(insurancePart);
         return publish(
@@ -76,7 +74,6 @@ public final class CarPublishSupport {
                 insurance.fileName,
                 insurance.contentType,
                 insurance.bytes,
-                locale,
                 uriInfo);
     }
 
@@ -87,14 +84,13 @@ public final class CarPublishSupport {
             final String insuranceName,
             final String insuranceType,
             final byte[] insuranceBytes,
-            final Locale locale,
             final UriInfo uriInfo) throws IOException {
         formValidationSupport.validate(form, ValidationGroups.OnPublishCar.class);
 
         final PublishCarRequest fullRequest = carCreateRequestSupport.toPublishRequest(
                 form, galleryUploads, insuranceName, insuranceType, insuranceBytes);
 
-        final PublishCarOutcome outcome = carPublishingService.publishCar(ownerId, fullRequest, locale);
+        final PublishCarOutcome outcome = carPublishingService.publishCar(ownerId, fullRequest);
         final Car car = outcome.getCar();
         final URI location = uriInfo.getBaseUriBuilder()
                 .path("cars")

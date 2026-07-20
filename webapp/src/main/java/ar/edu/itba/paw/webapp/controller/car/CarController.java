@@ -26,7 +26,6 @@ import javax.ws.rs.core.UriInfo;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataParam;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.security.access.method.P;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Component;
@@ -135,11 +134,7 @@ public class CarController {
     @Consumes(VndMediaType.CAR_V1_JSON)
     @Produces(VndMediaType.CAR_PRIVATE_V1_JSON)
     public Response publishCarJson(final CarCreateForm form) throws IOException {
-        return carPublishSupport.publishJson(
-                currentUserResolver.requireUserId(),
-                form,
-                LocaleContextHolder.getLocale(),
-                uriInfo);
+        return carPublishSupport.publishJson(currentUserResolver.requireUserId(), form, uriInfo);
     }
 
     @POST
@@ -150,12 +145,7 @@ public class CarController {
             @FormDataParam("pictures") final List<FormDataBodyPart> pictureParts,
             @FormDataParam("insurance") final FormDataBodyPart insurancePart) throws IOException {
         return carPublishSupport.publishMultipart(
-                currentUserResolver.requireUserId(),
-                carPart,
-                pictureParts,
-                insurancePart,
-                LocaleContextHolder.getLocale(),
-                uriInfo);
+                currentUserResolver.requireUserId(), carPart, pictureParts, insurancePart, uriInfo);
     }
 
     @GET
@@ -191,7 +181,6 @@ public class CarController {
                 id,
                 patch,
                 currentUserResolver.requirePrincipal(),
-                LocaleContextHolder.getLocale(),
                 uriInfo);
     }
 

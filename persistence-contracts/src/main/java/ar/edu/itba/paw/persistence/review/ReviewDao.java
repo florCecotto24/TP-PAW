@@ -42,10 +42,10 @@ public interface ReviewDao {
 
     /**
      * Average rating left to {@code counterpartyUserId} as owner ({@code counterpartyIsOwner=true})
-     * or as rider ({@code false}). Returns {@code null} when no rated reviews exist; otherwise a
-     * value rounded to two decimals.
+     * or as rider ({@code false}). Empty when no rated reviews exist; otherwise a value rounded to
+     * two decimals.
      */
-    BigDecimal findAverageRatingForCounterparty(long counterpartyUserId, boolean counterpartyIsOwner);
+    Optional<BigDecimal> findAverageRatingForCounterparty(long counterpartyUserId, boolean counterpartyIsOwner);
 
     /**
      * Batch variant of {@link #findAverageRatingForCounterparty(long, boolean)} with
@@ -62,9 +62,9 @@ public interface ReviewDao {
     /**
      * Average rating of rider→car reviews for the listing ({@code madeByRider=true}). Owner→rider
      * reviews are excluded so {@code cars.rating_avg} reflects vehicle quality, not rider scores.
-     * Returns {@code null} when no rated rider reviews exist; otherwise a value rounded to two
-     * decimals. Persistence of {@code cars.rating_avg} is via
+     * Empty when no rated rider reviews exist; otherwise a value rounded to two decimals.
+     * Persistence of {@code cars.rating_avg} is via
      * {@link CarDao#updateRatingAvg(long, java.math.BigDecimal)}.
      */
-    BigDecimal findAverageRatingForCar(long carId);
+    Optional<BigDecimal> findAverageRatingForCar(long carId);
 }

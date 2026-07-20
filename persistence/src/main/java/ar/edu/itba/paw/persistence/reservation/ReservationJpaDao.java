@@ -690,12 +690,14 @@ public class ReservationJpaDao implements ReservationDao {
     @Override
     public List<Reservation> findReservationsForRiderReviewInviteEmail(final OffsetDateTime now) {
         // NOT EXISTS sub-query navigates the Review entity (no native join to the reviews table).
-        // JOIN FETCH car + carModel + brand so callers that read resolveVehicleLabelFromReservation()
-        // (which touches car.getBrand() and car.getModel()) do not trigger per-row SELECTs on cars,
-        // car_models and car_brands. LEFT JOIN FETCH on the catalog side keeps the query safe for
-        // any pre-backfill cars that still have model_id = NULL.
+        // JOIN FETCH rider + car + carModel + brand so callers that read resolveRider() and
+        // resolveVehicleLabelFromReservation() (which touch rider, car.getBrand() and
+        // car.getModel()) do not trigger per-row SELECTs on users, cars, car_models and
+        // car_brands. LEFT JOIN FETCH on the catalog side keeps the query safe for any
+        // pre-backfill cars that still have model_id = NULL.
         return em.createQuery(
                         "FROM Reservation r "
+                                + "JOIN FETCH r.rider "
                                 + "JOIN FETCH r.car c "
                                 + "LEFT JOIN FETCH c.carModel cm "
                                 + "LEFT JOIN FETCH cm.brand "

@@ -64,7 +64,7 @@ public final class RegistrationAccountForm implements RegistrationPasswordConfir
     }
 
     public void setEmail(final String email) {
-        this.email = email != null ? email : "";
+        this.email = email != null ? email.trim() : "";
     }
 
     @Override

@@ -14,7 +14,6 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Component;
 
@@ -65,18 +64,13 @@ public class BrandModelItemController {
             @PathParam("modelId") final long modelId,
             @Valid final CatalogApprovalDto patch) {
         return modelCatalogSupport.approveModelIfRequested(
-                brandId,
-                modelId,
-                Boolean.TRUE.equals(patch.getValidated()),
-                LocaleContextHolder.getLocale(),
-                uriInfo);
+                brandId, modelId, Boolean.TRUE.equals(patch.getValidated()), uriInfo);
     }
 
     @DELETE
     @PreAuthorize("@userResourceAccess.isAdmin()")
     public Response rejectModel(
             @PathParam("id") final long brandId, @PathParam("modelId") final long modelId) {
-        return modelCatalogSupport.rejectModelForBrand(
-                brandId, modelId, LocaleContextHolder.getLocale());
+        return modelCatalogSupport.rejectModelForBrand(brandId, modelId);
     }
 }

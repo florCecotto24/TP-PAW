@@ -20,9 +20,8 @@ import org.springframework.stereotype.Component;
 import org.thymeleaf.context.Context;
 
 import ar.edu.itba.paw.exception.email.EmailMessagingException;
+import ar.edu.itba.paw.models.util.rules.SupportedLocales;
 import ar.edu.itba.paw.models.util.time.WallDateTimeDisplayFormat;
-
-import ar.edu.itba.paw.services.email.EmailServiceImpl;
 /**
  * Cross-cutting mail-dispatch primitives shared by every {@code *EmailServiceImpl}.
  *
@@ -136,7 +135,7 @@ public final class MailDispatchSupport {
 
     /** Wall-time display string in the supplied locale (falls back to English). */
     public String formatWallDateTime(final OffsetDateTime dateTime, final Locale messageLocale) {
-        final Locale locale = messageLocale != null ? messageLocale : Locale.ENGLISH;
+        final Locale locale = messageLocale != null ? messageLocale : SupportedLocales.DEFAULT;
         return WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(dateTime, locale);
     }
 }

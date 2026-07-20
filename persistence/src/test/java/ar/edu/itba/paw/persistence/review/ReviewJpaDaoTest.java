@@ -129,7 +129,7 @@ class ReviewJpaDaoTest extends DaoIntegrationTestSupport {
         insertOwnerReview(resOwner, carId, 1, "Bad rider", now);
 
         // 2. Act
-        final BigDecimal avg = dao.findAverageRatingForCar(carId);
+        final BigDecimal avg = dao.findAverageRatingForCar(carId).orElseThrow();
 
         // 3. Assert
         Assertions.assertEquals(0, new BigDecimal("5.00").compareTo(avg));

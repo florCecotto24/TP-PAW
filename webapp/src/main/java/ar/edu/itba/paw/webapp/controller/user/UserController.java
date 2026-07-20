@@ -22,10 +22,6 @@ import org.springframework.security.access.method.P;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Component;
 
-import ar.edu.itba.paw.exception.MessageKeys;
-import ar.edu.itba.paw.exception.user.UserNotFoundException;
-import ar.edu.itba.paw.models.domain.user.User;
-import ar.edu.itba.paw.services.user.UserService;
 import ar.edu.itba.paw.webapp.api.common.VndMediaType;
 import ar.edu.itba.paw.webapp.form.admin.CreateAdminUserForm;
 import ar.edu.itba.paw.webapp.form.user.RegistrationAccountForm;
@@ -52,7 +48,6 @@ import ar.edu.itba.paw.webapp.validation.constraint.user.ValidUserRole;
 @Component
 public class UserController {
 
-    private final UserService userService;
     private final CurrentUserResolver currentUserResolver;
     private final UserRepresentationSupport userRepresentationSupport;
     private final UserCollectionSupport userCollectionSupport;
@@ -67,13 +62,11 @@ public class UserController {
 
     @Autowired
     public UserController(
-            final UserService userService,
             final CurrentUserResolver currentUserResolver,
             final UserRepresentationSupport userRepresentationSupport,
             final UserCollectionSupport userCollectionSupport,
             final UserPatchSupport userPatchSupport,
             final PaginationSupport paginationSupport) {
-        this.userService = userService;
         this.currentUserResolver = currentUserResolver;
         this.userRepresentationSupport = userRepresentationSupport;
         this.userCollectionSupport = userCollectionSupport;
@@ -127,10 +120,8 @@ public class UserController {
     @Path("/{id}")
     @Produces({VndMediaType.USER_V1_JSON, VndMediaType.USER_PRIVATE_V1_JSON})
     public Response getUser(@PathParam("id") final long id) {
-        final User user = userService.getUserById(id)
-                .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
-        return userRepresentationSupport.buildUserResponse(
-                user, uriInfo, currentUserResolver.currentPrincipalOrNull(), httpHeaders);
+        return userRepresentationSupport.getUserResponse(
+                id, uriInfo, currentUserResolver.currentPrincipalOrNull(), httpHeaders);
     }
 
     @DELETE

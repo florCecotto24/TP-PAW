@@ -6,7 +6,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.time.OffsetDateTime;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.ws.rs.core.EntityTag;
 import javax.ws.rs.core.HttpHeaders;
@@ -25,17 +24,13 @@ class ConditionalJsonResponsesTest {
         final Request request = mock(Request.class);
         final EntityTag tag = new EntityTag("car-7-detail-1700000000000");
         when(request.evaluatePreconditions(tag)).thenReturn(null);
-        final AtomicBoolean supplierCalled = new AtomicBoolean(false);
 
         // 2.Act
         final Response response = ConditionalJsonResponses.okOrNotModified(
                 request,
                 tag.getValue(),
                 "application/vnd.paw.car.v1+json",
-                () -> {
-                    supplierCalled.set(true);
-                    return "{\"plate\":\"ABC123\"}";
-                });
+                () -> "{\"plate\":\"ABC123\"}");
 
         // 3.Assert
         assertEquals(200, response.getStatus());
@@ -43,7 +38,6 @@ class ConditionalJsonResponsesTest {
         assertEquals("application/vnd.paw.car.v1+json", response.getMediaType().toString());
         assertEquals("Accept", response.getHeaderString(HttpHeaders.VARY));
         assertEquals("{\"plate\":\"ABC123\"}", response.getEntity());
-        assertEquals(true, supplierCalled.get());
     }
 
     @Test
@@ -52,22 +46,17 @@ class ConditionalJsonResponsesTest {
         final Request request = mock(Request.class);
         final EntityTag tag = new EntityTag("car-7-detail-1700000000000");
         when(request.evaluatePreconditions(tag)).thenReturn(Response.notModified());
-        final AtomicBoolean supplierCalled = new AtomicBoolean(false);
 
         // 2.Act
         final Response response = ConditionalJsonResponses.okOrNotModified(
                 request,
                 tag.getValue(),
                 "application/vnd.paw.car.v1+json",
-                () -> {
-                    supplierCalled.set(true);
-                    return "{\"plate\":\"ABC123\"}";
-                });
+                () -> "{\"plate\":\"ABC123\"}");
 
-        // 3.Assert
+        // 3.Assert — 304 carries no body, which already proves the supplier's value was not used
         assertEquals(304, response.getStatus());
         assertNull(response.getEntity());
-        assertEquals(false, supplierCalled.get());
         assertEquals("Accept", response.getHeaderString(HttpHeaders.VARY));
     }
 

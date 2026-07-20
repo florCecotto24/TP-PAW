@@ -4,6 +4,7 @@ package ar.edu.itba.paw.services.car;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -251,8 +252,7 @@ public class CarServiceImpl implements CarService {
     public void applyStatusTransition(
             final long carId,
             final Car.Status target,
-            final long actingUserId,
-            final Locale locale) {
+            final long actingUserId) {
         carDao.lockForReservationWrite(carId);
         final Car car = carDao.getCarById(carId)
                 .orElseThrow(() -> new CarNotFoundException(carId));
@@ -274,7 +274,7 @@ public class CarServiceImpl implements CarService {
                 }
                 toggleCarStatus(actingUserId, carId);
             }
-            case ADMIN_PAUSED -> adminService.adminPauseCar(carId, actingUserId, locale);
+            case ADMIN_PAUSED -> adminService.adminPauseCar(carId, actingUserId);
             case DEACTIVATED -> throw new CarStatusTransitionConflictException(carId);
             default -> throw new CarStatusTransitionConflictException(carId);
         }
@@ -454,8 +454,8 @@ public class CarServiceImpl implements CarService {
 
     @Override
     @Transactional
-    public void pauseCarsForMissingCbu(final long ownerId) {
-        pauseActiveCarsToLackDoc(ownerId, (owner, car, locale) ->
+    public List<Long> pauseCarsForMissingCbu(final long ownerId) {
+        return pauseActiveCarsToLackDoc(ownerId, (owner, car, locale) ->
                 emailService.sendListingPausedDueToMissingCbu(CarPausedMissingCbuOwnerEmailPayload.builder()
                         .messageLocale(locale)
                         .ownerEmail(owner.getEmail())
@@ -473,8 +473,8 @@ public class CarServiceImpl implements CarService {
 
     @Override
     @Transactional
-    public void pauseCarsForMissingIdentity(final long ownerId) {
-        pauseActiveCarsToLackDoc(ownerId, (owner, car, locale) ->
+    public List<Long> pauseCarsForMissingIdentity(final long ownerId) {
+        return pauseActiveCarsToLackDoc(ownerId, (owner, car, locale) ->
                 emailService.sendListingPausedDueToMissingIdentity(CarPausedMissingIdentityOwnerEmailPayload.builder()
                         .messageLocale(locale)
                         .ownerEmail(owner.getEmail())
@@ -500,28 +500,31 @@ public class CarServiceImpl implements CarService {
      * PAUSED / ADMIN_PAUSED / DEACTIVATED stay put so restoring docs cannot reopen a listing
      * the owner (or admin) intentionally left off the market.
      */
-    private void pauseActiveCarsToLackDoc(final long ownerId, final ListingPausedMailSender mailSender) {
+    private List<Long> pauseActiveCarsToLackDoc(final long ownerId, final ListingPausedMailSender mailSender) {
         final List<Car> active = carDao.findCarsByOwnerAndStatuses(
                 ownerId, List.of(Car.Status.ACTIVE));
         if (active.isEmpty()) {
-            return;
+            return List.of();
         }
         final User owner = userService.getUserById(ownerId).orElse(null);
         if (owner == null) {
-            return;
+            return List.of();
         }
         final String ownerEmail = owner.getEmail();
         if (ownerEmail == null || ownerEmail.isBlank()) {
-            return;
+            return List.of();
         }
-        final Locale ownerMailLocale = userLocaleService.resolveMailLocale(ownerId);
+        final Locale ownerMailLocale = userLocaleService.resolveMailLocaleFor(owner);
+        final List<Long> pausedCarIds = new ArrayList<>();
         for (final Car car : active) {
             carDao.lockForReservationWrite(car.getId());
             if (!carDao.updateCarStatusIfCurrent(car.getId(), Car.Status.LACK_DOC, Car.Status.ACTIVE)) {
                 continue;
             }
+            pausedCarIds.add(car.getId());
             mailSender.send(owner, car, ownerMailLocale);
         }
+        return pausedCarIds;
     }
 
     private void resumeEligibleLackDocCars(final long ownerId) {

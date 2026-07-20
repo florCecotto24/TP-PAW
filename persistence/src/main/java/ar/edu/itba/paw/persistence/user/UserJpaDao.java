@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.persistence.user;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -56,6 +57,16 @@ public class UserJpaDao implements UserDao {
     @Override
     public Optional<User> getUserById(final long id) {
         return Optional.ofNullable(em.find(User.class, id));
+    }
+
+    @Override
+    public List<User> getUsersByIds(final Collection<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return em.createQuery("FROM User u WHERE u.id IN :ids", User.class)
+                .setParameter("ids", ids)
+                .getResultList();
     }
 
     @Override

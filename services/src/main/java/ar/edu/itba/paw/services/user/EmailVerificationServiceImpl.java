@@ -17,6 +17,7 @@ import ar.edu.itba.paw.exception.user.VerificationCodeInvalidException;
 import ar.edu.itba.paw.models.email.user.EmailVerificationCodeEmailPayload;
 import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.models.util.format.EmailNormalizer;
+import ar.edu.itba.paw.models.util.rules.SupportedLocales;
 import ar.edu.itba.paw.persistence.user.EmailVerificationCodeDao;
 import ar.edu.itba.paw.policy.VerificationCodePolicy;
 
@@ -128,7 +129,7 @@ public class EmailVerificationServiceImpl implements EmailVerificationService {
         final Instant now = Instant.now();
         emailVerificationCodeDao.insert(
                 userId, code, now.plus(verificationCodePolicy.getCodeTtl()), now);
-        final Locale fallback = locale != null ? locale : Locale.ENGLISH;
+        final Locale fallback = locale != null ? locale : SupportedLocales.DEFAULT;
         final Locale mailLocale = userLocaleService.resolveMailLocaleOrElse(userId, fallback);
         emailService.sendEmailVerificationCode(EmailVerificationCodeEmailPayload.builder()
                 .messageLocale(mailLocale)

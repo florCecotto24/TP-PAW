@@ -2,8 +2,6 @@ package ar.edu.itba.paw.models.domain.car;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
@@ -21,7 +19,6 @@ import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
-import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
@@ -127,9 +124,6 @@ public class Car {
     @OneToOne(fetch = FetchType.LAZY, optional = true)
     @JoinColumn(name = "insurance_file_id", unique = true)
     private StoredFile insuranceFile;
-
-    @OneToMany(mappedBy = "car", fetch = FetchType.LAZY, orphanRemoval = true)
-    private List<CarPicture> pictures = new ArrayList<>();
 
     /* package */ Car() {
         // For Hibernate
@@ -326,14 +320,6 @@ public class Car {
 
     public Optional<BigDecimal> getRatingAvg() {
         return Optional.ofNullable(ratingAvg);
-    }
-
-    /**
-     * Returns the live Hibernate-managed collection (not a defensive copy) so association mapping and
-     * dirty tracking keep working. Callers must treat it as read-only.
-     */
-    public List<CarPicture> getPictures() {
-        return pictures;
     }
 
     public void setStatus(final Status status) {

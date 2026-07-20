@@ -1,7 +1,6 @@
 package ar.edu.itba.paw.webapp.security.jwt;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -9,9 +8,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.servlet.FilterChain;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,6 +23,7 @@ import org.springframework.mock.env.MockEnvironment;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -57,6 +58,25 @@ class JwtAuthenticationFilterTest {
         SecurityContextHolder.clearContext();
     }
 
+    /**
+     * State-based fake: records the {@link Authentication} visible to downstream servlets while
+     * the chain runs (the filter clears the context afterwards). That downstream view IS the
+     * filter's contract, so tests assert on the captured object itself.
+     */
+    private static final class CapturingFilterChain implements FilterChain {
+
+        private Authentication authentication;
+
+        @Override
+        public void doFilter(final ServletRequest request, final ServletResponse response) {
+            authentication = SecurityContextHolder.getContext().getAuthentication();
+        }
+
+        Authentication capturedAuthentication() {
+            return authentication;
+        }
+    }
+
     @Test
     void testRefreshRejectedWhenPasswordVersionMismatch() throws Exception {
         // 1.Arrange — token issued at version 0; DB now at 1 after password change
@@ -65,15 +85,15 @@ class JwtAuthenticationFilterTest {
 
         final MockHttpServletRequest request = bearerRequest(refresh);
         final MockHttpServletResponse response = new MockHttpServletResponse();
-        final AtomicBoolean authenticatedDuringChain = new AtomicBoolean(false);
+        final CapturingFilterChain chain = new CapturingFilterChain();
 
         // 2.Act
-        filter.doFilter(request, response, capturingChain(authenticatedDuringChain));
+        filter.doFilter(request, response, chain);
 
         // 3.Assert — no rotation; request continues unauthenticated
         assertNull(response.getHeader(JwtTokenService.ACCESS_TOKEN_HEADER));
         assertNull(response.getHeader(JwtTokenService.REFRESH_TOKEN_HEADER));
-        assertFalse(authenticatedDuringChain.get());
+        assertNull(chain.capturedAuthentication());
     }
 
     @Test
@@ -84,14 +104,14 @@ class JwtAuthenticationFilterTest {
 
         final MockHttpServletRequest request = bearerRequest(refresh);
         final MockHttpServletResponse response = new MockHttpServletResponse();
-        final AtomicBoolean authenticatedDuringChain = new AtomicBoolean(false);
+        final CapturingFilterChain chain = new CapturingFilterChain();
 
         // 2.Act
-        filter.doFilter(request, response, capturingChain(authenticatedDuringChain));
+        filter.doFilter(request, response, chain);
 
         // 3.Assert
         assertNull(response.getHeader(JwtTokenService.ACCESS_TOKEN_HEADER));
-        assertFalse(authenticatedDuringChain.get());
+        assertNull(chain.capturedAuthentication());
     }
 
     @Test
@@ -103,13 +123,16 @@ class JwtAuthenticationFilterTest {
 
         final MockHttpServletRequest request = bearerRequest(refresh);
         final MockHttpServletResponse response = new MockHttpServletResponse();
-        final AtomicBoolean authenticatedDuringChain = new AtomicBoolean(false);
+        final CapturingFilterChain chain = new CapturingFilterChain();
 
         // 2.Act
-        filter.doFilter(request, response, capturingChain(authenticatedDuringChain));
+        filter.doFilter(request, response, chain);
 
-        // 3.Assert
-        assertTrue(authenticatedDuringChain.get());
+        // 3.Assert — downstream saw the reloaded principal; token pair rotated
+        final Authentication authentication = chain.capturedAuthentication();
+        assertNotNull(authentication);
+        assertTrue(authentication.isAuthenticated());
+        assertEquals(42L, ((RydenUserDetails) authentication.getPrincipal()).getUserId());
         assertNotNull(response.getHeader(JwtTokenService.ACCESS_TOKEN_HEADER));
         assertNotNull(response.getHeader(JwtTokenService.REFRESH_TOKEN_HEADER));
         final TokenService.ParsedJwt rotated =
@@ -126,13 +149,13 @@ class JwtAuthenticationFilterTest {
 
         final MockHttpServletRequest request = bearerRequest(access);
         final MockHttpServletResponse response = new MockHttpServletResponse();
-        final AtomicBoolean authenticatedDuringChain = new AtomicBoolean(false);
+        final CapturingFilterChain chain = new CapturingFilterChain();
 
         // 2.Act
-        filter.doFilter(request, response, capturingChain(authenticatedDuringChain));
+        filter.doFilter(request, response, chain);
 
         // 3.Assert
-        assertFalse(authenticatedDuringChain.get());
+        assertNull(chain.capturedAuthentication());
     }
 
     @Test
@@ -143,19 +166,16 @@ class JwtAuthenticationFilterTest {
 
         final MockHttpServletRequest request = bearerRequest(access);
         final MockHttpServletResponse response = new MockHttpServletResponse();
-        final AtomicBoolean authenticatedDuringChain = new AtomicBoolean(false);
+        final CapturingFilterChain chain = new CapturingFilterChain();
 
         // 2.Act
-        filter.doFilter(request, response, capturingChain(authenticatedDuringChain));
+        filter.doFilter(request, response, chain);
 
-        // 3.Assert
-        assertTrue(authenticatedDuringChain.get());
-    }
-
-    private static FilterChain capturingChain(final AtomicBoolean authenticatedDuringChain) {
-        return (req, res) -> authenticatedDuringChain.set(
-                SecurityContextHolder.getContext().getAuthentication() != null
-                        && SecurityContextHolder.getContext().getAuthentication().isAuthenticated());
+        // 3.Assert — downstream saw an authenticated principal for the token's user
+        final Authentication authentication = chain.capturedAuthentication();
+        assertNotNull(authentication);
+        assertTrue(authentication.isAuthenticated());
+        assertEquals(42L, ((RydenUserDetails) authentication.getPrincipal()).getUserId());
     }
 
     private static User dbUser(final boolean emailValidated, final int passwordVersion) {

@@ -2,7 +2,6 @@ package ar.edu.itba.paw.services.user;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 
@@ -19,11 +18,11 @@ import ar.edu.itba.paw.exception.user.UserNotFoundException;
 import ar.edu.itba.paw.exception.user.VerificationCodeAlreadyActiveException;
 import ar.edu.itba.paw.exception.user.VerificationCodeInvalidException;
 import ar.edu.itba.paw.models.domain.user.User;
-import ar.edu.itba.paw.models.email.user.EmailVerificationCodeEmailPayload;
-import ar.edu.itba.paw.persistence.user.EmailVerificationCodeDao;
+import ar.edu.itba.paw.models.util.rules.SupportedLocales;
 import ar.edu.itba.paw.policy.VerificationCodePolicy;
 
-import ar.edu.itba.paw.services.support.RecordingEmailService;
+import ar.edu.itba.paw.services.email.EmailService;
+import ar.edu.itba.paw.services.support.InMemoryEmailVerificationCodeDao;
 
 @ExtendWith(MockitoExtension.class)
 class EmailVerificationServiceImplTest {
@@ -31,8 +30,12 @@ class EmailVerificationServiceImplTest {
     private static final long USER_ID = 11L;
     private static final String EMAIL = "user@example.com";
 
+    // In-memory fake per AGENTS.md TEST-8: the persisted code row is the observable — tests read
+    // it back through the fake's stored state instead of capturing interactions with a mock DAO.
+    private InMemoryEmailVerificationCodeDao dao;
+
     @Mock
-    private EmailVerificationCodeDao dao;
+    private EmailService emailService;
 
     @Mock
     private UserService userService;
@@ -40,14 +43,11 @@ class EmailVerificationServiceImplTest {
     @Mock
     private UserLocaleService userLocaleService;
 
-    private RecordingEmailService emailService;
     private EmailVerificationServiceImpl service;
 
     @BeforeEach
-    void wireServiceWithRecordingEmail() {
-        // State-based double instead of a Mockito captor: rule TEST-8 forbids doAnswer-style
-        // payload capture, so the test reads the recorded payload directly from the fake.
-        emailService = new RecordingEmailService();
+    void setUp() {
+        dao = new InMemoryEmailVerificationCodeDao();
         service = new EmailVerificationServiceImpl(
                 dao, emailService, userService, userLocaleService,
                 VerificationCodePolicy.fromValidatedConfiguration(6, 5),
@@ -55,69 +55,67 @@ class EmailVerificationServiceImplTest {
     }
 
     @Test
-    void testIssueFreshVerificationCodeProducesSixDigitCodeWithResolvedLocale() {
+    void testIssueFreshVerificationCodePersistsSixDigitCode() {
         // 1.Arrange
-        Mockito.when(userLocaleService.resolveMailLocaleOrElse(USER_ID, Locale.ENGLISH)).thenReturn(new Locale("es"));
+        Mockito.when(userLocaleService.resolveMailLocaleOrElse(USER_ID, SupportedLocales.DEFAULT))
+                .thenReturn(new Locale("es"));
 
         // 2.Act
         service.issueFreshVerificationCode(USER_ID, EMAIL, null);
-        final List<EmailVerificationCodeEmailPayload> sent = emailService.emailVerificationCodes();
-        final EmailVerificationCodeEmailPayload payload = sent.get(0);
 
         // 3.Assert
-        Assertions.assertEquals(1, sent.size());
-        Assertions.assertEquals(new Locale("es"), payload.getMessageLocale());
-        Assertions.assertEquals(EMAIL, payload.getRecipientEmail());
-        Assertions.assertNotNull(payload.getCode());
-        Assertions.assertEquals(6, payload.getCode().length());
-        Assertions.assertTrue(payload.getCode().matches("\\d{6}"), "code must be six decimal digits");
+        final Optional<String> stored = dao.storedCodeFor(USER_ID);
+        Assertions.assertTrue(stored.isPresent());
+        Assertions.assertTrue(stored.get().matches("\\d{6}"),
+                "persisted code must be six decimal digits");
     }
 
     @Test
-    void testIssueFreshVerificationCodeUsesProvidedLocaleAsFallback() {
+    void testIssueFreshVerificationCodeReplacesPreviouslyStoredCode() {
         // 1.Arrange
-        Mockito.when(userLocaleService.resolveMailLocaleOrElse(Mockito.eq(USER_ID), Mockito.any(Locale.class)))
-                .thenAnswer(invocation -> invocation.getArgument(1));
+        dao.seedCode(USER_ID, "STALE-SENTINEL", Instant.now().plus(Duration.ofMinutes(5)));
+        Mockito.when(userLocaleService.resolveMailLocaleOrElse(USER_ID, Locale.ENGLISH))
+                .thenReturn(Locale.ENGLISH);
 
         // 2.Act
-        service.issueFreshVerificationCode(USER_ID, EMAIL, new Locale("es"));
+        service.issueFreshVerificationCode(USER_ID, EMAIL, Locale.ENGLISH);
 
         // 3.Assert
-        Assertions.assertEquals(new Locale("es"),
-                emailService.emailVerificationCodes().get(0).getMessageLocale());
+        Assertions.assertTrue(dao.storedCodeFor(USER_ID).orElseThrow().matches("\\d{6}"),
+                "a fresh six-digit code must replace the previously stored one");
     }
 
     @Test
     void testEnsurePendingVerificationCodeShortCircuitsWhenActiveCodeExists() {
         // 1.Arrange
-        Mockito.when(dao.hasActiveCode(Mockito.eq(USER_ID), Mockito.any(Instant.class))).thenReturn(true);
+        dao.seedCode(USER_ID, "111111", Instant.now().plus(Duration.ofMinutes(5)));
 
         // 2.Act
         service.ensurePendingVerificationCode(USER_ID, EMAIL, Locale.ENGLISH);
 
         // 3.Assert
-        Assertions.assertTrue(emailService.emailVerificationCodes().isEmpty(),
-                "no email should have been sent when a verification code is already active");
+        Assertions.assertEquals(Optional.of("111111"), dao.storedCodeFor(USER_ID),
+                "the already active code must be kept untouched");
     }
 
     @Test
     void testEnsurePendingVerificationCodeIssuesNewCodeWhenNoneActive() {
         // 1.Arrange
-        Mockito.when(dao.hasActiveCode(Mockito.eq(USER_ID), Mockito.any(Instant.class))).thenReturn(false);
-        Mockito.when(userLocaleService.resolveMailLocaleOrElse(USER_ID, Locale.ENGLISH)).thenReturn(Locale.ENGLISH);
+        Mockito.when(userLocaleService.resolveMailLocaleOrElse(USER_ID, Locale.ENGLISH))
+                .thenReturn(Locale.ENGLISH);
 
         // 2.Act
         service.ensurePendingVerificationCode(USER_ID, EMAIL, Locale.ENGLISH);
 
         // 3.Assert
-        Assertions.assertEquals(1, emailService.emailVerificationCodes().size());
-        Assertions.assertEquals(EMAIL, emailService.emailVerificationCodes().get(0).getRecipientEmail());
+        Assertions.assertTrue(dao.storedCodeFor(USER_ID).orElseThrow().matches("\\d{6}"),
+                "a six-digit code must be persisted when none was active");
     }
 
     @Test
     void testResendVerificationCodeThrowsWhenAlreadyActive() {
         // 1.Arrange
-        Mockito.when(dao.hasActiveCode(Mockito.eq(USER_ID), Mockito.any(Instant.class))).thenReturn(true);
+        dao.seedCode(USER_ID, "111111", Instant.now().plus(Duration.ofMinutes(5)));
 
         // 2.Act / 3.Assert
         final VerificationCodeAlreadyActiveException ex = Assertions.assertThrows(
@@ -128,19 +126,18 @@ class EmailVerificationServiceImplTest {
     }
 
     @Test
-    void testResendVerificationCodeProducesNewCodeWhenNoneActive() {
+    void testResendVerificationCodePersistsNewCodeWhenNoneActive() {
         // 1.Arrange
-        Mockito.when(dao.hasActiveCode(Mockito.eq(USER_ID), Mockito.any(Instant.class))).thenReturn(false);
-        Mockito.when(userLocaleService.resolveMailLocaleOrElse(USER_ID, Locale.ENGLISH)).thenReturn(Locale.ENGLISH);
+        dao.seedCode(USER_ID, "EXPIRED-SENTINEL", Instant.now().minusSeconds(60));
+        Mockito.when(userLocaleService.resolveMailLocaleOrElse(USER_ID, Locale.ENGLISH))
+                .thenReturn(Locale.ENGLISH);
 
         // 2.Act
         service.resendVerificationCode(USER_ID, EMAIL, Locale.ENGLISH);
 
         // 3.Assert
-        final List<EmailVerificationCodeEmailPayload> sent = emailService.emailVerificationCodes();
-        Assertions.assertEquals(1, sent.size());
-        Assertions.assertEquals(EMAIL, sent.get(0).getRecipientEmail());
-        Assertions.assertTrue(sent.get(0).getCode().matches("\\d{6}"));
+        Assertions.assertTrue(dao.storedCodeFor(USER_ID).orElseThrow().matches("\\d{6}"),
+                "the expired row must be replaced by a fresh six-digit code");
     }
 
     @Test
@@ -160,8 +157,7 @@ class EmailVerificationServiceImplTest {
         // 1.Arrange
         final User user = User.identities(USER_ID, EMAIL, "Ada", "Lovelace");
         Mockito.when(userService.findByEmail(EMAIL)).thenReturn(Optional.of(user));
-        Mockito.when(dao.deleteIfValid(Mockito.eq(USER_ID), Mockito.eq("000000"), Mockito.any(Instant.class)))
-                .thenReturn(false);
+        dao.seedCode(USER_ID, "123456", Instant.now().plus(Duration.ofMinutes(5)));
 
         // 2.Act / 3.Assert
         final VerificationCodeInvalidException ex = Assertions.assertThrows(
@@ -172,17 +168,46 @@ class EmailVerificationServiceImplTest {
     }
 
     @Test
+    void testVerifyEmailAndConsumeCodeThrowsWhenCodeExpired() {
+        // 1.Arrange
+        final User user = User.identities(USER_ID, EMAIL, "Ada", "Lovelace");
+        Mockito.when(userService.findByEmail(EMAIL)).thenReturn(Optional.of(user));
+        dao.seedCode(USER_ID, "123456", Instant.now().minusSeconds(60));
+
+        // 2.Act / 3.Assert
+        final VerificationCodeInvalidException ex = Assertions.assertThrows(
+                VerificationCodeInvalidException.class,
+                () -> service.verifyEmailAndConsumeCode(EMAIL, "123456"));
+
+        Assertions.assertEquals(MessageKeys.USER_VERIFICATION_CODE_INVALID, ex.getMessageCode());
+    }
+
+    @Test
     void testVerifyEmailAndConsumeCodeReturnsUserIdOnSuccess() {
         // 1.Arrange
         final User user = User.identities(USER_ID, EMAIL, "Ada", "Lovelace");
         Mockito.when(userService.findByEmail(EMAIL)).thenReturn(Optional.of(user));
-        Mockito.when(dao.deleteIfValid(Mockito.eq(USER_ID), Mockito.eq("123456"), Mockito.any(Instant.class)))
-                .thenReturn(true);
+        dao.seedCode(USER_ID, "123456", Instant.now().plus(Duration.ofMinutes(5)));
 
         // 2.Act
         final long returnedId = service.verifyEmailAndConsumeCode(EMAIL, "123456");
 
         // 3.Assert
         Assertions.assertEquals(USER_ID, returnedId);
+    }
+
+    @Test
+    void testVerifyEmailAndConsumeCodeConsumesStoredCode() {
+        // 1.Arrange
+        final User user = User.identities(USER_ID, EMAIL, "Ada", "Lovelace");
+        Mockito.when(userService.findByEmail(EMAIL)).thenReturn(Optional.of(user));
+        dao.seedCode(USER_ID, "123456", Instant.now().plus(Duration.ofMinutes(5)));
+
+        // 2.Act
+        service.verifyEmailAndConsumeCode(EMAIL, "123456");
+
+        // 3.Assert
+        Assertions.assertTrue(dao.storedCodeFor(USER_ID).isEmpty(),
+                "the code must be consumed (deleted) after a successful verification");
     }
 }

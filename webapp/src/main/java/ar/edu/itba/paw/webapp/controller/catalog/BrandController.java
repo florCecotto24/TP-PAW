@@ -67,8 +67,8 @@ public class BrandController {
     @POST
     @Consumes(VndMediaType.BRAND_V1_JSON)
     @Produces(VndMediaType.BRAND_V1_JSON)
+    @PreAuthorize("isAuthenticated()")
     public Response createBrand(@Valid final BrandCreateForm form) {
-        currentUserResolver.requireUserId();
         return brandCatalogSupport.createBrand(form, uriInfo);
     }
 
@@ -110,10 +110,10 @@ public class BrandController {
     @Path("/{id}/models")
     @Consumes(VndMediaType.MODEL_V1_JSON)
     @Produces(VndMediaType.MODEL_V1_JSON)
+    @PreAuthorize("isAuthenticated()")
     public Response createModelForBrand(
             @PathParam("id") final long id,
             @Valid final ModelCreateForm form) {
-        currentUserResolver.requireUserId();
         return brandCatalogSupport.createModelForBrand(id, form, uriInfo);
     }
 }

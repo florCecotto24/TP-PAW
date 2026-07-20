@@ -85,6 +85,7 @@ public final class MessageKeys {
     public static final String USER_PROFILE_DOCUMENT_TOO_LARGE = "user.profile.document.tooLarge";
     public static final String USER_PROFILE_DOCUMENT_ALREADY_UPLOADED = "user.profile.document.alreadyUploaded";
     public static final String USER_PROFILE_CBU_INVALID = "user.profile.cbuInvalid";
+    public static final String USER_CBU_NOT_FOUND = "user.cbu.notFound";
 
     // car
     public static final String CAR_PLATE_ALREADY_EXISTS = "car.plate.alreadyExists";
